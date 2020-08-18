@@ -50,11 +50,11 @@ pub struct SimConfig {
     /// Number of neutral markers to include in the experiment
     pub markers: u16,
 
-    #[structopt(short, long, default_value = "100")]
+    #[structopt(short = "D", long, default_value = "100")]
     /// The dilution factor
     pub dilution_factor: f64,
 
-    #[structopt(short = "n", long, default_value = "5E8")]
+    #[structopt(long = "Nmax", default_value = "5E8")]
     /// Maximum population size reached before transfer
     input_max_pop_size: f64,
 

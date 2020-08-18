@@ -25,18 +25,29 @@ impl Lineages {
 }
 
 pub fn run_simulations(cfg: &SimConfig) {
+    // Validate that unimplemented parameters aren't in use
+    if cfg.deleterious_mutation_rate != 0.0 {
+        todo!("Deleterious mutations not yet supported")
+    } else if cfg.mutation_rate_mutation_rate != 0.0 {
+        todo!("Mutation rate mutations not yet supported")
+    }
+
     let mut rng = Pcg64::from_entropy();
     let mut lineages = initialize_lineages(cfg);
-    println!("{:#?}", lineages);
+    println!("Start: {:?}", lineages);
 
-    for _ in 0..cfg.transfers {
-        let delta_t_phase_1 = (cfg.dilution_factor.log2() - 1.0).ceil() as usize;
+    for i in 0..cfg.transfers {
+        let delta_t_phase_1 = (cfg.dilution_factor.log2() - 1.0).floor() as usize;
         lineages = doubling_phase_1(delta_t_phase_1, lineages, cfg, &mut rng);
         let delta_t_phase_2 = estimate_delta_t_phase_2(&lineages, cfg);
         lineages = doubling_phase_2(delta_t_phase_2, lineages, cfg, &mut rng);
+
+        if i % 500_000 == 0 {
+            println!("Generation {}: {:?}", i, lineages);
+        }
     }
 
-    println!("{:#?}", lineages);
+    println!("End: {:?}", lineages);
 }
 
 fn initialize_lineages(cfg: &SimConfig) -> Lineages {
