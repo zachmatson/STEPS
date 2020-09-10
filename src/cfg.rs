@@ -1,7 +1,11 @@
 use std::path::PathBuf;
 
 use clap::AppSettings;
+use rand::prelude::*;
+use rand_distr::weighted::WeightedIndex;
 use structopt::{clap, StructOpt};
+
+use crate::sim::MutationType;
 
 #[derive(Debug, StructOpt)]
 #[structopt(no_version, setting(AppSettings::DisableVersion))]
@@ -14,7 +18,7 @@ impl Config {
     pub fn from_args() -> Self {
         let mut cfg = <Config as StructOpt>::from_args();
         match &mut cfg.subcommand {
-            Subcommand::Simulate(sim_cfg) => sim_cfg.calculate_args(),
+            Subcommand::Simulate(sim_cfg) => sim_cfg.finish_initialization(),
             Subcommand::Format(_) => (),
         };
 
@@ -94,7 +98,7 @@ pub struct SimConfig {
     /// Factor describing mutation rate mutation size
     pub mutation_rate_mutation_size_factor: f64,
 
-    #[structopt(short = "g", default_value = "0.0")]
+    #[structopt(short = "g", default_value = "1.0")]
     /// Diminishing returns epistasis strength
     pub diminishing_returns_epistasis_strength: f64,
 
@@ -105,15 +109,49 @@ pub struct SimConfig {
     #[structopt(skip)]
     /// Total mutation rate
     pub total_mutation_rate: f64,
+
+    // Private fields
+    #[structopt(skip)]
+    /// Distribution from which to pick mutation types
+    mutation_type_index_distribution: Option<WeightedIndex<f64>>,
 }
 
 impl SimConfig {
-    fn calculate_args(&mut self) {
+    const MUTATION_TYPES: [MutationType; 4] = [
+        MutationType::Beneficial,
+        MutationType::Neutral,
+        MutationType::Deleterious,
+        MutationType::MutationRate,
+    ];
+
+    /// Finish the initialization of the SimConfig struct with fields that cannot be handled by StructOpt/Clap
+    fn finish_initialization(&mut self) {
         self.max_pop_size = self.input_max_pop_size.round() as u64;
         self.total_mutation_rate = self.beneficial_mutation_rate
             + self.deleterious_mutation_rate
             + self.neutral_mutation_rate
             + self.mutation_rate_mutation_rate;
+
+        // Weights for the elements of Self::MUTATION_TYPES
+        self.mutation_type_index_distribution = Some(
+            WeightedIndex::new(vec![
+                self.beneficial_mutation_rate,
+                self.neutral_mutation_rate,
+                self.deleterious_mutation_rate,
+                self.mutation_rate_mutation_rate,
+            ])
+            .unwrap(),
+        );
+    }
+
+    /// Randomly pick a mutation type weighted by the mutation rates
+    /// selected
+    pub fn sample_mutation_type<R: Rng>(&self, rng: &mut R) -> MutationType {
+        Self::MUTATION_TYPES[self
+            .mutation_type_index_distribution
+            .as_ref()
+            .unwrap()
+            .sample(rng)]
     }
 }
 

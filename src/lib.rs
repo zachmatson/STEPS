@@ -3,5 +3,4 @@
 mod cfg;
 pub use cfg::*;
 
-mod sim;
-pub use sim::*;
+pub mod sim;
