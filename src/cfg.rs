@@ -1,9 +1,8 @@
 use std::path::PathBuf;
 
-use clap::AppSettings;
 use rand::prelude::*;
 use rand_distr::weighted::WeightedIndex;
-use structopt::{clap, StructOpt};
+use structopt::{clap::AppSettings, StructOpt};
 
 use crate::sim::MutationType;
 
@@ -15,6 +14,7 @@ pub struct Config {
 }
 
 impl Config {
+    /// Generate Config from command line arguments
     pub fn from_args() -> Self {
         let mut cfg = <Config as StructOpt>::from_args();
         match &mut cfg.subcommand {
@@ -86,7 +86,7 @@ pub struct SimConfig {
     /// The mutation rate of the mutation rate
     pub mutation_rate_mutation_rate: f64,
 
-    #[structopt(long = "Sb", default_value = "0.0")]
+    #[structopt(long = "Sb", default_value = "0.011")]
     /// Initial mean beneficial mutation size
     pub initial_beneficial_mutation_size: f64,
 
@@ -117,6 +117,7 @@ pub struct SimConfig {
 }
 
 impl SimConfig {
+    /// Available mutation types
     const MUTATION_TYPES: [MutationType; 4] = [
         MutationType::Beneficial,
         MutationType::Neutral,
@@ -126,6 +127,13 @@ impl SimConfig {
 
     /// Finish the initialization of the SimConfig struct with fields that cannot be handled by StructOpt/Clap
     fn finish_initialization(&mut self) {
+        // Validate that unimplemented parameters aren't in use
+        if self.deleterious_mutation_rate != 0.0 {
+            deleterious_todo();
+        } else if self.mutation_rate_mutation_rate != 0.0 {
+            mutation_rate_todo();
+        }
+
         self.max_pop_size = self.input_max_pop_size.round() as u64;
         self.total_mutation_rate = self.beneficial_mutation_rate
             + self.deleterious_mutation_rate
@@ -133,28 +141,39 @@ impl SimConfig {
             + self.mutation_rate_mutation_rate;
 
         // Weights for the elements of Self::MUTATION_TYPES
-        self.mutation_type_index_distribution = Some(
-            WeightedIndex::new(vec![
-                self.beneficial_mutation_rate,
-                self.neutral_mutation_rate,
-                self.deleterious_mutation_rate,
-                self.mutation_rate_mutation_rate,
-            ])
-            .unwrap(),
-        );
+        self.mutation_type_index_distribution = if self.total_mutation_rate > 0.0 {
+            Some(
+                WeightedIndex::new(vec![
+                    self.beneficial_mutation_rate,
+                    self.neutral_mutation_rate,
+                    self.deleterious_mutation_rate,
+                    self.mutation_rate_mutation_rate,
+                ])
+                .unwrap(),
+            )
+        } else {
+            None
+        }
     }
 
     /// Randomly pick a mutation type weighted by the mutation rates
-    /// selected
-    pub fn sample_mutation_type<R: Rng>(&self, rng: &mut R) -> MutationType {
-        Self::MUTATION_TYPES[self
-            .mutation_type_index_distribution
+    /// selected  
+    /// Will return None if all mutation rates are 0
+    pub fn sample_mutation_type<R: Rng>(&self, rng: &mut R) -> Option<MutationType> {
+        self.mutation_type_index_distribution
             .as_ref()
-            .unwrap()
-            .sample(rng)]
+            .map(|dist| Self::MUTATION_TYPES[dist.sample(rng)])
     }
 }
 
 #[derive(StructOpt, Debug)]
 #[structopt(version = " ", setting(AppSettings::DisableVersion))]
 pub struct FormatConfig {/* TODO: Format options */}
+
+pub fn deleterious_todo() -> ! {
+    todo!("Deleterious mutations not yet supported")
+}
+
+pub fn mutation_rate_todo() -> ! {
+    todo!("Mutation rate mutations not yet supported")
+}

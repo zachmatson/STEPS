@@ -152,15 +152,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3728d817d99e5ac407411fa471ff9800a778d88a24685968b36824eaf4bee400"
 
 [[package]]
-name = "mers_twist"
-version = "2.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b72b7d791f087af3b2591d8378d96bb342f6465df6c9114903dc623b852afcd8"
-dependencies = [
- "rand_core",
-]
-
-[[package]]
 name = "packed_simd"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -291,7 +282,6 @@ version = "0.1.0"
 dependencies = [
  "csv",
  "derive_more",
- "mers_twist",
  "packed_simd",
  "rand",
  "rand_distr",
