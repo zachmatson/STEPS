@@ -27,7 +27,7 @@ pub fn calculate_bottlenecked_size_with_growth<R: Rng>(
         .sample(rng)
 }
 
-/// Push a mutant based on the `idx`th element of `input_lineages` to the end of `output_lineages`
+/// Push a mutant based on `initial_W` and `initial_U` with random mutation type to the end of `output_lineages`
 pub fn push_new_mutant<R: Rng>(
     initial_W: f64,
     initial_U: f64,
@@ -36,21 +36,18 @@ pub fn push_new_mutant<R: Rng>(
     rng: &mut R,
 ) {
     let mutation_type = cfg.sample_mutation_type(rng).unwrap();
-    match mutation_type {
+
+    output_lineages.N.push(1);
+    output_lineages.U.push(initial_U);
+    output_lineages.W.push(match mutation_type {
         MutationType::Beneficial => {
             let alpha = (1.0 + cfg.diminishing_returns_epistasis_strength * (initial_W - 1.0))
                 / cfg.initial_beneficial_mutation_size;
             let mutation_size = rand_distr::Exp::new(alpha).unwrap().sample(rng);
-            output_lineages.N.push(1);
-            output_lineages.W.push(initial_W + mutation_size);
-            output_lineages.U.push(initial_U);
+            initial_W + mutation_size
         }
-        MutationType::Neutral => {
-            output_lineages.N.push(1);
-            output_lineages.W.push(initial_W);
-            output_lineages.U.push(initial_U);
-        }
+        MutationType::Neutral => initial_W,
         MutationType::Deleterious => cfg::deleterious_todo(),
         MutationType::MutationRate => cfg::mutation_rate_todo(),
-    }
+    });
 }
