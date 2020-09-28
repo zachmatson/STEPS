@@ -11,7 +11,10 @@ mod helpers;
 use helpers::*;
 
 pub fn run_simulations(cfg: &SimConfig) {
-    let mut rng = Pcg64::from_entropy();
+    let mut rng = match cfg.seed {
+        Some(seed) => Pcg64::seed_from_u64(seed),
+        None => Pcg64::from_entropy(),
+    };
 
     for _ in 0..cfg.replicates {
         single_replicate(cfg, &mut rng);
@@ -19,13 +22,17 @@ pub fn run_simulations(cfg: &SimConfig) {
 }
 
 fn single_replicate<R: Rng>(cfg: &SimConfig, rng: &mut R) {
-    let mut lineages = Lineages::new(cfg);
+    let mut lineages = Lineages::from_simconfig(cfg);
     println!("Start: {:?}", lineages);
 
-    let delta_t_phase_1 = (cfg.dilution_factor.log2() - 1.0).floor() as usize;
+    let mut delta_t_phase_1 = (cfg.dilution_factor.log2() - 1.0).floor() as usize;
+
     for i in 0..cfg.transfers {
         lineages = doubling_phase_1(delta_t_phase_1, lineages, cfg, rng);
-        lineages = doubling_phase_2(lineages, cfg, rng);
+        
+        let (updated_lineages, sum_N, avg_W) = doubling_phase_2(lineages, cfg, rng);
+        lineages = updated_lineages;
+        delta_t_phase_1 = calculate_phase_1_delta_t(sum_N, avg_W, cfg);
 
         println!("Generation {}: {:?}", i, lineages);
     }
@@ -87,11 +94,13 @@ fn doubling_phase_1<R: Rng>(
     lineages
 }
 
-fn doubling_phase_2<R: Rng>(lineages: Lineages, cfg: &SimConfig, rng: &mut R) -> Lineages {
+fn doubling_phase_2<R: Rng>(lineages: Lineages, cfg: &SimConfig, rng: &mut R) -> (Lineages, u64, f64) {
     // Create output vector
     // Reserve extra for more mutants
     // The full size won't be needed
     let mut output = Lineages::with_capacity(2 * lineages.N.len());
+    let mut sum_N = 0;
+    let mut weighted_sum_W = 0.0;
 
     // Calculate delta_t
     let delta_t = estimate_phase_2_delta_t(&lineages, cfg);
@@ -121,12 +130,16 @@ fn doubling_phase_2<R: Rng>(lineages: Lineages, cfg: &SimConfig, rng: &mut R) ->
             output.N.push(new_N);
             output.W.push(lineages.W[i]);
             output.U.push(lineages.U[i]);
+            sum_N += new_N;
+            weighted_sum_W += new_N as f64 * lineages.W[i];
         }
 
         for _ in 0..N_mut {
             push_new_mutant(lineages.W[i], lineages.U[i], &mut output, cfg, rng);
+            sum_N += 1;
+            weighted_sum_W += output.W.last().unwrap();
         }
     }
 
-    output
+    (output, sum_N, weighted_sum_W / sum_N as f64)
 }

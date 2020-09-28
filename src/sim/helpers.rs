@@ -9,9 +9,12 @@ pub fn estimate_phase_2_delta_t(lineages: &Lineages, cfg: &SimConfig) -> f64 {
         .sum::<f64>();
     let sum_N = lineages.N.iter().sum::<u64>() as f64;
     let avg_W = weighted_sum_W / sum_N;
-    println!("Sum N: {}", sum_N);
 
     (cfg.max_pop_size as f64 / sum_N).log2() / avg_W
+}
+
+pub fn calculate_phase_1_delta_t(sum_N: u64, avg_W: f64, cfg: &SimConfig) -> usize {
+    ((cfg.max_pop_size as f64 / sum_N as f64).log(avg_W.exp2()) - 1.0).floor() as usize
 }
 
 pub fn sample_bottlenecked_size_with_growth<R: Rng>(

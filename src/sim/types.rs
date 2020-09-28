@@ -13,7 +13,7 @@ pub struct Lineages {
 }
 
 impl Lineages {
-    pub fn new(cfg: &SimConfig) -> Self {
+    pub fn from_simconfig(cfg: &SimConfig) -> Self {
         let initial_n =
             (cfg.max_pop_size as f64 / cfg.dilution_factor / cfg.markers as f64).round() as u64;
 

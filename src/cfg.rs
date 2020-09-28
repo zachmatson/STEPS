@@ -102,6 +102,10 @@ pub struct SimConfig {
     /// Diminishing returns epistasis strength
     pub diminishing_returns_epistasis_strength: f64,
 
+    #[structopt(long)]
+    /// Seed for the RNG
+    pub seed: Option<u64>,
+
     // Calculated fields
     #[structopt(skip)]
     /// Maximum population size reached before transfer
