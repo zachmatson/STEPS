@@ -14,7 +14,7 @@ pub fn estimate_phase_2_delta_t(lineages: &Lineages, cfg: &SimConfig) -> f64 {
     (cfg.max_pop_size as f64 / sum_N).log2() / avg_W
 }
 
-pub fn calculate_bottlenecked_size_with_growth<R: Rng>(
+pub fn sample_bottlenecked_size_with_growth<R: Rng>(
     delta_t: f64,
     N: u64,
     W: f64,
@@ -47,7 +47,7 @@ pub fn push_new_mutant<R: Rng>(
             initial_W + mutation_size
         }
         MutationType::Neutral => initial_W,
-        MutationType::Deleterious => cfg::deleterious_todo(),
-        MutationType::MutationRate => cfg::mutation_rate_todo(),
+        MutationType::Deleterious => deleterious_todo(),
+        MutationType::MutationRate => mutation_rate_todo(),
     });
 }

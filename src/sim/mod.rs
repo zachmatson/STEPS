@@ -2,7 +2,7 @@ use rand::prelude::*;
 use rand_distr;
 use rand_pcg::Pcg64;
 
-use crate::cfg::{self, SimConfig};
+use crate::cfg::*;
 
 mod types;
 pub use types::MutationType;
@@ -44,10 +44,9 @@ fn doubling_phase_1<R: Rng>(
     // Iterate through each doubling
     for _ in 0..delta_t {
         // Create output vector
-        let mut output = Lineages::default();
         // Reserve extra for more mutants
         // The full size won't be needed
-        output.reserve(2 * lineages.N.len());
+        let mut output = Lineages::with_capacity(2 * lineages.N.len());
 
         // Iterate through all populations
         for i in 0..lineages.N.len() {
@@ -90,20 +89,16 @@ fn doubling_phase_1<R: Rng>(
 
 fn doubling_phase_2<R: Rng>(lineages: Lineages, cfg: &SimConfig, rng: &mut R) -> Lineages {
     // Create output vector
-    let mut output = Lineages::default();
-    output.reserve(lineages.N.len());
+    // Reserve extra for more mutants
+    // The full size won't be needed
+    let mut output = Lineages::with_capacity(2 * lineages.N.len());
 
     // Calculate delta_t
     let delta_t = estimate_phase_2_delta_t(&lineages, cfg);
 
     for i in 0..lineages.N.len() {
-        let N_bottlenecked = calculate_bottlenecked_size_with_growth(
-            delta_t,
-            lineages.N[i],
-            lineages.W[i],
-            cfg,
-            rng,
-        );
+        let N_bottlenecked =
+            sample_bottlenecked_size_with_growth(delta_t, lineages.N[i], lineages.W[i], cfg, rng);
 
         if N_bottlenecked == 0 {
             continue;

@@ -1,4 +1,4 @@
-use crate::cfg::SimConfig;
+use super::*;
 
 #[derive(Default, Debug)]
 pub struct Lineages {
@@ -21,6 +21,14 @@ impl Lineages {
             N: vec![initial_n; cfg.markers as usize],
             W: vec![1.0; cfg.markers as usize],
             U: vec![cfg.total_mutation_rate; cfg.markers as usize],
+        }
+    }
+
+    pub fn with_capacity(n: usize) -> Self {
+        Lineages {
+            N: Vec::with_capacity(n),
+            W: Vec::with_capacity(n),
+            U: Vec::with_capacity(n),
         }
     }
 
