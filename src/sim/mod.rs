@@ -56,19 +56,19 @@ fn generic_doubling_phase<G: GrowthCalculator, R: Rng>(
     // The full size won't be needed
     let mut output = Lineages::with_capacity(2 * lineages.len());
 
-    for i in 0..lineages.len() {
+    for lineage in lineages.iter() {
         let (new_N, N_mut) =
-            growth_calculator.calculate_new_N_and_mutant_count(lineages[i], cfg, rng);
+            growth_calculator.calculate_new_N_and_mutant_count(*lineage, cfg, rng);
 
         if new_N > 0 {
             output.push(Lineage {
                 N: new_N,
-                ..lineages[i]
+                ..*lineage
             });
         }
 
         for _ in 0..N_mut {
-            let mutant = new_mutant(lineages[i], cfg, rng);
+            let mutant = new_mutant(*lineage, cfg, rng);
             output.push(mutant);
         }
     }
