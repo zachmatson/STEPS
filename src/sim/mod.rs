@@ -29,7 +29,7 @@ fn single_replicate<R: Rng>(cfg: &SimConfig, rng: &mut R) {
 
     for i in 0..cfg.transfers {
         lineages = doubling_phase_1(delta_t_phase_1, lineages, cfg, rng);
-        
+
         let (updated_lineages, sum_N, avg_W) = doubling_phase_2(lineages, cfg, rng);
         lineages = updated_lineages;
         delta_t_phase_1 = calculate_phase_1_delta_t(sum_N, avg_W, cfg);
@@ -94,7 +94,11 @@ fn doubling_phase_1<R: Rng>(
     lineages
 }
 
-fn doubling_phase_2<R: Rng>(lineages: Lineages, cfg: &SimConfig, rng: &mut R) -> (Lineages, u64, f64) {
+fn doubling_phase_2<R: Rng>(
+    lineages: Lineages,
+    cfg: &SimConfig,
+    rng: &mut R,
+) -> (Lineages, u64, f64) {
     // Create output vector
     // Reserve extra for more mutants
     // The full size won't be needed
