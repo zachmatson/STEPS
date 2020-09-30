@@ -1,5 +1,11 @@
 use super::*;
 
+pub struct Lineage {
+    N: u64,
+    W: f64,
+    U: f64,
+}
+
 #[derive(Default, Debug)]
 pub struct Lineages {
     /// Population size
@@ -47,7 +53,11 @@ pub enum MutationType {
     MutationRate,
 }
 
+/// Provides a method to calculate the size of the population after a given doubling phase
+/// and the number of mutants to add at the end of that phase
 pub trait GrowthCalculator {
+    /// Returns tuple `(new_N, N_mut)` giving the new size and number of descendant mutants for
+    /// the `idx`th element of `lineages` after this growth phase
     fn calculate_new_N_and_mutant_count<R: Rng>(
         &self,
         lineages: &Lineages,

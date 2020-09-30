@@ -1,13 +1,14 @@
 use super::*;
 
-struct Phase1();
+/// Phase 1 doubling, double once and don't bottleneck
+pub struct Phase1();
 
 impl GrowthCalculator for Phase1 {
     fn calculate_new_N_and_mutant_count<R: Rng>(
         &self,
         lineages: &Lineages,
         idx: usize,
-        cfg: &SimConfig,
+        _: &SimConfig,
         rng: &mut R,
     ) -> (u64, u64) {
         // Calculate size after growth
@@ -26,7 +27,7 @@ impl GrowthCalculator for Phase1 {
         // Subtract number of mutants to get new size
         let new_N = N_after_growth - N_mut;
 
-        if new_N < lineages.N[i] {
+        if new_N < lineages.N[idx] {
             eprintln!("WARNING: N_mut exceeded amount of new cells");
         }
 
@@ -34,8 +35,9 @@ impl GrowthCalculator for Phase1 {
     }
 }
 
-struct Phase2 {
-    delta_t: f64,
+/// Phase 2 doubling, estimate doubling for delta_t times and bottleneck
+pub struct Phase2 {
+    pub delta_t: f64,
 }
 
 impl GrowthCalculator for Phase2 {
@@ -46,13 +48,19 @@ impl GrowthCalculator for Phase2 {
         cfg: &SimConfig,
         rng: &mut R,
     ) -> (u64, u64) {
-        let N_bottlenecked =
-            sample_bottlenecked_size_with_growth(self.delta_t, lineages.N[i], lineages.W[i], cfg, rng);
+        // Determine population size after growth and before bottleneck
+        let N_after_growth =
+            ((lineages.W[idx] * self.delta_t).exp2() * lineages.N[idx] as f64).round() as u64;
+        // Bottleneck this population
+        let N_bottlenecked = rand_distr::Binomial::new(N_after_growth, cfg.dilution_factor.recip())
+            .unwrap()
+            .sample(rng);
 
         if N_bottlenecked == 0 {
             return (0, 0);
         }
 
+        // Estimate how many new mutants survived bottlenecking
         let N_mut = if lineages.U[idx] > 0.0 {
             rand_distr::Poisson::new(
                 lineages.U[idx]
@@ -77,30 +85,8 @@ pub fn estimate_phase_1_delta_t(sum_N: u64, avg_W: f64, cfg: &SimConfig) -> usiz
         .max(0.0) as usize
 }
 
-pub fn estimate_phase_2_delta_t(lineages: &Lineages, cfg: &SimConfig) -> f64 {
-    let weighted_sum_W = lineages
-        .W
-        .iter()
-        .zip(lineages.N.iter())
-        .map(|(w, n)| (*w) * (*n) as f64)
-        .sum::<f64>();
-    let sum_N = lineages.N.iter().sum::<u64>() as f64;
-    let avg_W = weighted_sum_W / sum_N;
-
-    (cfg.max_pop_size as f64 / sum_N).log2() / avg_W
-}
-
-pub fn sample_bottlenecked_size_with_growth<R: Rng>(
-    delta_t: f64,
-    N: u64,
-    W: f64,
-    cfg: &SimConfig,
-    rng: &mut R,
-) -> u64 {
-    let N_after_growth = ((W * delta_t).exp2() * N as f64).round() as u64;
-    rand_distr::Binomial::new(N_after_growth, cfg.dilution_factor.recip())
-        .unwrap()
-        .sample(rng)
+pub fn estimate_phase_2_delta_t(sum_N: u64, avg_W: f64, cfg: &SimConfig) -> f64 {
+    (cfg.max_pop_size as f64 / sum_N as f64).log2() / avg_W
 }
 
 /// Push a mutant based on `initial_W` and `initial_U` with random mutation type to the end of `output_lineages`
