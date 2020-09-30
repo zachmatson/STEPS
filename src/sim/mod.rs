@@ -57,17 +57,21 @@ fn doubling_phase_1<R: Rng>(
 
         // Iterate through all populations
         for i in 0..lineages.N.len() {
+            // Calculate size after growth
+            let N_after_growth = (lineages.W[i].exp2() * lineages.N[i] as f64).round() as u64;
+
             // Check number of mutations
             // Sample if mutation rate is positive, otherwise no mutations
             let N_mut: u64 = if lineages.U[i] > 0.0 {
-                rand_distr::Poisson::new(lineages.U[i] * lineages.N[i] as f64)
+                rand_distr::Poisson::new(lineages.U[i] * (N_after_growth - lineages.N[i]) as f64)
                     .unwrap()
                     .sample(rng)
             } else {
                 0
             };
-            // Calculate size after growth and subtract mutants
-            let new_N = (lineages.W[i].exp2() * lineages.N[i] as f64).round() as u64 - N_mut;
+
+            // Subtract number of mutants to get new size
+            let new_N = N_after_growth - N_mut;
 
             if new_N < lineages.N[i] {
                 eprintln!("WARNING: N_mut exceeded amount of new cells");
