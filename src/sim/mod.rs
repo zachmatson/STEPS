@@ -68,7 +68,8 @@ fn generic_doubling_phase<G: GrowthCalculator, R: Rng>(
         }
 
         for _ in 0..N_mut {
-            push_new_mutant(lineages[i], &mut output, cfg, rng);
+            let mutant = new_mutant(lineages[i], cfg, rng);
+            output.push(mutant);
         }
     }
 

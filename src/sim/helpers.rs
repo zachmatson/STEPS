@@ -92,12 +92,11 @@ impl GrowthCalculator for Phase2 {
 }
 
 /// Push a mutant based on `initial_W` and `initial_U` with random mutation type to the end of `output_lineages`
-pub fn push_new_mutant<R: Rng>(
+pub fn new_mutant<R: Rng>(
     parent: Lineage,
-    output_lineages: &mut Lineages,
     cfg: &SimConfig,
     rng: &mut R,
-) {
+) -> Lineage {
     let mutation_type = cfg.sample_mutation_type(rng).unwrap();
 
     let W = match mutation_type {
@@ -112,5 +111,5 @@ pub fn push_new_mutant<R: Rng>(
         MutationType::MutationRate => mutation_rate_todo(),
     };
 
-    output_lineages.push(Lineage { N: 1, W, ..parent });
+    Lineage { N: 1, W, ..parent }
 }
