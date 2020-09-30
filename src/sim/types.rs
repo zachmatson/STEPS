@@ -1,47 +1,61 @@
+use derive_more::*;
+
 use super::*;
 
+#[derive(Copy, Clone, Debug)]
 pub struct Lineage {
-    N: u64,
-    W: f64,
-    U: f64,
-}
-
-#[derive(Default, Debug)]
-pub struct Lineages {
     /// Population size
-    pub N: Vec<u64>,
+    pub N: u64,
     /// Population fitness
-    pub W: Vec<f64>,
+    pub W: f64,
     /// Population total mutation rate  
     /// Use to calculate chance of mutations happening,
     /// but defer to general mutation rate to determine type
-    pub U: Vec<f64>,
+    pub U: f64,
+}
+
+#[derive(Default, Debug, Deref)]
+pub struct Lineages {
+    #[deref]
+    lineages: Vec<Lineage>,
+    sum_N: u64,
+    weighted_sum_W: f64,
 }
 
 impl Lineages {
     pub fn from_simconfig(cfg: &SimConfig) -> Self {
-        let initial_n =
-            (cfg.max_pop_size as f64 / cfg.dilution_factor / cfg.markers as f64).round() as u64;
-
-        Lineages {
-            N: vec![initial_n; cfg.markers as usize],
-            W: vec![1.0; cfg.markers as usize],
-            U: vec![cfg.total_mutation_rate; cfg.markers as usize],
+        let mut output = Self::default();
+        let N = (cfg.max_pop_size as f64 / cfg.dilution_factor / cfg.markers as f64).round() as u64;
+        for _ in 0..cfg.markers {
+            output.push(Lineage {
+                N,
+                W: 1.0,
+                U: cfg.total_mutation_rate,
+            });
         }
+
+        output
     }
 
     pub fn with_capacity(n: usize) -> Self {
         Lineages {
-            N: Vec::with_capacity(n),
-            W: Vec::with_capacity(n),
-            U: Vec::with_capacity(n),
+            lineages: Vec::with_capacity(n),
+            ..Default::default()
         }
     }
 
-    pub fn reserve(&mut self, n: usize) {
-        self.N.reserve(n);
-        self.W.reserve(n);
-        self.U.reserve(n);
+    pub fn push(&mut self, lineage: Lineage) {
+        self.sum_N += lineage.N;
+        self.weighted_sum_W += lineage.N as f64 * lineage.W;
+        self.lineages.push(lineage);
+    }
+
+    pub fn sum_N(&self) -> u64 {
+        self.sum_N
+    }
+
+    pub fn avg_W(&self) -> f64 {
+        self.weighted_sum_W / self.sum_N as f64
     }
 }
 
@@ -60,8 +74,7 @@ pub trait GrowthCalculator {
     /// the `idx`th element of `lineages` after this growth phase
     fn calculate_new_N_and_mutant_count<R: Rng>(
         &self,
-        lineages: &Lineages,
-        idx: usize,
+        lineage: Lineage,
         cfg: &SimConfig,
         rng: &mut R,
     ) -> (u64, u64);
