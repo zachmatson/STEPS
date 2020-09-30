@@ -26,16 +26,14 @@ fn single_replicate<R: Rng>(cfg: &SimConfig, rng: &mut R) {
     println!("Start: {:?}", lineages);
 
     for i in 0..cfg.transfers {
-        let delta_t_phase_1 = estimate_phase_1_delta_t(&lineages, cfg);
+        let delta_t_phase_1 = Phase1::estimate_delta_t(&lineages, cfg);
         for _ in 0..delta_t_phase_1 {
             lineages = generic_doubling_phase(Phase1(), lineages, cfg, rng);
         }
 
-        let delta_t_phase_2 = estimate_phase_2_delta_t(&lineages, cfg);
+        let phase_2 = Phase2::new(&lineages, cfg);
         lineages = generic_doubling_phase(
-            Phase2 {
-                delta_t: delta_t_phase_2,
-            },
+            phase_2,
             lineages,
             cfg,
             rng,

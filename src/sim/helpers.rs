@@ -34,9 +34,24 @@ impl GrowthCalculator for Phase1 {
     }
 }
 
+impl Phase1 {
+    pub fn estimate_delta_t(lineages: &Lineages, cfg: &SimConfig) -> usize {
+        ((cfg.max_pop_size as f64 / lineages.sum_N() as f64).log(lineages.avg_W().exp2()) - 1.0)
+            .floor()
+            .max(0.0) as usize
+    }
+}
+
 /// Phase 2 doubling, estimate doubling for delta_t times and bottleneck
 pub struct Phase2 {
-    pub delta_t: f64,
+    delta_t: f64,
+}
+
+impl Phase2 {
+    pub fn new(lineages: &Lineages, cfg: &SimConfig) -> Self {
+        let delta_t = (cfg.max_pop_size as f64 / lineages.sum_N() as f64).log2() / lineages.avg_W();
+        Phase2 { delta_t }
+    }
 }
 
 impl GrowthCalculator for Phase2 {
@@ -74,16 +89,6 @@ impl GrowthCalculator for Phase2 {
 
         (new_N, N_mut)
     }
-}
-
-pub fn estimate_phase_1_delta_t(lineages: &Lineages, cfg: &SimConfig) -> usize {
-    ((cfg.max_pop_size as f64 / lineages.sum_N() as f64).log(lineages.avg_W().exp2()) - 1.0)
-        .floor()
-        .max(0.0) as usize
-}
-
-pub fn estimate_phase_2_delta_t(lineages: &Lineages, cfg: &SimConfig) -> f64 {
-    (cfg.max_pop_size as f64 / lineages.sum_N() as f64).log2() / lineages.avg_W()
 }
 
 /// Push a mutant based on `initial_W` and `initial_U` with random mutation type to the end of `output_lineages`
