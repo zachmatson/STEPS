@@ -46,3 +46,13 @@ pub enum MutationType {
     Deleterious,
     MutationRate,
 }
+
+pub trait GrowthCalculator {
+    fn calculate_new_N_and_mutant_count<R: Rng>(
+        &self,
+        lineages: &Lineages,
+        idx: usize,
+        cfg: &SimConfig,
+        rng: &mut R,
+    ) -> (u64, u64);
+}
