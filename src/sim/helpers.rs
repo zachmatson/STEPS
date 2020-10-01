@@ -1,7 +1,59 @@
 use super::*;
 
+/// Provides a method to calculate the size of the population after a given doubling phase
+/// and the number of mutants to add at the end of that phase
+pub trait GrowthCalculator {
+    /// Returns tuple `(new_N, N_mut)` giving the new size and number of descendant mutants for
+    /// the `idx`th element of `lineages` after this growth phase
+    fn calculate_new_N_and_mutant_count<R: Rng>(
+        &self,
+        lineage: Lineage,
+        cfg: &SimConfig,
+        rng: &mut R,
+    ) -> (u64, u64);
+
+    /// Double the lineages
+    fn double_lineages<R: Rng>(
+        &self,
+        lineages: Lineages,
+        cfg: &SimConfig,
+        rng: &mut R,
+    ) -> Lineages {
+        // Create output vector
+        // Reserve extra for more mutants
+        // The full size won't be needed
+        let mut output = Lineages::with_capacity(2 * lineages.len());
+
+        for lineage in lineages.iter() {
+            let (new_N, N_mut) = self.calculate_new_N_and_mutant_count(*lineage, cfg, rng);
+
+            if new_N > 0 {
+                output.push(Lineage {
+                    N: new_N,
+                    ..*lineage
+                });
+            }
+
+            for _ in 0..N_mut {
+                let mutant = new_mutant(*lineage, cfg, rng);
+                output.push(mutant);
+            }
+        }
+
+        output
+    }
+}
+
 /// Phase 1 doubling, double once and don't bottleneck
 pub struct Phase1();
+
+impl Phase1 {
+    pub fn estimate_delta_t(lineages: &Lineages, cfg: &SimConfig) -> usize {
+        ((cfg.max_pop_size as f64 / lineages.sum_N() as f64).log(lineages.avg_W().exp2()) - 1.0)
+            .floor()
+            .max(0.0) as usize
+    }
+}
 
 impl GrowthCalculator for Phase1 {
     fn calculate_new_N_and_mutant_count<R: Rng>(
@@ -31,14 +83,6 @@ impl GrowthCalculator for Phase1 {
         }
 
         (new_N, N_mut)
-    }
-}
-
-impl Phase1 {
-    pub fn estimate_delta_t(lineages: &Lineages, cfg: &SimConfig) -> usize {
-        ((cfg.max_pop_size as f64 / lineages.sum_N() as f64).log(lineages.avg_W().exp2()) - 1.0)
-            .floor()
-            .max(0.0) as usize
     }
 }
 
@@ -92,11 +136,7 @@ impl GrowthCalculator for Phase2 {
 }
 
 /// Push a mutant based on `initial_W` and `initial_U` with random mutation type to the end of `output_lineages`
-pub fn new_mutant<R: Rng>(
-    parent: Lineage,
-    cfg: &SimConfig,
-    rng: &mut R,
-) -> Lineage {
+pub fn new_mutant<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> Lineage {
     let mutation_type = cfg.sample_mutation_type(rng).unwrap();
 
     let W = match mutation_type {

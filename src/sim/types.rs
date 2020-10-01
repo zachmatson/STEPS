@@ -66,16 +66,3 @@ pub enum MutationType {
     Deleterious,
     MutationRate,
 }
-
-/// Provides a method to calculate the size of the population after a given doubling phase
-/// and the number of mutants to add at the end of that phase
-pub trait GrowthCalculator {
-    /// Returns tuple `(new_N, N_mut)` giving the new size and number of descendant mutants for
-    /// the `idx`th element of `lineages` after this growth phase
-    fn calculate_new_N_and_mutant_count<R: Rng>(
-        &self,
-        lineage: Lineage,
-        cfg: &SimConfig,
-        rng: &mut R,
-    ) -> (u64, u64);
-}
