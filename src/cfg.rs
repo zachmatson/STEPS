@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::path::PathBuf;
 
 use rand::prelude::*;
@@ -118,6 +119,9 @@ pub struct SimConfig {
     #[structopt(skip)]
     /// Distribution from which to pick mutation types
     mutation_type_index_distribution: Option<WeightedIndex<f64>>,
+    #[structopt(skip)]
+    /// Counter to keep unique identifiers
+    unique_id_counter: RefCell<u64>,
 }
 
 impl SimConfig {
@@ -167,6 +171,10 @@ impl SimConfig {
         self.mutation_type_index_distribution
             .as_ref()
             .map(|dist| Self::MUTATION_TYPES[dist.sample(rng)])
+    }
+
+    pub fn get_unique_id(&self) -> u64 {
+        self.unique_id_counter.replace_with(|x| *x + 1)
     }
 }
 

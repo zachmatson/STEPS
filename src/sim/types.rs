@@ -12,6 +12,13 @@ pub struct Lineage {
     /// Use to calculate chance of mutations happening,
     /// but defer to general mutation rate to determine type
     pub U: f64,
+
+    /// Unique lineage identifier
+    /// (also uniquely identifies the mutation
+    /// between the parent and this lineage)
+    pub id: u64,
+    /// Lineage identifier for the parent
+    pub parent_id: u64,
 }
 
 #[derive(Default, Debug, Deref)]
@@ -26,11 +33,14 @@ impl Lineages {
     pub fn from_simconfig(cfg: &SimConfig) -> Self {
         let mut output = Self::default();
         let N = (cfg.max_pop_size as f64 / cfg.dilution_factor / cfg.markers as f64).round() as u64;
+        let parent_id = cfg.get_unique_id();
         for _ in 0..cfg.markers {
             output.push(Lineage {
                 N,
                 W: 1.0,
                 U: cfg.total_mutation_rate,
+                id: cfg.get_unique_id(),
+                parent_id,
             });
         }
 
