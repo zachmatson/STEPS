@@ -22,7 +22,7 @@ pub trait GrowthCalculator {
         // Create output vector
         // Reserve extra for more mutants
         // The full size won't be needed
-        let mut output = Lineages::with_capacity(2 * lineages.len());
+        let mut output = Lineages::successor(&lineages);
 
         for lineage in lineages.iter() {
             let (new_N, N_mut) = self.calculate_new_N_and_mutant_count(*lineage, cfg, rng);
@@ -36,7 +36,7 @@ pub trait GrowthCalculator {
 
             for _ in 0..N_mut {
                 let mutant = new_mutant(*lineage, cfg, rng);
-                output.push(mutant);
+                output.push_child(mutant);
             }
         }
 
@@ -154,8 +154,6 @@ pub fn new_mutant<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> Line
     Lineage {
         N: 1,
         W,
-        U: parent.U,
-        id: cfg.get_unique_id(),
-        parent_id: parent.id,
+        ..parent
     }
 }
