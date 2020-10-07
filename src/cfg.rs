@@ -132,9 +132,7 @@ impl SimConfig {
     /// Finish the initialization of the SimConfig struct with fields that cannot be handled by StructOpt/Clap
     fn finish_initialization(&mut self) {
         // Validate that unimplemented parameters aren't in use
-        if self.deleterious_mutation_rate != 0.0 {
-            deleterious_todo();
-        } else if self.mutation_rate_mutation_rate != 0.0 {
+        if self.mutation_rate_mutation_rate != 0.0 {
             mutation_rate_todo();
         }
 

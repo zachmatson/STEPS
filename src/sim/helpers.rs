@@ -140,16 +140,23 @@ pub fn new_mutant<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> Line
     let mutation_type = cfg.sample_mutation_type(rng).unwrap();
 
     let W = match mutation_type {
-        MutationType::Beneficial => {
-            let alpha = (1.0 + cfg.diminishing_returns_epistasis_strength * (parent.W - 1.0))
-                / cfg.initial_beneficial_mutation_size;
-            let mutation_size = rand_distr::Exp::new(alpha).unwrap().sample(rng);
-            parent.W + mutation_size
-        }
+        MutationType::Beneficial => fitness_after_beneficial_mutation(parent, cfg, rng),
         MutationType::Neutral => parent.W,
-        MutationType::Deleterious => deleterious_todo(),
+        MutationType::Deleterious => fitness_after_deleterious_mutation(parent, cfg, rng),
         MutationType::MutationRate => mutation_rate_todo(),
     };
 
     Lineage { N: 1, W, ..parent }
+}
+
+fn fitness_after_beneficial_mutation<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> f64 {
+    let alpha = (1.0 + cfg.diminishing_returns_epistasis_strength * (parent.W - 1.0))
+        / cfg.initial_beneficial_mutation_size;
+    let mutation_size = rand_distr::Exp::new(alpha).unwrap().sample(rng);
+    parent.W + mutation_size
+}
+
+#[allow(unused_variables)]
+fn fitness_after_deleterious_mutation<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> f64 {
+    deleterious_todo()
 }
