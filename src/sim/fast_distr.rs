@@ -1,5 +1,7 @@
 use super::*;
 
+/// Sample a Poisson random variate from a distribution with mean `lambda` using `rng`
+/// Uses the multiplication method described in https://www.jstor.org/stable/2346807 
 pub fn direct_poisson<R: Rng>(lambda: f64, rng: &mut R) -> u64 {
     let thresh = (-lambda).exp();
     let mut n = 0;
