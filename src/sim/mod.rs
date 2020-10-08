@@ -9,6 +9,7 @@ pub use types::MutationType;
 use types::*;
 mod helpers;
 use helpers::*;
+mod fast_distr;
 
 pub fn run_simulations(cfg: &SimConfig) {
     let mut rng = match cfg.seed {

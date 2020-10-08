@@ -68,9 +68,7 @@ impl GrowthCalculator for Phase1 {
         // Check number of mutations
         // Sample if mutation rate is positive, otherwise no mutations
         let N_mut: u64 = if lineage.U > 0.0 {
-            rand_distr::Poisson::new(lineage.U * (N_after_growth - lineage.N) as f64)
-                .unwrap()
-                .sample(rng)
+            fast_distr::direct_poisson(lineage.U * (N_after_growth - lineage.N) as f64, rng)
         } else {
             0
         };
@@ -118,13 +116,12 @@ impl GrowthCalculator for Phase2 {
 
         // Estimate how many new mutants survived bottlenecking
         let N_mut = if lineage.U > 0.0 {
-            rand_distr::Poisson::new(
+            fast_distr::direct_poisson(
                 lineage.U
                     * N_bottlenecked as f64
                     * (1.0 - (lineage.W * self.delta_t).exp2().recip()),
+                rng,
             )
-            .unwrap()
-            .sample(rng)
         } else {
             0
         };
@@ -157,6 +154,10 @@ fn fitness_after_beneficial_mutation<R: Rng>(parent: Lineage, cfg: &SimConfig, r
 }
 
 #[allow(unused_variables)]
-fn fitness_after_deleterious_mutation<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> f64 {
+fn fitness_after_deleterious_mutation<R: Rng>(
+    parent: Lineage,
+    cfg: &SimConfig,
+    rng: &mut R,
+) -> f64 {
     deleterious_todo()
 }
