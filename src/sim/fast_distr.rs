@@ -1,16 +1,17 @@
 use super::*;
 
 /// Sample a Poisson random variate from a distribution with mean `lambda` using `rng`
-/// Uses the multiplication method described in https://www.jstor.org/stable/2346807 
+/// Uses the Algorithm 3 described in https://www.jstor.org/stable/2347913
 pub fn direct_poisson<R: Rng>(lambda: f64, rng: &mut R) -> u64 {
-    let thresh = (-lambda).exp();
-    let mut n = 0;
-    let mut prod = 1.0;
+    let mut x = 0;
+    let mut p = (-lambda).exp();
+    let mut u = rng.gen::<f64>();
 
-    while prod > thresh {
-        n += 1;
-        prod *= rng.gen::<f64>();
+    while u > p {
+        x += 1;
+        u -= p;
+        p *= lambda / x as f64;
     }
-
-    n - 1
+    
+    x
 }
