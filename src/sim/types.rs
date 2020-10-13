@@ -33,7 +33,6 @@ pub struct Lineages {
 impl Lineages {
     pub fn from_simconfig(cfg: &SimConfig) -> Self {
         let mut output = Self::default();
-        output.unique_id_counter += 1;
         let N = (cfg.max_pop_size as f64 / cfg.dilution_factor / cfg.markers as f64).round() as u64;
         for _ in 0..cfg.markers {
             output.push_child(Lineage {
@@ -64,8 +63,8 @@ impl Lineages {
 
     pub fn push_child(&mut self, mut lineage: Lineage) {
         lineage.parent_id = lineage.id;
-        lineage.id = self.unique_id_counter;
         self.unique_id_counter += 1;
+        lineage.id = self.unique_id_counter;
         self.push(lineage);
     }
 

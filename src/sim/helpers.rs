@@ -143,11 +143,7 @@ pub fn new_mutant<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> Line
         MutationType::MutationRate => mutation_rate_todo(),
     };
 
-    Lineage {
-        N: 1,
-        W,
-        ..parent
-    }
+    Lineage { N: 1, W, ..parent }
 }
 
 fn fitness_after_beneficial_mutation<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> f64 {

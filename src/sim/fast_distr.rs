@@ -12,6 +12,6 @@ pub fn direct_poisson<R: Rng>(lambda: f64, rng: &mut R) -> u64 {
         u -= p;
         p *= lambda / x as f64;
     }
-    
+
     x
 }
