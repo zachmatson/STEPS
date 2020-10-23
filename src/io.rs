@@ -30,10 +30,10 @@ struct Metadata {
 impl Metadata {
     fn new(output_mode: OutputMode) -> Self {
         Self {
-            name: "RelLTEE".to_string(),
+            name: "ReLLTEE".to_string(),
             version: env!("CARGO_PKG_VERSION").to_string(),
             description:
-                "RelLTEE simulation of bacterial evolution written by Devin Lake and Zachary Matson"
+                "ReLLTEE simulation of bacterial evolution written by Devin Lake and Zachary Matson"
                     .to_string(),
             output_mode,
         }
