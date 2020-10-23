@@ -3,10 +3,7 @@ use std::path::PathBuf;
 use rand::prelude::*;
 use rand_distr::weighted::WeightedIndex;
 use serde::{Deserialize, Serialize};
-use structopt::{
-    clap,
-    StructOpt,
-};
+use structopt::{clap, StructOpt};
 
 use crate::sim::MutationType;
 

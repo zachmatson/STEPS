@@ -38,8 +38,10 @@ pub fn reproduce_simulations(cfg: &ReproduceConfig) {
     let sim_cfg = extract_sim_config(&cfg.input_path);
 
     if sim_cfg.seed.is_none() {
-        println!("Note: The simulations were previously run without a seed. \
-               Simulations will be run with the same settings but results will not be identical.");
+        println!(
+            "Note: The simulations were previously run without a seed. \
+               Simulations will be run with the same settings but results will not be identical."
+        );
     }
 
     run_simulations_inner(&cfg.output_cfg, &sim_cfg);
