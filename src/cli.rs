@@ -16,11 +16,11 @@ fn run_simulations_inner(output_cfg: &OuputConfig, sim_cfg: &SimConfig) {
 
         population_handler.start_replicate();
         output_handler.start_replicate();
-        output_handler.handle_lineages(r, 0, population_handler.lineages_ref());
+        output_handler.handle_lineages(r, 0, population_handler.lineages());
 
         for t in 1..=sim_cfg.transfers {
             population_handler.transfer();
-            output_handler.handle_lineages(r, t, population_handler.lineages_ref());
+            output_handler.handle_lineages(r, t, population_handler.lineages());
 
             if t % 4096 == 0 {
                 transfer_bar.set_position(t as u64);

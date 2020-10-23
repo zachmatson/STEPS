@@ -59,7 +59,7 @@ impl<'a> PopulationHandler<'a> {
         self.lineages = Some(lineages);
     }
 
-    pub fn lineages_ref<'l>(&'l self) -> &'l Lineages {
+    pub fn lineages(&self) -> &Lineages {
         self.lineages.as_ref().unwrap()
     }
 }
