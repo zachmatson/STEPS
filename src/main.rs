@@ -1,13 +1,14 @@
 use relltee::{
     cfg::{Config, Subcommand::*},
-    sim,
+    cli,
 };
 
 fn main() {
     let cfg = Config::from_args();
 
     match cfg.subcommand {
-        Simulate(x) => sim::run_simulations(&x),
+        Simulate(x) => cli::run_simulations(&x),
         Format(_) => todo!("Create formatting mode"),
+        Reproduce(x) => cli::reproduce_simulations(&x),
     }
 }

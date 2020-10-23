@@ -1,8 +1,10 @@
 use derive_more::*;
+use serde::Serialize;
+use serde_tuple::*;
 
 use super::*;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Serialize_tuple)]
 pub struct Lineage {
     /// Population size
     pub N: u64,
@@ -19,14 +21,19 @@ pub struct Lineage {
     pub id: u64,
     /// Lineage identifier for the parent
     pub parent_id: u64,
+
+    /// Lineage identifier for the initial neutral marker mutation
+    pub marker: u16,
 }
 
-#[derive(Default, Debug, Deref)]
+#[derive(Default, Debug, Deref, Serialize)]
 pub struct Lineages {
     #[deref]
     lineages: Vec<Lineage>,
     sum_N: u64,
     weighted_sum_W: f64,
+    sum_N_marker_1: u64,
+    #[serde(skip)]
     unique_id_counter: u64,
 }
 
@@ -34,13 +41,14 @@ impl Lineages {
     pub fn from_simconfig(cfg: &SimConfig) -> Self {
         let mut output = Self::default();
         let N = (cfg.max_pop_size as f64 / cfg.dilution_factor / cfg.markers as f64).round() as u64;
-        for _ in 0..cfg.markers {
+        for m in 1..=cfg.markers {
             output.push_child(Lineage {
                 N,
                 W: 1.0,
                 U: cfg.total_mutation_rate,
                 id: 0,
                 parent_id: 0,
+                marker: m,
             });
         }
 
@@ -57,6 +65,9 @@ impl Lineages {
 
     pub fn push(&mut self, lineage: Lineage) {
         self.sum_N += lineage.N;
+        if lineage.marker == 1 {
+            self.sum_N_marker_1 += lineage.N;
+        }
         self.weighted_sum_W += lineage.N as f64 * lineage.W;
         self.lineages.push(lineage);
     }
@@ -74,6 +85,10 @@ impl Lineages {
 
     pub fn avg_W(&self) -> f64 {
         self.weighted_sum_W / self.sum_N as f64
+    }
+
+    pub fn marker_1_ratio(&self) -> f64 {
+        self.sum_N_marker_1 as f64 / (self.sum_N - self.sum_N_marker_1) as f64
     }
 }
 

@@ -2,12 +2,15 @@ use std::path::PathBuf;
 
 use rand::prelude::*;
 use rand_distr::weighted::WeightedIndex;
-use structopt::{clap::AppSettings, StructOpt};
+use serde::{Deserialize, Serialize};
+use structopt::{
+    clap,
+    StructOpt,
+};
 
 use crate::sim::MutationType;
 
-#[derive(Debug, StructOpt)]
-#[structopt(no_version, setting(AppSettings::DisableVersion))]
+#[derive(StructOpt)]
 pub struct Config {
     #[structopt(subcommand)]
     pub subcommand: Subcommand,
@@ -20,28 +23,83 @@ impl Config {
         match &mut cfg.subcommand {
             Subcommand::Simulate(sim_cfg) => sim_cfg.finish_initialization(),
             Subcommand::Format(_) => (),
+            Subcommand::Reproduce(_) => (),
         };
 
         cfg
     }
 }
 
-#[derive(Debug, StructOpt)]
-#[structopt(no_version, setting(AppSettings::DisableVersion))]
+#[derive(StructOpt)]
 pub enum Subcommand {
     /// Run simulations
-    Simulate(SimConfig),
+    Simulate(SimulationsCLIConfig),
     /// Convert the simulation output to various formats
     Format(FormatConfig),
+    /// Reproduce results from a previous simulation run
+    Reproduce(ReproduceConfig),
 }
 
-#[derive(Debug, StructOpt)]
-#[structopt(version = " ", setting(AppSettings::DisableVersion))]
-pub struct SimConfig {
-    #[structopt(short, long = "output", parse(from_os_str))]
-    /// File to output results
-    pub output_file: PathBuf,
+#[derive(StructOpt)]
+pub struct SimulationsCLIConfig {
+    #[structopt(flatten)]
+    pub output_cfg: OuputConfig,
 
+    #[structopt(flatten)]
+    pub sim_cfg: SimConfig,
+
+    #[structopt(long = "Nmax", default_value = "5E8")]
+    /// Maximum population size reached before transfer
+    input_max_pop_size: f64,
+}
+
+impl SimulationsCLIConfig {
+    /// Finish the initialization of the SimConfig struct with fields that cannot be handled by StructOpt/Clap
+    fn finish_initialization(&mut self) {
+        // Might have rounding issues if the input gets this large
+        // and population size should never be this large
+        // so handle with a panic
+        // In the future this might need to be replaced with something more robust,
+        // but for now it is best to prevent any subtle errors
+        if self.input_max_pop_size >= (1u64 << 53u64) as f64 {
+            clap::Error::with_description(
+                "Max pop size exceeds maximum 2^53-1. Input may be rounded incorrectly with this population size.",
+                clap::ErrorKind::InvalidValue
+            ).exit();
+        }
+        self.sim_cfg.max_pop_size = self.input_max_pop_size.round() as u64;
+        self.sim_cfg.finish_initialization();
+    }
+}
+
+#[derive(StructOpt)]
+pub struct FormatConfig {/* TODO: Format options */}
+
+#[derive(StructOpt)]
+pub struct ReproduceConfig {
+    /// Path of the input file, which came from a previous run  
+    /// and contains the information needed to reproduce the results
+    pub input_path: PathBuf,
+
+    #[structopt(flatten)]
+    pub output_cfg: OuputConfig,
+}
+
+#[derive(StructOpt)]
+pub struct OuputConfig {
+    #[structopt(short = "j", long = "raw-output")]
+    /// Path to output the full raw simulation results (as ndjson),
+    /// which includes data for all mutations at each sampled interval
+    pub raw_output_path: Option<PathBuf>,
+
+    #[structopt(short = "o", long = "summary-output")]
+    /// Path to output the summarized simulation results (as CSV),
+    /// which contains the fitness and marker ratio over time
+    pub summary_output_path: Option<PathBuf>,
+}
+
+#[derive(Debug, StructOpt, Serialize, Deserialize)]
+pub struct SimConfig {
     #[structopt(short, long, default_value = "1")]
     /// Number of replicates to perform
     pub replicates: u32,
@@ -50,6 +108,10 @@ pub struct SimConfig {
     /// How many transfers to run the experiment for
     pub transfers: u32,
 
+    #[structopt(short = "f", long, default_value = "1")]
+    /// The rate at which populations should be sampled
+    pub sampling_frequency: u32,
+
     #[structopt(short, long, default_value = "2")]
     /// Number of neutral markers to include in the experiment
     pub markers: u16,
@@ -57,18 +119,6 @@ pub struct SimConfig {
     #[structopt(short = "D", long, default_value = "100")]
     /// The dilution factor
     pub dilution_factor: f64,
-
-    #[structopt(long = "Nmax", default_value = "5E8")]
-    /// Maximum population size reached before transfer
-    input_max_pop_size: f64,
-
-    #[structopt(short = "f", long, default_value = "1")]
-    /// The rate at which populations should be sampled
-    pub sampling_frequency: u64,
-
-    #[structopt(short = "l", long)]
-    /// The minimum fraction of the population that a mutation must makeup before it will be saved
-    pub threshold: Option<f64>,
 
     #[structopt(long = "Ub", default_value = "0.0")]
     /// Beneficial mutation rate
@@ -111,11 +161,13 @@ pub struct SimConfig {
     /// Maximum population size reached before transfer
     pub max_pop_size: u64,
     #[structopt(skip)]
+    #[serde(skip_deserializing)]
     /// Total mutation rate
     pub total_mutation_rate: f64,
 
     // Private fields
     #[structopt(skip)]
+    #[serde(skip)]
     /// Distribution from which to pick mutation types
     mutation_type_index_distribution: Option<WeightedIndex<f64>>,
 }
@@ -129,14 +181,13 @@ impl SimConfig {
         MutationType::MutationRate,
     ];
 
-    /// Finish the initialization of the SimConfig struct with fields that cannot be handled by StructOpt/Clap
-    fn finish_initialization(&mut self) {
+    /// Finish initialization for fields that require additional steps
+    pub fn finish_initialization(&mut self) {
         // Validate that unimplemented parameters aren't in use
         if self.mutation_rate_mutation_rate != 0.0 {
             mutation_rate_todo();
         }
 
-        self.max_pop_size = self.input_max_pop_size.round() as u64;
         self.total_mutation_rate = self.beneficial_mutation_rate
             + self.deleterious_mutation_rate
             + self.neutral_mutation_rate
@@ -167,10 +218,6 @@ impl SimConfig {
             .map(|dist| Self::MUTATION_TYPES[dist.sample(rng)])
     }
 }
-
-#[derive(StructOpt, Debug)]
-#[structopt(version = " ", setting(AppSettings::DisableVersion))]
-pub struct FormatConfig {/* TODO: Format options */}
 
 pub fn deleterious_todo() -> ! {
     todo!("Deleterious mutations not yet supported")
