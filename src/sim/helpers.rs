@@ -19,12 +19,7 @@ pub trait GrowthCalculator {
     ) -> (u64, u64);
 
     /// Grow the lineages and add necessary mutants
-    fn grow_lineages<R: Rng>(
-        &self,
-        lineages: Lineages,
-        cfg: &SimConfig,
-        rng: &mut R,
-    ) -> Lineages {
+    fn grow_lineages<R: Rng>(&self, lineages: Lineages, cfg: &SimConfig, rng: &mut R) -> Lineages {
         // Successor `Lineages` struct will be empty with appropriate capacity and
         // identifier counter for adding the lineages after this growth
         let mut output = Lineages::successor(&lineages);
@@ -103,7 +98,7 @@ pub struct Phase2 {
 }
 
 impl Phase2 {
-    /// Create a new instance of `Phase2` which would grow `lineages` enough to bring its total 
+    /// Create a new instance of `Phase2` which would grow `lineages` enough to bring its total
     /// population size to the Nmax defined in `cfg`
     pub fn new(lineages: &Lineages, cfg: &SimConfig) -> Self {
         // Use approximation N_final = 2^(avg_W * delta_t)*N_initial

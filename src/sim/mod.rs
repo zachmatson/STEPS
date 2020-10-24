@@ -25,9 +25,10 @@ fn default_sim_rng(cfg: &SimConfig) -> SIM_RNG {
 
 /// Opaque handler for populations and transfer processes  
 /// Manages transfer details and owns its RNG and a set of lineages
-/// 
+///
 /// Must create with the `new` function and call `start_replicate` before each replicate
-/// including the first replicate
+/// including the first replicate  
+/// Then use `transfer` to perform each transfer within a replicate
 pub struct SimulationHandler<'a> {
     /// `Lineages` being handled  
     /// Must be created/reset with `new` before a new replicate

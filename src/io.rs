@@ -268,7 +268,9 @@ impl std::fmt::Display for ReproductionError {
                 "Previous results from incompatible simulation version {}",
                 &version
             ),
-            ReproductionError::MissingHeaders => write!(f, "Cannot find headers in input file to reproduce with"),
+            ReproductionError::MissingHeaders => {
+                write!(f, "Cannot find headers in input file to reproduce with")
+            }
         }
     }
 }

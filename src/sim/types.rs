@@ -54,7 +54,7 @@ impl Lineages {
     /// into use `Lineages::successor` to ensure that the IDs remain properly numbered
     pub fn from_simconfig(cfg: &SimConfig) -> Self {
         let mut output = Self::default();
-        // Initialize with a lineage for each marker and a population size of 
+        // Initialize with a lineage for each marker and a population size of
         // Nmax/D, evenly divided between the markers
         let N = (cfg.max_pop_size as f64 / cfg.dilution_factor / cfg.markers as f64).round() as u64;
         // 1 index the markers beacuse "0" ID is reserved for the immediate ancestor of the neutral marker mutations
@@ -75,7 +75,7 @@ impl Lineages {
     }
 
     /// Create a new, empty instance from an old instance, which will have a capacity scaled based on
-    /// the old instance (currently 2x the length of the old instance) and preserve the 
+    /// the old instance (currently 2x the length of the old instance) and preserve the
     /// counter used to generate unique IDs.
     ///
     /// This is the proper way to generate a new instance to transfer into from an old instance.  
