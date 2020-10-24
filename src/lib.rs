@@ -5,6 +5,6 @@
 //! [Find this project on GitHub](https://github.com/zachmatson/DevinsSimulations)
 
 pub mod cfg;
-pub mod sim;
-mod io;
 pub mod cli;
+mod io;
+pub mod sim;
