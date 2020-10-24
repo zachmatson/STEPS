@@ -216,10 +216,16 @@ impl SimConfig {
     }
 }
 
+/// Call where code to support deleterious mutations is activated  
+/// these code paths should not be accessed in normal use until
+/// support for deleterious mutations is added
 pub fn deleterious_todo() -> ! {
     todo!("Deleterious mutations not yet supported")
 }
 
+/// Call where code to support mutation rate mutations is activated  
+/// these code paths should not be accessed in normal use until
+/// support for mutation rate mutations is added
 pub fn mutation_rate_todo() -> ! {
     todo!("Mutation rate mutations not yet supported")
 }

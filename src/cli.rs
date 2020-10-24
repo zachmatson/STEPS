@@ -8,7 +8,7 @@ pub fn run_simulations(cfg: &SimulationsCLIConfig) {
 
 fn run_simulations_inner(output_cfg: &OuputConfig, sim_cfg: &SimConfig) {
     let replicate_bar = styled_bar(sim_cfg.replicates as u64, "Replicate:");
-    let mut population_handler = PopulationHandler::new(&sim_cfg);
+    let mut population_handler = SimulationHandler::new(&sim_cfg);
     let mut output_handler = OutputHandler::new(&output_cfg, &sim_cfg);
 
     for r in 1..=sim_cfg.replicates {
