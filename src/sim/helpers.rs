@@ -164,7 +164,7 @@ pub fn new_mutant<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> Line
     //     _ => parent.U,
     // };
 
-    Lineage { N: 1, W, U, ..parent }
+    Lineage { N: 1, W, ..parent }
 }
 
 /// Generate fitness of a descendant of `parent` after undergoing a beneficial mutation

@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::Path;
@@ -43,54 +44,67 @@ impl Metadata {
 pub struct OutputHandler {
     sampling_frequency: u32,
     raw_outputter: Option<RawOutputter>,
-    summary_outputter: Option<SummaryOutputer>,
+    summary_outputter: Option<SummaryOutputter>,
 }
 
 impl OutputHandler {
-    pub fn new(output_cfg: &OuputConfig, sim_cfg: &SimConfig) -> Self {
-        let raw_outputter = output_cfg
-            .raw_output_path
-            .as_ref()
-            .map(|_| RawOutputter::initialize(output_cfg, sim_cfg));
+    pub fn new(output_cfg: &OuputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
+        let raw_outputter = if output_cfg.raw_output_path.is_some() {
+            Some(RawOutputter::initialize(output_cfg, sim_cfg)?)
+        } else {
+            None
+        };
 
-        let summary_outputter = output_cfg
-            .summary_output_path
-            .as_ref()
-            .map(|_| SummaryOutputer::initialize(output_cfg, sim_cfg));
+        let summary_outputter = if output_cfg.summary_output_path.is_some() {
+            Some(SummaryOutputter::initialize(output_cfg, sim_cfg)?)
+        } else {
+            None
+        };
 
-        Self {
+        Ok(Self {
             sampling_frequency: sim_cfg.sampling_frequency,
             raw_outputter,
             summary_outputter,
-        }
+        })
     }
 
-    pub fn start_replicate(&mut self) {
+    pub fn start_replicate(&mut self) -> Result<(), std::io::Error> {
         if let Some(raw_outputter) = &mut self.raw_outputter {
-            raw_outputter.start_replicate();
+            raw_outputter.start_replicate()?;
         }
+
+        Ok(())
     }
 
-    pub fn finish_replicate(&mut self) {
+    pub fn finish_replicate(&mut self) -> Result<(), std::io::Error> {
         if let Some(raw_outputter) = &mut self.raw_outputter {
-            raw_outputter.finish_replicate();
+            raw_outputter.finish_replicate()?;
         }
+
+        Ok(())
     }
 
     #[inline(always)]
-    pub fn handle_lineages(&mut self, r: u32, t: u32, lineages: &Lineages) {
+    pub fn handle_lineages(
+        &mut self,
+        r: u32,
+        t: u32,
+        lineages: &Lineages,
+    ) -> Result<(), Box<dyn Error>> {
         // Only output if at the sampling frequency
         if t % self.sampling_frequency != 0 {
-            return;
+            return Ok(());
         }
 
         if let Some(raw_outputter) = &mut self.raw_outputter {
-            raw_outputter.record_lineages(lineages);
+            raw_outputter.record_lineages(lineages)?;
         }
 
         if let Some(summary_outputter) = &mut self.summary_outputter {
-            summary_outputter.record_lineages(r, t, lineages);
+            summary_outputter.record_lineages(r, t, lineages)?;
         }
+
+        Ok(())
     }
 }
 
@@ -106,119 +120,157 @@ struct RawOutputter {
 }
 
 impl RawOutputter {
-    #![allow(unused_must_use)]
-    fn initialize(output_cfg: &OuputConfig, sim_cfg: &SimConfig) -> Self {
+    fn initialize(output_cfg: &OuputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
         let buf = Some(create_file_with_header(
             output_cfg.raw_output_path.as_ref().unwrap(),
             sim_cfg,
             OutputMode::Raw,
             "",
             BUFFER_CAPACITY,
-        ));
+        )?);
 
-        Self { buf }
+        Ok(Self { buf })
     }
 
     fn buf(&mut self) -> &mut BufWriter<File> {
         self.buf.as_mut().unwrap()
     }
 
-    fn start_replicate(&mut self) {
-        write!(self.buf(), "[");
+    fn start_replicate(&mut self) -> Result<(), std::io::Error> {
+        write!(self.buf(), "[")?;
+        Ok(())
     }
 
-    fn finish_replicate(&mut self) {
-        writeln!(self.buf(), "]");
+    fn finish_replicate(&mut self) -> Result<(), std::io::Error> {
+        writeln!(self.buf(), "]")?;
+        Ok(())
     }
 
-    fn record_lineages(&mut self, lineages: &Lineages) {
-        serde_json::to_writer(self.buf(), lineages);
-        write!(self.buf(), ",");
+    fn record_lineages(&mut self, lineages: &Lineages) -> Result<(), Box<dyn Error>> {
+        serde_json::to_writer(self.buf(), lineages)?;
+        write!(self.buf(), ",")?;
+        Ok(())
     }
 }
 
-struct SummaryOutputer {
+struct SummaryOutputter {
     wtr: csv::Writer<File>,
     needs_ratio: bool,
 }
 
-impl SummaryOutputer {
-    #![allow(unused_must_use)]
-    fn initialize(output_cfg: &OuputConfig, sim_cfg: &SimConfig) -> Self {
+impl SummaryOutputter {
+    fn initialize(output_cfg: &OuputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
         let buf = create_file_with_header(
             output_cfg.summary_output_path.as_ref().unwrap(),
             sim_cfg,
             OutputMode::Summary,
             "# ",
             HEADER_BUFFER_CAPACITY,
-        );
+        )?;
 
         // Release the buffer contents and get file handle back to give to CSV writer
-        let file = buf.into_inner().unwrap();
+        let file = buf.into_inner()?;
         let mut wtr = csv::Writer::from_writer(file);
 
         let needs_ratio = sim_cfg.markers == 2;
 
         // Write header
         if needs_ratio {
-            wtr.write_record(&["replicate", "transfer", "mean_fitness", "marker_ratio"]);
+            wtr.write_record(&["replicate", "transfer", "mean_fitness", "marker_ratio"])?;
         } else {
-            wtr.write_record(&["replicate", "transfer", "mean_fitness"]);
+            wtr.write_record(&["replicate", "transfer", "mean_fitness"])?;
         }
 
-        Self { wtr, needs_ratio }
+        Ok(Self { wtr, needs_ratio })
     }
 
-    fn record_lineages(&mut self, r: u32, t: u32, lineages: &Lineages) {
+    fn record_lineages(
+        &mut self,
+        r: u32,
+        t: u32,
+        lineages: &Lineages,
+    ) -> Result<(), Box<dyn Error>> {
         if self.needs_ratio {
             self.wtr
-                .serialize((r, t, lineages.avg_W(), lineages.marker_1_ratio()));
+                .serialize((r, t, lineages.avg_W(), lineages.marker_1_ratio()))?;
         } else {
-            self.wtr.serialize((r, t, lineages.avg_W()));
+            self.wtr.serialize((r, t, lineages.avg_W()))?;
         }
+
+        Ok(())
     }
 }
 
-#[allow(unused_must_use)]
 fn create_file_with_header<P: AsRef<Path>>(
     path: P,
     sim_cfg: &SimConfig,
     output_mode: OutputMode,
     header_prefix: &'static str,
     buffer_capacity: usize,
-) -> BufWriter<File> {
-    let file = File::create(path).unwrap();
+) -> Result<BufWriter<File>, Box<dyn Error>> {
+    let file = File::create(path)?;
     let mut buf = BufWriter::with_capacity(buffer_capacity, file);
 
     // Write the metadata to the file with optional comment character
-    write!(&mut buf, "{}", header_prefix);
+    write!(&mut buf, "{}", header_prefix)?;
     let metadata = Metadata::new(output_mode);
-    serde_json::to_writer(&mut buf, &metadata);
-    writeln!(&mut buf);
+    serde_json::to_writer(&mut buf, &metadata)?;
+    writeln!(&mut buf)?;
 
     // Write the simulation configuration to the file with optional comment character
-    write!(&mut buf, "{}", header_prefix);
-    serde_json::to_writer(&mut buf, sim_cfg);
-    writeln!(&mut buf);
+    write!(&mut buf, "{}", header_prefix)?;
+    serde_json::to_writer(&mut buf, sim_cfg)?;
+    writeln!(&mut buf)?;
 
-    buf
+    Ok(buf)
 }
 
-pub fn extract_sim_config<P: AsRef<Path>>(path: P) -> SimConfig {
-    let file = File::open(path).unwrap();
+pub fn extract_sim_config<P: AsRef<Path>>(path: P) -> Result<SimConfig, Box<dyn Error>> {
+    let file = File::open(path)?;
     let reader = BufReader::with_capacity(HEADER_BUFFER_CAPACITY, file);
     let mut lines = reader
         .lines()
         .map(|line| line.unwrap().trim_start_matches("# ").to_string());
 
     // Read metadata
-    let metadata: Metadata = serde_json::from_str(&lines.next().unwrap()).unwrap();
+    let metadata: Metadata = match &lines.next() {
+        Some(line) => serde_json::from_str(line)?,
+        None => Err(ReproductionError::MissingHeaders)?,
+    };
     // Make sure the version is correct
-    assert_eq!(metadata.version, "0.1.0");
+    if metadata.version != env!("CARGO_PKG_VERSION") {
+        Err(ReproductionError::IncompatibleVersion {
+            version: metadata.version,
+        })?;
+    }
 
     // Read config
-    let mut sim_cfg: SimConfig = serde_json::from_str(&lines.next().unwrap()).unwrap();
+    let mut sim_cfg: SimConfig = match &lines.next() {
+        Some(line) => serde_json::from_str(line)?,
+        None => Err(ReproductionError::MissingHeaders)?,
+    };
     sim_cfg.finish_initialization();
 
-    sim_cfg
+    Ok(sim_cfg)
 }
+
+#[derive(Debug)]
+pub enum ReproductionError {
+    IncompatibleVersion { version: String },
+    MissingHeaders,
+}
+
+impl std::fmt::Display for ReproductionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReproductionError::IncompatibleVersion { version } => write!(
+                f,
+                "Previous results from incompatible simulation version {}",
+                &version
+            ),
+            ReproductionError::MissingHeaders => write!(f, "Cannot find headers in input file to reproduce with"),
+        }
+    }
+}
+
+impl Error for ReproductionError {}
