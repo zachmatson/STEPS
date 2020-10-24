@@ -1,3 +1,8 @@
+//! Structs with configuration settings and parameters for simulations, outputs
+//! and subcommands
+//!
+//! Also contains all code for handling the receiving of command line input  
+
 use std::path::PathBuf;
 
 use rand::prelude::*;
@@ -7,6 +12,7 @@ use structopt::{clap, StructOpt};
 
 use crate::sim::MutationType;
 
+/// Configuration options for ReLLTEE command line app  
 #[derive(StructOpt)]
 pub struct Config {
     #[structopt(subcommand)]
@@ -14,9 +20,12 @@ pub struct Config {
 }
 
 impl Config {
-    /// Generate Config from command line arguments
+    /// Generate `Config` from command line arguments  
+    /// Exits the program if there is a failure  
     pub fn from_args() -> Self {
+        // Underlying StructOpt/clap implementation performs the actual building of `Config`
         let mut cfg = <Config as StructOpt>::from_args();
+        // Additional initialization where needed
         match &mut cfg.subcommand {
             Subcommand::Simulate(sim_cfg) => sim_cfg.finish_initialization(),
             Subcommand::Format(_) => (),
@@ -28,16 +37,19 @@ impl Config {
 }
 
 #[derive(StructOpt)]
+#[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub enum Subcommand {
     /// Run simulations
     Simulate(SimulationsCLIConfig),
-    /// Convert the simulation output to various formats
+    /// Convert the simulation output format  
     Format(FormatConfig),
-    /// Reproduce results from a previous simulation run
+    /// Reproduce results from a previous simulation run  
     Reproduce(ReproduceConfig),
 }
 
+/// Command line inputs required to run the simulations from the command line and produce an output
 #[derive(StructOpt)]
+#[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub struct SimulationsCLIConfig {
     #[structopt(flatten)]
     pub output_cfg: OuputConfig,
@@ -64,6 +76,8 @@ impl SimulationsCLIConfig {
                 clap::ErrorKind::InvalidValue
             ).exit();
         }
+        // Input max pop size is skipped by StructOpt because we want it as a u64
+        // but input as an f64 to allow scientific notation
         self.sim_cfg.max_pop_size = self.input_max_pop_size.round() as u64;
         self.sim_cfg.finish_initialization();
     }
@@ -72,6 +86,7 @@ impl SimulationsCLIConfig {
 #[derive(StructOpt)]
 pub struct FormatConfig {/* TODO: Format options */}
 
+/// Command line inputs required to reproduce results of previous simulation and output them  
 #[derive(StructOpt)]
 pub struct ReproduceConfig {
     /// Path of the input file, which came from a previous run  
@@ -82,21 +97,29 @@ pub struct ReproduceConfig {
     pub output_cfg: OuputConfig,
 }
 
+/// Command line inputs needed to output results
 #[derive(StructOpt)]
+#[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub struct OuputConfig {
+    #[structopt(short = "o", long = "summary-output")]
+    /// Path to output the summarized simulation results (as CSV),
+    /// which contains the fitness and marker ratio (if applicable) over time
+    pub summary_output_path: Option<PathBuf>,
+
     #[structopt(short = "j", long = "raw-output")]
     /// Path to output the full raw simulation results (as ndjson),
     /// which includes data for all mutations at each sampled interval
     pub raw_output_path: Option<PathBuf>,
-
-    #[structopt(short = "o", long = "summary-output")]
-    /// Path to output the summarized simulation results (as CSV),
-    /// which contains the fitness and marker ratio over time
-    pub summary_output_path: Option<PathBuf>,
 }
 
-#[derive(Debug, StructOpt, Serialize, Deserialize)]
+/// Options for ReLLTEE simulations
+#[derive(StructOpt, Serialize, Deserialize)]
+#[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub struct SimConfig {
+    #[structopt(short = "f", long, default_value = "1")]
+    /// The rate at which populations should be sampled
+    pub sampling_frequency: u32,
+
     #[structopt(short, long, default_value = "1")]
     /// Number of replicates to perform
     pub replicates: u32,
@@ -104,10 +127,6 @@ pub struct SimConfig {
     #[structopt(short, long, default_value = "1000")]
     /// How many transfers to run the experiment for
     pub transfers: u32,
-
-    #[structopt(short = "f", long, default_value = "1")]
-    /// The rate at which populations should be sampled
-    pub sampling_frequency: u32,
 
     #[structopt(short, long, default_value = "2")]
     /// Number of neutral markers to include in the experiment
@@ -153,10 +172,13 @@ pub struct SimConfig {
     /// Seed for the RNG
     pub seed: Option<u64>,
 
-    // Calculated fields
+    // Must be set manually
+    // Because it will be input as f64
     #[structopt(skip)]
     /// Maximum population size reached before transfer
     pub max_pop_size: u64,
+
+    // Must be calculated after other fields are known
     #[structopt(skip)]
     #[serde(skip_deserializing)]
     /// Total mutation rate
