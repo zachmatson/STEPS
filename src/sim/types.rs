@@ -1,3 +1,5 @@
+//! Types used for storing simulation data
+
 use derive_more::*;
 use serde::Serialize;
 use serde_tuple::*;

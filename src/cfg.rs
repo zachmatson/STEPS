@@ -1,7 +1,11 @@
 //! Structs with configuration settings and parameters for simulations, outputs
 //! and subcommands
 //!
-//! Also contains all code for handling the receiving of command line input  
+//! Also contains all code for handling the receiving of command line input
+
+// Many biological parameters like "N", "W", or "U" will be expressed here with capitalization
+// that does not match the normal Rust snake-case guideli
+#![allow(non_snake_case)]
 
 use std::path::PathBuf;
 
