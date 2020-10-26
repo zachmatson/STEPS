@@ -7,6 +7,7 @@ use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
+use serde_tuple::*;
 
 use crate::{
     cfg::{OuputConfig, SimConfig},
@@ -14,9 +15,6 @@ use crate::{
 };
 
 /// Type which handles the details of outputting simulation results
-///
-/// Must call `start_replicate` before each replicate, including the first one  
-/// Then use `handle_lineages` to output the information in a `Lineages` instance as needed
 pub struct OutputHandler {
     /// Frequency at which to output results
     ///
@@ -52,29 +50,6 @@ impl OutputHandler {
         })
     }
 
-    /// Prepare the output for results from a new replicate
-    ///
-    /// Must also call `finish_replicate` after the replicate is done
-    pub fn start_replicate(&mut self) -> Result<(), std::io::Error> {
-        if let Some(raw_outputter) = &mut self.raw_outputter {
-            raw_outputter.start_replicate()?;
-        }
-
-        Ok(())
-    }
-
-    /// Clean up after outputting the results from a replicate
-    ///
-    /// Must also call `start_replicate` after this to prepare for the next replicate,
-    /// if another will be outputted
-    pub fn finish_replicate(&mut self) -> Result<(), std::io::Error> {
-        if let Some(raw_outputter) = &mut self.raw_outputter {
-            raw_outputter.finish_replicate()?;
-        }
-
-        Ok(())
-    }
-
     /// Output information from `Lineages` as necessary
     #[inline(always)]
     pub fn handle_lineages(
@@ -89,7 +64,7 @@ impl OutputHandler {
         }
 
         if let Some(raw_outputter) = &mut self.raw_outputter {
-            raw_outputter.record_lineages(lineages)?;
+            raw_outputter.record_lineages(r, t, lineages)?;
         }
 
         if let Some(summary_outputter) = &mut self.summary_outputter {
@@ -141,6 +116,13 @@ impl Metadata {
     }
 }
 
+#[derive(Serialize_tuple)]
+struct LineagesRecord<'a> {
+    r: u32,
+    t: u32,
+    lineages: &'a Lineages,
+}
+
 /// Buffer capacity to use in outputs  
 /// Set at 8 MB
 const BUFFER_CAPACITY: usize = 8_388_608;
@@ -150,10 +132,6 @@ const HEADER_BUFFER_CAPACITY: usize = 2_048;
 
 /// Type which outputs data for the `Raw` `OutputMode`,
 /// including owning the file handle for the output
-///
-/// Must call `start_replicate` before each replicate and
-/// `finish_replicate` after each replicate, including the
-/// first and last replicates
 struct RawOutputter {
     /// Buffered file writer to write data into
     buf: Option<BufWriter<File>>,
@@ -182,30 +160,18 @@ impl RawOutputter {
         self.buf.as_mut().unwrap()
     }
 
-    /// Prepare the outputter for results from a new replicate
-    ///
-    /// Must also call `finish_replicate` after the replicate is done
-    fn start_replicate(&mut self) -> Result<(), std::io::Error> {
-        // Sets up JSON sequence type
-        write!(self.buf(), "[")?;
-        Ok(())
-    }
-
-    /// Clean up after outputting the results from a replicate
-    ///
-    /// Must also call `start_replicate` after this to prepare for the next replicate,
-    /// if another will be outputted
-    fn finish_replicate(&mut self) -> Result<(), std::io::Error> {
-        // Ends JSON sequence type
-        writeln!(self.buf(), "]")?;
-        Ok(())
-    }
-
     /// Output the raw data in `Lineages`
-    fn record_lineages(&mut self, lineages: &Lineages) -> Result<(), Box<dyn Error>> {
-        serde_json::to_writer(self.buf(), lineages)?;
-        // Separate from next `Lineages` to be written
-        write!(self.buf(), ",")?;
+    fn record_lineages(
+        &mut self,
+        r: u32,
+        t: u32,
+        lineages: &Lineages,
+    ) -> Result<(), Box<dyn Error>> {
+        let record = LineagesRecord { r, t, lineages };
+        serde_json::to_writer(self.buf(), &record)?;
+        // Separate from next record to be written
+        writeln!(self.buf())?;
+
         Ok(())
     }
 }
@@ -327,7 +293,8 @@ fn extract_headers<P: AsRef<Path>>(path: P) -> Result<(Metadata, SimConfig), Box
     if &metadata.version != env!("CARGO_PKG_VERSION") {
         return Err(MetadataError::IncompatibleVersion {
             version: (&metadata.version).to_owned(),
-        }.into());
+        }
+        .into());
     }
 
     let mut sim_cfg: SimConfig = match &lines.next() {

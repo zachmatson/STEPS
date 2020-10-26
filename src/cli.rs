@@ -36,7 +36,6 @@ fn run_simulations_inner(
         let transfer_bar = styled_bar(sim_cfg.transfers as u64, "Transfer:");
 
         population_handler.start_replicate();
-        output_handler.start_replicate()?;
         // All other lineages will be handled after transferring
         // Must handle the output for the initial lineages before any transfers
         output_handler.handle_lineages(r, 0, population_handler.lineages())?;
@@ -51,8 +50,6 @@ fn run_simulations_inner(
                 transfer_bar.set_position(t as u64);
             }
         }
-
-        output_handler.finish_replicate()?;
 
         // Must reset the transfer bar this way to make the display work for the replicate bar
         // when it gets incremented
