@@ -1,7 +1,7 @@
 //! Code for running the simulations and types used for storing simulation data
 
 // Many biological parameters like "N", "W", or "U" will be expressed here with capitalization
-// that does not match the normal Rust snake-case guideli
+// that does not match the normal Rust snake-case guidelines
 #![allow(non_snake_case)]
 
 use rand::prelude::*;

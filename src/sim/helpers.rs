@@ -1,8 +1,6 @@
 //! Helper structs, traits, and functions for doubling lineages and adding mutants  
 //! Finer implementation details of the transfer process
 
-use rand_distr;
-
 use super::*;
 
 /// Trait for types that can perform a doubling or approximate multiple doublings for an instance of `Lineages`  

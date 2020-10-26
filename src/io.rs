@@ -301,9 +301,18 @@ fn create_file_with_header<P: AsRef<Path>>(
 /// Will fail if previous output is from a different version, in the future this  
 /// may change (i.e. with SemVer)
 pub fn extract_sim_config<P: AsRef<Path>>(path: P) -> Result<SimConfig, Box<dyn Error>> {
+    Ok(extract_headers(path)?.1)
+}
+
+/// Get the `Metadata` and `SimConfig` encoded in a previous output file back out
+///
+/// Will fail if previous output is from a different version, in the future this  
+/// may change (i.e. with SemVer)
+fn extract_headers<P: AsRef<Path>>(path: P) -> Result<(Metadata, SimConfig), Box<dyn Error>> {
     let file = File::open(path)?;
     // BufReader is required for `lines` iterator
     let reader = BufReader::with_capacity(HEADER_BUFFER_CAPACITY, file);
+
     // Map the lines to remove possible comment characters
     let mut lines = reader
         .lines()
@@ -312,46 +321,50 @@ pub fn extract_sim_config<P: AsRef<Path>>(path: P) -> Result<SimConfig, Box<dyn 
     // Make sure the metadata is present and version is correct
     let metadata: Metadata = match &lines.next() {
         Some(line) => serde_json::from_str(line)?,
-        None => Err(ReproductionError::MissingHeaders)?,
+        None => return Err(MetadataError::MissingHeaders.into()),
     };
 
-    if metadata.version != env!("CARGO_PKG_VERSION") {
-        Err(ReproductionError::IncompatibleVersion {
-            version: metadata.version,
-        })?;
+    if &metadata.version != env!("CARGO_PKG_VERSION") {
+        return Err(MetadataError::IncompatibleVersion {
+            version: (&metadata.version).to_owned(),
+        }.into());
     }
 
     let mut sim_cfg: SimConfig = match &lines.next() {
         Some(line) => serde_json::from_str(line)?,
-        None => Err(ReproductionError::MissingHeaders)?,
+        None => return Err(MetadataError::MissingHeaders.into()),
     };
     // Must finish initialization steps
     // Because not everything in SimConfig can be serialized
     sim_cfg.finish_initialization();
 
-    Ok(sim_cfg)
+    Ok((metadata, sim_cfg))
 }
 
 /// An error originating from processing a previous output file for reproduction of results  
 #[derive(Debug)]
-pub enum ReproductionError {
+pub enum MetadataError {
     IncompatibleVersion { version: String },
     MissingHeaders,
+    WrongOutputMode,
 }
 
-impl std::fmt::Display for ReproductionError {
+impl std::fmt::Display for MetadataError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ReproductionError::IncompatibleVersion { version } => write!(
+            MetadataError::IncompatibleVersion { version } => write!(
                 f,
                 "Previous results from incompatible simulation version {}",
                 &version
             ),
-            ReproductionError::MissingHeaders => {
+            MetadataError::MissingHeaders => {
                 write!(f, "Cannot find headers in input file to reproduce with")
+            }
+            MetadataError::WrongOutputMode => {
+                write!(f, "The input file was produced with the wrong output mode")
             }
         }
     }
 }
 
-impl Error for ReproductionError {}
+impl Error for MetadataError {}
