@@ -3,7 +3,7 @@
 
 use std::error::Error;
 use std::fs::File;
-use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::io::{BufRead, BufReader, BufWriter, Lines, Write};
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
@@ -121,6 +121,23 @@ struct LineagesRecord<'a> {
     r: u32,
     t: u32,
     lineages: &'a Lineages,
+}
+
+#[derive(Serialize_tuple, Deserialize_tuple)]
+struct OwnedLineagesRecord {
+    r: u32,
+    t: u32,
+    lineages: Lineages,
+}
+
+impl OwnedLineagesRecord {
+    fn borrowed<'a>(&'a self) -> LineagesRecord<'a> {
+        LineagesRecord {
+            r: self.r,
+            t: self.t,
+            lineages: &self.lineages,
+        }
+    }
 }
 
 /// Buffer capacity to use in outputs  
@@ -262,52 +279,6 @@ fn create_file_with_header<P: AsRef<Path>>(
     Ok(buf)
 }
 
-/// Get the `SimConfig` encoded in a previous output file back out
-///
-/// Will fail if previous output is from a different version, in the future this  
-/// may change (i.e. with SemVer)
-pub fn extract_sim_config<P: AsRef<Path>>(path: P) -> Result<SimConfig, Box<dyn Error>> {
-    Ok(extract_headers(path)?.1)
-}
-
-/// Get the `Metadata` and `SimConfig` encoded in a previous output file back out
-///
-/// Will fail if previous output is from a different version, in the future this  
-/// may change (i.e. with SemVer)
-fn extract_headers<P: AsRef<Path>>(path: P) -> Result<(Metadata, SimConfig), Box<dyn Error>> {
-    let file = File::open(path)?;
-    // BufReader is required for `lines` iterator
-    let reader = BufReader::with_capacity(HEADER_BUFFER_CAPACITY, file);
-
-    // Map the lines to remove possible comment characters
-    let mut lines = reader
-        .lines()
-        .map(|line| line.unwrap().trim_start_matches("# ").to_string());
-
-    // Make sure the metadata is present and version is correct
-    let metadata: Metadata = match &lines.next() {
-        Some(line) => serde_json::from_str(line)?,
-        None => return Err(MetadataError::MissingHeaders.into()),
-    };
-
-    if &metadata.version != env!("CARGO_PKG_VERSION") {
-        return Err(MetadataError::IncompatibleVersion {
-            version: (&metadata.version).to_owned(),
-        }
-        .into());
-    }
-
-    let mut sim_cfg: SimConfig = match &lines.next() {
-        Some(line) => serde_json::from_str(line)?,
-        None => return Err(MetadataError::MissingHeaders.into()),
-    };
-    // Must finish initialization steps
-    // Because not everything in SimConfig can be serialized
-    sim_cfg.finish_initialization();
-
-    Ok((metadata, sim_cfg))
-}
-
 /// An error originating from processing a previous output file for reproduction of results  
 #[derive(Debug)]
 pub enum MetadataError {
@@ -335,3 +306,81 @@ impl std::fmt::Display for MetadataError {
 }
 
 impl Error for MetadataError {}
+
+/// Get the `SimConfig` encoded in a previous output file back out
+///
+/// Will fail if previous output is from a different version, in the future this  
+/// may change (i.e. with SemVer)
+pub fn extract_sim_config<P: AsRef<Path>>(path: P) -> Result<SimConfig, Box<dyn Error>> {
+    Ok(extract_headers(path)?.1)
+}
+
+/// Get the `Metadata` and `SimConfig` encoded in a previous output file back out
+///
+/// Will fail if previous output is from a different version, in the future this  
+/// may change (i.e. with SemVer)
+fn extract_headers<P: AsRef<Path>>(
+    path: P,
+) -> Result<(Metadata, SimConfig, Lines<BufReader<File>>), Box<dyn Error>> {
+    let file = File::open(path)?;
+    // BufReader is required for `lines` iterator
+    let reader = BufReader::with_capacity(HEADER_BUFFER_CAPACITY, file);
+    let mut lines = reader.lines();
+
+    // Make sure the metadata is present and version is correct
+    // Strip comment characters
+    let metadata: Metadata = match lines.next() {
+        Some(line) => serde_json::from_str(line?.trim_start_matches("# "))?,
+        None => return Err(MetadataError::MissingHeaders.into()),
+    };
+
+    if &metadata.version != env!("CARGO_PKG_VERSION") {
+        return Err(MetadataError::IncompatibleVersion {
+            version: (&metadata.version).to_owned(),
+        }
+        .into());
+    }
+
+    let mut sim_cfg: SimConfig = match lines.next() {
+        Some(line) => serde_json::from_str(line?.trim_start_matches("# "))?,
+        None => return Err(MetadataError::MissingHeaders.into()),
+    };
+    // Must finish initialization steps
+    // Because not everything in SimConfig can be serialized
+    sim_cfg.finish_initialization();
+
+    Ok((metadata, sim_cfg, lines))
+}
+
+struct RawResultsReader {
+    lines: Lines<BufReader<File>>,
+}
+
+impl RawResultsReader {
+    fn new<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
+        let (metadata, sim_cfg, lines) = extract_headers(path)?;
+
+        match metadata.output_mode {
+            OutputMode::Raw => (),
+            _ => return Err(MetadataError::WrongOutputMode.into()),
+        }
+
+        Ok(Self { lines })
+    }
+
+    fn deserialize_line(
+        line: Result<String, std::io::Error>,
+    ) -> Result<OwnedLineagesRecord, Box<dyn Error>> {
+        Ok(serde_json::from_str(&line?)?)
+    }
+}
+
+impl Iterator for RawResultsReader {
+    type Item = Result<(u32, u32, Lineages), Box<dyn Error>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let line = self.lines.next()?;
+        let item = Self::deserialize_line(line).map(|record| (record.r, record.t, record.lineages));
+        Some(item)
+    }
+}

@@ -1,14 +1,14 @@
 //! Types used for storing simulation data
 
 use derive_more::*;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use serde_tuple::*;
 
 use super::*;
 
 /// A single lineage with size, fitness, mutation rate, and identifier  
 /// Also keeps identifier of parent lineage and initial marker mutation
-#[derive(Copy, Clone, Debug, Serialize_tuple)]
+#[derive(Copy, Clone, Debug, Serialize_tuple, Deserialize_tuple)]
 pub struct Lineage {
     /// Population size of the lineage
     pub N: u64,
@@ -31,7 +31,7 @@ pub struct Lineage {
 
 /// Container of `Lineage`s with `Vec` like interface which tracks important characteristics  
 /// and assigns identifiers
-#[derive(Default, Debug, Deref, Serialize)]
+#[derive(Default, Debug, Deref, Serialize, Deserialize)]
 pub struct Lineages {
     #[deref]
     /// Actual `Vec` of lineages
