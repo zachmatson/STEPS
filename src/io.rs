@@ -158,10 +158,10 @@ impl OwnedLineagesRecord {
 
 /// Buffer capacity to use in outputs  
 /// Set at 8 MB
-const BUFFER_CAPACITY: usize = 8_388_608;
+const BUFFER_CAPACITY: usize = 8 * (1 << 20);
 /// Buffer capacity for writing/reading header
 /// Set at 2 KB
-const HEADER_BUFFER_CAPACITY: usize = 2_048;
+const HEADER_BUFFER_CAPACITY: usize = 2 * (1 << 10);
 
 /// Type which outputs data for the `Raw` `OutputMode`,
 /// including owning the file handle for the output
@@ -340,7 +340,9 @@ fn csv_writer_with_metadata<P: AsRef<Path>>(
     // Release the buffer contents and get file handle back to give to CSV writer
     // Because the csv::Writer already buffers
     let file = buf.into_inner()?;
-    let wtr = csv::Writer::from_writer(file);
+    let wtr = csv::WriterBuilder::new()
+        .buffer_capacity(BUFFER_CAPACITY)
+        .from_writer(file);
 
     Ok(wtr)
 }
