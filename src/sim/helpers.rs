@@ -17,7 +17,13 @@ pub trait GrowthCalculator {
     ) -> (u64, u64);
 
     /// Grow the lineages and add necessary mutants
-    fn grow_lineages<R: Rng>(&self, lineages: Lineages, cfg: &SimConfig, rng: &mut R) -> Lineages {
+    fn grow_lineages<R: Rng>(
+        &self,
+        lineages: Lineages,
+        cfg: &SimConfig,
+        rng: &mut R,
+        mutations_vec: &mut Option<Vec<Mutation>>,
+    ) -> Lineages {
         // Successor `Lineages` struct will be empty with appropriate capacity and
         // identifier counter for adding the lineages after this growth
         let mut output = Lineages::successor(&lineages);
@@ -36,7 +42,7 @@ pub trait GrowthCalculator {
 
             for _ in 0..N_mut {
                 let mutant = new_mutant(*lineage, cfg, rng);
-                output.push_child(mutant);
+                output.push_child(lineage, mutant, mutations_vec);
             }
         }
 

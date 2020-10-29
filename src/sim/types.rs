@@ -1,7 +1,7 @@
 //! Types used for storing simulation data
 
 use derive_more::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_tuple::*;
 
 use super::*;
@@ -54,23 +54,38 @@ impl Lineages {
     ///
     /// Use this only to start a new replicate. For creating a new container to transfer
     /// into use `Lineages::successor` to ensure that the IDs remain properly numbered
-    pub fn from_simconfig(cfg: &SimConfig) -> Self {
+    pub fn from_simconfig(cfg: &SimConfig, mutations_vec: &mut Option<Vec<Mutation>>) -> Self {
         let mut output = Self::default();
+
+        // Size, parent ID, and marker won't matter
+        let ancestor = Lineage {
+            N: 0,
+            W: 1.0,
+            U: cfg.total_mutation_rate,
+            id: 0,
+            parent_id: 0,
+            marker: 0,
+        };
+
         // Initialize with a lineage for each marker and a population size of
         // Nmax/D, evenly divided between the markers
         let N = (cfg.max_pop_size as f64 / cfg.dilution_factor / cfg.markers as f64).round() as u64;
+
         // 1 index the markers beacuse "0" ID is reserved for the immediate ancestor of the neutral marker mutations
         for m in 1..=cfg.markers {
-            // Start with id 0 and parent_id 0 so push_child will assign an appropriate id
-            // While keeping the parent at 0
-            output.push_child(Lineage {
-                N,
-                W: 1.0,
-                U: cfg.total_mutation_rate,
-                id: 0,
-                parent_id: 0,
-                marker: m,
-            });
+            // ID and parent ID will be assigned by push_child so it doesn't matter what we use for them here
+            output.push_child(
+                &ancestor,
+                Lineage {
+                    N,
+                    W: 1.0,
+                    U: cfg.total_mutation_rate,
+                    id: 0,
+                    parent_id: 0,
+                    marker: m,
+                },
+                mutations_vec,
+            );
         }
 
         output
@@ -101,17 +116,32 @@ impl Lineages {
         self.lineages.push(lineage);
     }
 
-    /// Push a new child `Lineage` to the collection  
-    /// This gives it a new unique ID and sets its previous ID as the parent ID
-    pub fn push_child(&mut self, mut lineage: Lineage) {
-        lineage.parent_id = lineage.id;
+    /// Push a new `child` `Lineage` of `Parent` to the collection
+    /// Properly assigning its Parent ID, its own ID, and tracking sequencing
+    /// information if necessary
+    pub fn push_child(
+        &mut self,
+        parent: &Lineage,
+        mut child: Lineage,
+        mutations_vec: &mut Option<Vec<Mutation>>,
+    ) {
+        child.parent_id = parent.id;
         // unique_id_counter stores last assigned ID
         // starting with 0 as the ID of the common ancestor to each marker
         // which is never actually used by any lineage,
         // so must increment *before* using the ID
         self.unique_id_counter += 1;
-        lineage.id = self.unique_id_counter;
-        self.push(lineage);
+        child.id = self.unique_id_counter;
+
+        if let Some(mutations_vec) = mutations_vec {
+            mutations_vec.push(Mutation {
+                id: child.id,
+                background_id: parent.id,
+                delta_W: child.W - parent.W,
+            });
+        }
+
+        self.push(child);
     }
 
     /// Return the total population of all stored lineages
@@ -143,4 +173,17 @@ pub enum MutationType {
     Deleterious,
     /// A mutation which alters the mutation rate
     MutationRate,
+}
+
+#[derive(Debug)]
+pub struct Mutation {
+    /// ID of the `Mutation` corresponding to the ID of
+    /// the first `Lineage` instance with this mutation
+    pub id: u64,
+    /// ID of the background of the `Mutation` corresponding
+    /// to the ID of the *parent* of the first `Lineage`
+    /// instance with this mutation
+    pub background_id: u64,
+    /// Change in fitness as a result of this mutation
+    pub delta_W: f64,
 }

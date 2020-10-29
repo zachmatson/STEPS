@@ -13,7 +13,7 @@ pub fn run_simulations(cfg: &SimulationsCLIConfig) {
 }
 
 /// Run the simulations with command line display and display error results if applicable
-fn run_simulations_outer(output_cfg: &OuputConfig, sim_cfg: &SimConfig) {
+fn run_simulations_outer(output_cfg: &OutputConfig, sim_cfg: &SimConfig) {
     if let Err(e) = run_simulations_inner(output_cfg, sim_cfg) {
         eprintln!("Error: Failed to properly output results.");
         eprintln!("Details:\n{:#?}", e);
@@ -24,12 +24,13 @@ fn run_simulations_outer(output_cfg: &OuputConfig, sim_cfg: &SimConfig) {
 ///
 /// To display the error results to the user use `run_simulations_outer`
 fn run_simulations_inner(
-    output_cfg: &OuputConfig,
+    output_cfg: &OutputConfig,
     sim_cfg: &SimConfig,
 ) -> Result<(), Box<dyn Error>> {
     let replicate_bar = styled_bar(sim_cfg.replicates as u64, "Replicate:");
     // Objects which manage the underlying simulations and the outputting of results
-    let mut population_handler = SimulationHandler::new(&sim_cfg);
+    let mut population_handler =
+        SimulationHandler::new(&sim_cfg, output_cfg.sequencing_output_path.is_some());
     let mut output_handler = OutputHandler::new(&output_cfg, &sim_cfg)?;
 
     for r in 1..=sim_cfg.replicates {
@@ -38,12 +39,22 @@ fn run_simulations_inner(
         population_handler.start_replicate();
         // All other lineages will be handled after transferring
         // Must handle the output for the initial lineages before any transfers
-        output_handler.handle_lineages(r, 0, population_handler.lineages())?;
+        output_handler.handle_output(
+            r,
+            0,
+            population_handler.lineages(),
+            population_handler.new_mutations(),
+        )?;
 
         // 1 index because t is day *1* after the first transfer
         for t in 1..=sim_cfg.transfers {
             population_handler.transfer();
-            output_handler.handle_lineages(r, t, population_handler.lineages())?;
+            output_handler.handle_output(
+                r,
+                t,
+                population_handler.lineages(),
+                population_handler.new_mutations(),
+            )?;
 
             // Update progress bar only periodically to reduce time spent redrawing it
             if t % 4096 == 0 {

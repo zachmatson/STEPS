@@ -10,8 +10,8 @@ use serde::{Deserialize, Serialize};
 use serde_tuple::*;
 
 use crate::{
-    cfg::{OuputConfig, SimConfig},
-    sim::Lineages,
+    cfg::{OutputConfig, SimConfig},
+    sim::{Lineages, Mutation},
 };
 
 /// Type which handles the details of outputting simulation results
@@ -26,11 +26,13 @@ pub struct OutputHandler {
     raw_outputter: Option<RawOutputter>,
     /// Outputter for the summary output mode, if applicable
     summary_outputter: Option<SummaryOutputter>,
+    /// Outputter for the sequencing output mode, if applicable
+    sequencing_outputter: Option<SequencingOutputter>,
 }
 
 impl OutputHandler {
     /// Create a new `OutputHandler` from options in an `OutputConfig` and `SimConfig`
-    pub fn new(output_cfg: &OuputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
+    pub fn new(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
         let raw_outputter = if output_cfg.raw_output_path.is_some() {
             Some(RawOutputter::initialize(output_cfg, sim_cfg)?)
         } else {
@@ -43,32 +45,44 @@ impl OutputHandler {
             None
         };
 
+        let sequencing_outputter = if output_cfg.sequencing_output_path.is_some() {
+            Some(SequencingOutputter::initialize(output_cfg, sim_cfg)?)
+        } else {
+            None
+        };
+
         Ok(Self {
             sampling_frequency: sim_cfg.sampling_frequency,
             raw_outputter,
             summary_outputter,
+            sequencing_outputter,
         })
     }
 
     /// Output information from `Lineages` as necessary
     #[inline(always)]
-    pub fn handle_lineages(
+    pub fn handle_output(
         &mut self,
         r: u32,
         t: u32,
         lineages: &Lineages,
+        new_mutations: Option<&Vec<Mutation>>,
     ) -> Result<(), Box<dyn Error>> {
+        // Must output no matter the sampling frequency
+        // to ensure the complete hierarchy is preserved
+        if let Some(sequencing_outputter) = &mut self.sequencing_outputter {
+            sequencing_outputter.record_mutations(r, t, new_mutations.unwrap())?;
+        }
+
         // Only output if at the sampling frequency
-        if t % self.sampling_frequency != 0 {
-            return Ok(());
-        }
+        if t % self.sampling_frequency == 0 {
+            if let Some(raw_outputter) = &mut self.raw_outputter {
+                raw_outputter.record_lineages(r, t, lineages)?;
+            }
 
-        if let Some(raw_outputter) = &mut self.raw_outputter {
-            raw_outputter.record_lineages(r, t, lineages)?;
-        }
-
-        if let Some(summary_outputter) = &mut self.summary_outputter {
-            summary_outputter.record_lineages(r, t, lineages)?;
+            if let Some(summary_outputter) = &mut self.summary_outputter {
+                summary_outputter.record_lineages(r, t, lineages)?;
+            }
         }
 
         Ok(())
@@ -82,6 +96,8 @@ enum OutputMode {
     Raw,
     /// Population summary information only, as CSV
     Summary,
+    /// Information about each mutation that occurs, as CSV
+    Sequencing,
 }
 
 /// Get the current version of ReLLTEE as defined in Cargo.toml
@@ -131,7 +147,7 @@ struct OwnedLineagesRecord {
 }
 
 impl OwnedLineagesRecord {
-    fn borrowed<'a>(&'a self) -> LineagesRecord<'a> {
+    fn borrowed(&self) -> LineagesRecord {
         LineagesRecord {
             r: self.r,
             t: self.t,
@@ -158,7 +174,7 @@ impl RawOutputter {
     /// Create a new `RawOutputter` from options in an `OutputConfig` and `SimConfig`  
     ///
     /// Allocates internal buffer and obtains file handle
-    fn initialize(output_cfg: &OuputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
+    fn initialize(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
         let buf = Some(create_file_with_header(
             output_cfg.raw_output_path.as_ref().unwrap(),
             sim_cfg,
@@ -206,19 +222,12 @@ impl SummaryOutputter {
     /// Create a new `SummaryOutputter` from options in an `OutputConfig` and `SimConfig`  
     ///
     /// Allocates internal buffer and obtains file handle
-    fn initialize(output_cfg: &OuputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
-        let buf = create_file_with_header(
+    fn initialize(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
+        let mut wtr = csv_writer_with_metadata(
             output_cfg.summary_output_path.as_ref().unwrap(),
             sim_cfg,
             OutputMode::Summary,
-            "# ",
-            HEADER_BUFFER_CAPACITY,
         )?;
-
-        // Release the buffer contents and get file handle back to give to CSV writer
-        // Because the csv::Writer already buffers
-        let file = buf.into_inner()?;
-        let mut wtr = csv::Writer::from_writer(file);
 
         // Ratio output only makes sense for two marker scenario
         let needs_ratio = sim_cfg.markers == 2;
@@ -251,6 +260,46 @@ impl SummaryOutputter {
     }
 }
 
+/// Type which outputs data for the `Sequencing` `OutputMode`,
+/// including owning the file handle for the output
+struct SequencingOutputter {
+    /// Buffered file writer to write data into
+    wtr: csv::Writer<File>,
+}
+
+impl SequencingOutputter {
+    /// Create a new `SequencingOutputter` from options in an `OutputConfig` and `SimConfig`  
+    ///
+    /// Allocates internal buffer and obtains file handle
+    fn initialize(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
+        let mut wtr = csv_writer_with_metadata(
+            output_cfg.sequencing_output_path.as_ref().unwrap(),
+            sim_cfg,
+            OutputMode::Sequencing,
+        )?;
+
+        // Header must be done manually
+        wtr.write_record(&["replicate", "transfer", "id", "background", "delta_W"])?;
+
+        Ok(Self { wtr })
+    }
+
+    /// Output new mutation data for `Lineages`
+    fn record_mutations(
+        &mut self,
+        r: u32,
+        t: u32,
+        new_mutations: &[Mutation],
+    ) -> Result<(), Box<dyn Error>> {
+        for mutation in new_mutations {
+            self.wtr
+                .serialize((r, t, mutation.id, mutation.background_id, mutation.delta_W))?;
+        }
+
+        Ok(())
+    }
+}
+
 /// Create a file to output simulation results and a variably sized buffered writer for it  
 /// while outputting `Metadata` and `SimConfig` options into header at the top of the file
 ///
@@ -277,6 +326,23 @@ fn create_file_with_header<P: AsRef<Path>>(
     writeln!(&mut buf)?;
 
     Ok(buf)
+}
+
+/// Create a file to output simulation results and return a `csv::Writer` pointed to it
+/// while outputting `Metadata` and `SimConfig` options into header at the top of the file
+fn csv_writer_with_metadata<P: AsRef<Path>>(
+    path: P,
+    sim_cfg: &SimConfig,
+    output_mode: OutputMode,
+) -> Result<csv::Writer<File>, Box<dyn Error>> {
+    let buf = create_file_with_header(path, sim_cfg, output_mode, "# ", HEADER_BUFFER_CAPACITY)?;
+
+    // Release the buffer contents and get file handle back to give to CSV writer
+    // Because the csv::Writer already buffers
+    let file = buf.into_inner()?;
+    let wtr = csv::Writer::from_writer(file);
+
+    Ok(wtr)
 }
 
 /// An error originating from processing a previous output file for reproduction of results  
@@ -358,7 +424,7 @@ struct RawResultsReader {
 
 impl RawResultsReader {
     fn new<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
-        let (metadata, sim_cfg, lines) = extract_headers(path)?;
+        let (metadata, _, lines) = extract_headers(path)?;
 
         match metadata.output_mode {
             OutputMode::Raw => (),

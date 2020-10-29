@@ -56,7 +56,7 @@ pub enum Subcommand {
 #[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub struct SimulationsCLIConfig {
     #[structopt(flatten)]
-    pub output_cfg: OuputConfig,
+    pub output_cfg: OutputConfig,
 
     #[structopt(flatten)]
     pub sim_cfg: SimConfig,
@@ -98,13 +98,13 @@ pub struct ReproduceConfig {
     pub input_path: PathBuf,
 
     #[structopt(flatten)]
-    pub output_cfg: OuputConfig,
+    pub output_cfg: OutputConfig,
 }
 
 /// Command line inputs needed to output results
 #[derive(StructOpt)]
 #[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
-pub struct OuputConfig {
+pub struct OutputConfig {
     #[structopt(short = "o", long = "summary-output")]
     /// Path to output the summarized simulation results (as CSV),
     /// which contains the fitness and marker ratio (if applicable) over time
@@ -114,6 +114,11 @@ pub struct OuputConfig {
     /// Path to output the full raw simulation results (as ndjson),
     /// which includes data for all mutations at each sampled interval
     pub raw_output_path: Option<PathBuf>,
+
+    #[structopt(short, long = "sequencing-output")]
+    /// Path to output information about all mutations that occur (as CSV),
+    /// which includes change in fitness and IDs for all mutations over time
+    pub sequencing_output_path: Option<PathBuf>,
 }
 
 /// Options for ReLLTEE simulations

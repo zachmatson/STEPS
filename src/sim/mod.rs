@@ -39,6 +39,8 @@ pub struct SimulationHandler<'a> {
     /// `Lineages` being handled  
     /// Must be created/reset with `new` before a new replicate
     lineages: Option<Lineages>,
+    /// Mutations added in the last transfer
+    new_mutations: Option<Vec<Mutation>>,
     /// Simulation options
     cfg: &'a SimConfig,
     /// RNG to use for all replicates
@@ -47,10 +49,17 @@ pub struct SimulationHandler<'a> {
 
 impl<'a> SimulationHandler<'a> {
     /// Create a new `SimulationHandler` with new RNG
-    pub fn new(cfg: &'a SimConfig) -> Self {
+    pub fn new(cfg: &'a SimConfig, track_mutations: bool) -> Self {
         let rng = default_sim_rng(cfg);
+
+        let new_mutations = match track_mutations {
+            true => Some(Vec::new()),
+            false => None,
+        };
+
         Self {
             lineages: None,
+            new_mutations,
             cfg,
             rng,
         }
@@ -59,11 +68,14 @@ impl<'a> SimulationHandler<'a> {
     /// Initialize the lineages for a replicate while continuing to use same RNG  
     /// Must call before every replicate
     pub fn start_replicate(&mut self) {
-        self.lineages = Some(Lineages::from_simconfig(self.cfg));
+        self.reset_new_mutations();
+        self.lineages = Some(Lineages::from_simconfig(self.cfg, &mut self.new_mutations));
     }
 
     /// Perform a transfer and update the lineages
     pub fn transfer(&mut self) {
+        self.reset_new_mutations();
+
         // Get the lineages out of the struct to mutate
         // Will fail for the first transfer of first replicate if `start_replicate` was not called properly
         let mut lineages = self.lineages.take().unwrap();
@@ -71,11 +83,13 @@ impl<'a> SimulationHandler<'a> {
         // estimate_delta_t gives the *number of times* that phase 1 must be repeated
         let delta_t_phase_1 = Phase1::estimate_delta_t(&lineages, self.cfg);
         for _ in 0..delta_t_phase_1 {
-            lineages = Phase1().grow_lineages(lineages, self.cfg, &mut self.rng);
+            lineages =
+                Phase1().grow_lineages(lineages, self.cfg, &mut self.rng, &mut self.new_mutations);
         }
 
         let phase_2 = Phase2::new(&lineages, self.cfg);
-        lineages = phase_2.grow_lineages(lineages, self.cfg, &mut self.rng);
+        lineages =
+            phase_2.grow_lineages(lineages, self.cfg, &mut self.rng, &mut self.new_mutations);
 
         // Must put lineages back into the struct after transferring
         self.lineages = Some(lineages);
@@ -85,5 +99,17 @@ impl<'a> SimulationHandler<'a> {
     /// The lineages will be updated after each transfer  
     pub fn lineages(&self) -> &Lineages {
         self.lineages.as_ref().unwrap()
+    }
+
+    /// Get reference to the new mutations added in the last transfer  
+    /// Will be `None` if sequencing mode is not enabled (`track_mutations` set to `false`)
+    pub fn new_mutations(&self) -> Option<&Vec<Mutation>> {
+        self.new_mutations.as_ref()
+    }
+
+    fn reset_new_mutations(&mut self) {
+        if let Some(new_mutations) = &mut self.new_mutations {
+            new_mutations.clear();
+        }
     }
 }
