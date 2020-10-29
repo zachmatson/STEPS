@@ -167,7 +167,7 @@ const HEADER_BUFFER_CAPACITY: usize = 2 * (1 << 10);
 /// including owning the file handle for the output
 struct RawOutputter {
     /// Buffered file writer to write data into
-    buf: Option<BufWriter<File>>,
+    buf: BufWriter<File>,
 }
 
 impl RawOutputter {
@@ -175,22 +175,15 @@ impl RawOutputter {
     ///
     /// Allocates internal buffer and obtains file handle
     fn initialize(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
-        let buf = Some(create_file_with_header(
+        let buf = create_file_with_header(
             output_cfg.raw_output_path.as_ref().unwrap(),
             sim_cfg,
             OutputMode::Raw,
             "",
             BUFFER_CAPACITY,
-        )?);
+        )?;
 
         Ok(Self { buf })
-    }
-
-    /// Get a mutable reference to the internal buffer
-    ///
-    /// Panics if the buffer does not exist
-    fn buf(&mut self) -> &mut BufWriter<File> {
-        self.buf.as_mut().unwrap()
     }
 
     /// Output the raw data in `Lineages`
@@ -201,9 +194,9 @@ impl RawOutputter {
         lineages: &Lineages,
     ) -> Result<(), Box<dyn Error>> {
         let record = LineagesRecord { r, t, lineages };
-        serde_json::to_writer(self.buf(), &record)?;
+        serde_json::to_writer(&mut self.buf, &record)?;
         // Separate from next record to be written
-        writeln!(self.buf())?;
+        writeln!(&mut self.buf)?;
 
         Ok(())
     }
