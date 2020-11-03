@@ -50,6 +50,13 @@ pub trait GrowthCalculator {
     }
 }
 
+/// Estimate the `delta_t` requird to bring the lineages to the correct population size
+/// Using approximation N_final = 2^(avg_W * delta_t)*N_initial
+fn estimate_delta_t(lineages: &Lineages, cfg: &SimConfig) -> f64 {
+    // Use approximation N_final = 2^(avg_W * delta_t)*N_initial
+    (cfg.max_pop_size as f64 / lineages.sum_N() as f64).log2() / lineages.avg_W()
+}
+
 /// Phase 1 doubling  
 /// Doubles once with no bottleneck
 pub struct Phase1();
@@ -58,9 +65,8 @@ impl Phase1 {
     /// Estimate the number of generations required in phase 1  
     /// Each generation will require a separate call to grow the lineages with Phase1
     pub fn estimate_delta_t(lineages: &Lineages, cfg: &SimConfig) -> usize {
-        // Use approximation N_final = 2^(avg_W * delta_t)*N_initial
-        // And only do floor(delta_t-1) doublings in phase 1 to allow room for phase 2
-        ((cfg.max_pop_size as f64 / lineages.sum_N() as f64).log(lineages.avg_W().exp2()) - 1.0)
+        // Only do floor(delta_t-1) doublings in phase 1 to allow room for phase 2
+        (estimate_delta_t(lineages, cfg) - 1.0)
             .floor()
             .max(0.0) as usize
     }
@@ -106,7 +112,7 @@ impl Phase2 {
     /// population size to the Nmax defined in `cfg`
     pub fn new(lineages: &Lineages, cfg: &SimConfig) -> Self {
         // Use approximation N_final = 2^(avg_W * delta_t)*N_initial
-        let delta_t = (cfg.max_pop_size as f64 / lineages.sum_N() as f64).log2() / lineages.avg_W();
+        let delta_t = estimate_delta_t(lineages, cfg);
         Phase2 { delta_t }
     }
 }
