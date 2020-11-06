@@ -35,21 +35,19 @@ fn default_sim_rng(cfg: &SimConfig) -> SIM_RNG {
 /// Must create with the `new` function and call `start_replicate` before each replicate
 /// including the first replicate  
 /// Then use `transfer` to perform each transfer within a replicate
-pub struct SimulationHandler<'a> {
+pub struct SimulationHandler {
     /// `Lineages` being handled  
     /// Must be created/reset with `new` before a new replicate
     lineages: Option<Lineages>,
     /// Mutations added in the last transfer
     new_mutations: Option<Vec<Mutation>>,
-    /// Simulation options
-    cfg: &'a SimConfig,
     /// RNG to use for all replicates
     rng: SIM_RNG,
 }
 
-impl<'a> SimulationHandler<'a> {
+impl SimulationHandler {
     /// Create a new `SimulationHandler` with new RNG
-    pub fn new(cfg: &'a SimConfig, track_mutations: bool) -> Self {
+    pub fn new(cfg: &SimConfig, track_mutations: bool) -> Self {
         let rng = default_sim_rng(cfg);
 
         let new_mutations = match track_mutations {
@@ -60,20 +58,19 @@ impl<'a> SimulationHandler<'a> {
         Self {
             lineages: None,
             new_mutations,
-            cfg,
             rng,
         }
     }
 
     /// Initialize the lineages for a replicate while continuing to use same RNG  
     /// Must call before every replicate
-    pub fn start_replicate(&mut self) {
+    pub fn start_replicate(&mut self, cfg: &SimConfig) {
         self.reset_new_mutations();
-        self.lineages = Some(Lineages::from_simconfig(self.cfg, &mut self.new_mutations));
+        self.lineages = Some(Lineages::from_simconfig(cfg, &mut self.new_mutations));
     }
 
     /// Perform a transfer and update the lineages
-    pub fn transfer(&mut self) {
+    pub fn transfer(&mut self, cfg: &SimConfig) {
         self.reset_new_mutations();
 
         // Get the lineages out of the struct to mutate
@@ -81,15 +78,15 @@ impl<'a> SimulationHandler<'a> {
         let mut lineages = self.lineages.take().unwrap();
 
         // estimate_delta_t gives the *number of times* that phase 1 must be repeated
-        let delta_t_phase_1 = Phase1::estimate_delta_t(&lineages, self.cfg);
+        let delta_t_phase_1 = Phase1::estimate_delta_t(&lineages, cfg);
         for _ in 0..delta_t_phase_1 {
             lineages =
-                Phase1().grow_lineages(lineages, self.cfg, &mut self.rng, &mut self.new_mutations);
+                Phase1().grow_lineages(lineages, cfg, &mut self.rng, &mut self.new_mutations);
         }
 
-        let phase_2 = Phase2::new(&lineages, self.cfg);
+        let phase_2 = Phase2::new(&lineages, cfg);
         lineages =
-            phase_2.grow_lineages(lineages, self.cfg, &mut self.rng, &mut self.new_mutations);
+            phase_2.grow_lineages(lineages, cfg, &mut self.rng, &mut self.new_mutations);
 
         // Must put lineages back into the struct after transferring
         self.lineages = Some(lineages);
