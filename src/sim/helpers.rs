@@ -50,25 +50,31 @@ pub trait GrowthCalculator {
     }
 }
 
-/// Estimate the `delta_t` requird to bring the lineages to the correct population size
-/// Using approximation N_final = 2^(avg_W * delta_t)*N_initial
-fn estimate_delta_t(lineages: &Lineages, cfg: &SimConfig) -> f64 {
-    // Use approximation N_final = 2^(avg_W * delta_t)*N_initial
-    (cfg.max_pop_size as f64 / lineages.sum_N() as f64).log2() / lineages.avg_W()
+/// Get the population size of a `Lineage` after growing for `delta_t` time
+#[inline(always)]
+fn calculate_N_after_growth(lineage: Lineage, delta_t: f64) -> u64 {
+    ((lineage.W * delta_t).exp2() * lineage.N as f64).round() as u64
 }
 
 /// Phase 1 doubling  
 /// Doubles once with no bottleneck
-pub struct Phase1();
+pub struct Phase1 {
+    delta_t: f64,
+}
 
 impl Phase1 {
-    /// Estimate the number of generations required in phase 1  
-    /// Each generation will require a separate call to grow the lineages with Phase1
-    pub fn estimate_delta_t(lineages: &Lineages, cfg: &SimConfig) -> usize {
-        // Only do floor(delta_t-1) doublings in phase 1 to allow room for phase 2
-        (estimate_delta_t(lineages, cfg) - 1.0)
-            .floor()
-            .max(0.0) as usize
+    /// The number of doublings required in Phase 1  
+    /// This number does not change as simulations run;
+    /// it is fixed for a given set of parameters
+    pub fn doublings_required(cfg: &SimConfig) -> usize {
+        cfg.dilution_factor.log2().floor() as usize
+    }
+
+    /// Create a new instance of `Phase1` which would grow `lineages` enough to
+    /// double its current population size
+    pub fn new(lineages: &Lineages) -> Self {
+        let delta_t = lineages.avg_W().recip();
+        Self { delta_t }
     }
 }
 
@@ -80,7 +86,7 @@ impl GrowthCalculator for Phase1 {
         rng: &mut R,
     ) -> (u64, u64) {
         // Total population size including new mutants
-        let N_after_growth = (lineage.W.exp2() * lineage.N as f64).round() as u64;
+        let N_after_growth = calculate_N_after_growth(lineage, self.delta_t);
 
         // Poisson sampling will fail if lambda is not positive
         let N_mut: u64 = if lineage.U > 0.0 {
@@ -108,11 +114,17 @@ pub struct Phase2 {
 }
 
 impl Phase2 {
-    /// Create a new instance of `Phase2` which would grow `lineages` enough to bring its total
-    /// population size to the Nmax defined in `cfg`
-    pub fn new(lineages: &Lineages, cfg: &SimConfig) -> Self {
-        // Use approximation N_final = 2^(avg_W * delta_t)*N_initial
-        let delta_t = estimate_delta_t(lineages, cfg);
+    /// The number of doublings required in Phase 2 
+    /// This number does not change as simulations run;
+    /// it is fixed for a given set of parameters
+    pub fn doublings_required(cfg: &SimConfig) -> f64 {
+        cfg.dilution_factor.log2().fract()
+    }
+
+    /// Create a new instance of `Phase2` which would grow `lineages` enough to
+    /// approximate some fractional number of `doublings`
+    pub fn new(lineages: &Lineages, doublings: f64) -> Self {
+        let delta_t = doublings / lineages.avg_W();
         Phase2 { delta_t }
     }
 }
@@ -125,7 +137,7 @@ impl GrowthCalculator for Phase2 {
         rng: &mut R,
     ) -> (u64, u64) {
         // Population size after growth and *before* bottleneck
-        let N_after_growth = ((lineage.W * self.delta_t).exp2() * lineage.N as f64).round() as u64;
+        let N_after_growth = calculate_N_after_growth(lineage, self.delta_t);
         // Bottlenecked size including mutants
         let N_bottlenecked = rand_distr::Binomial::new(N_after_growth, cfg.dilution_factor.recip())
             .unwrap()

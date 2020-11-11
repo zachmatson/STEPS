@@ -30,13 +30,13 @@ fn run_simulations_inner(
     let replicate_bar = styled_bar(sim_cfg.replicates as u64, "Replicate:");
     // Objects which manage the underlying simulations and the outputting of results
     let mut population_handler =
-        SimulationHandler::new(sim_cfg, output_cfg.sequencing_output_path.is_some());
+        SimulationHandler::new(sim_cfg.to_owned(), output_cfg.sequencing_output_path.is_some());
     let mut output_handler = OutputHandler::new(&output_cfg, &sim_cfg)?;
 
     for r in 1..=sim_cfg.replicates {
         let transfer_bar = styled_bar(sim_cfg.transfers as u64, "Transfer:");
 
-        population_handler.start_replicate(sim_cfg);
+        population_handler.start_replicate();
         // All other lineages will be handled after transferring
         // Must handle the output for the initial lineages before any transfers
         output_handler.handle_output(
@@ -48,7 +48,7 @@ fn run_simulations_inner(
 
         // 1 index because t is day *1* after the first transfer
         for t in 1..=sim_cfg.transfers {
-            population_handler.transfer(sim_cfg);
+            population_handler.transfer();
             output_handler.handle_output(
                 r,
                 t,

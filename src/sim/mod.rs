@@ -36,6 +36,12 @@ fn default_sim_rng(cfg: &SimConfig) -> SIM_RNG {
 /// including the first replicate  
 /// Then use `transfer` to perform each transfer within a replicate
 pub struct SimulationHandler {
+    /// Simulation options
+    cfg: SimConfig,
+    /// Number of phase 1 doublings to perform
+    phase_1_doublings: usize,
+    /// Number of phase 2 doublings to perform
+    phase_2_doublings: f64,
     /// `Lineages` being handled  
     /// Must be created/reset with `new` before a new replicate
     lineages: Option<Lineages>,
@@ -47,8 +53,11 @@ pub struct SimulationHandler {
 
 impl SimulationHandler {
     /// Create a new `SimulationHandler` with new RNG
-    pub fn new(cfg: &SimConfig, track_mutations: bool) -> Self {
-        let rng = default_sim_rng(cfg);
+    pub fn new(cfg: SimConfig, track_mutations: bool) -> Self {
+        let phase_1_doublings = Phase1::doublings_required(&cfg);
+        let phase_2_doublings = Phase2::doublings_required(&cfg);
+
+        let rng = default_sim_rng(&cfg);
 
         let new_mutations = match track_mutations {
             true => Some(Vec::new()),
@@ -56,6 +65,9 @@ impl SimulationHandler {
         };
 
         Self {
+            cfg,
+            phase_1_doublings,
+            phase_2_doublings,
             lineages: None,
             new_mutations,
             rng,
@@ -64,13 +76,13 @@ impl SimulationHandler {
 
     /// Initialize the lineages for a replicate while continuing to use same RNG  
     /// Must call before every replicate
-    pub fn start_replicate(&mut self, cfg: &SimConfig) {
+    pub fn start_replicate(&mut self) {
         self.reset_new_mutations();
-        self.lineages = Some(Lineages::from_simconfig(cfg, &mut self.new_mutations));
+        self.lineages = Some(Lineages::from_simconfig(&self.cfg, &mut self.new_mutations));
     }
 
     /// Perform a transfer and update the lineages
-    pub fn transfer(&mut self, cfg: &SimConfig) {
+    pub fn transfer(&mut self) {
         self.reset_new_mutations();
 
         // Get the lineages out of the struct to mutate
@@ -78,15 +90,15 @@ impl SimulationHandler {
         let mut lineages = self.lineages.take().unwrap();
 
         // estimate_delta_t gives the *number of times* that phase 1 must be repeated
-        let delta_t_phase_1 = Phase1::estimate_delta_t(&lineages, cfg);
-        for _ in 0..delta_t_phase_1 {
+        for _ in 0..self.phase_1_doublings {
+            let phase_1 = Phase1::new(&lineages);
             lineages =
-                Phase1().grow_lineages(lineages, cfg, &mut self.rng, &mut self.new_mutations);
+                phase_1.grow_lineages(lineages, &self.cfg, &mut self.rng, &mut self.new_mutations);
         }
 
-        let phase_2 = Phase2::new(&lineages, cfg);
+        let phase_2 = Phase2::new(&lineages, self.phase_2_doublings);
         lineages =
-            phase_2.grow_lineages(lineages, cfg, &mut self.rng, &mut self.new_mutations);
+            phase_2.grow_lineages(lineages, &self.cfg, &mut self.rng, &mut self.new_mutations);
 
         // Must put lineages back into the struct after transferring
         self.lineages = Some(lineages);

@@ -122,7 +122,7 @@ pub struct OutputConfig {
 }
 
 /// Options for ReLLTEE simulations
-#[derive(StructOpt, Serialize, Deserialize)]
+#[derive(StructOpt, Serialize, Deserialize, Clone)]
 #[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub struct SimConfig {
     #[structopt(short = "f", long, default_value = "1")]
