@@ -29,8 +29,10 @@ fn run_simulations_inner(
 ) -> Result<(), Box<dyn Error>> {
     let replicate_bar = styled_bar(sim_cfg.replicates as u64, "Replicate:");
     // Objects which manage the underlying simulations and the outputting of results
-    let mut population_handler =
-        SimulationHandler::new(sim_cfg.to_owned(), output_cfg.sequencing_output_path.is_some());
+    let mut population_handler = SimulationHandler::new(
+        sim_cfg.to_owned(),
+        output_cfg.sequencing_output_path.is_some(),
+    );
     let mut output_handler = OutputHandler::new(&output_cfg, &sim_cfg)?;
 
     for r in 1..=sim_cfg.replicates {

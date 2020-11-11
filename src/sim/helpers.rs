@@ -114,17 +114,11 @@ pub struct Phase2 {
 }
 
 impl Phase2 {
-    /// The number of doublings required in Phase 2 
-    /// This number does not change as simulations run;
-    /// it is fixed for a given set of parameters
-    pub fn doublings_required(cfg: &SimConfig) -> f64 {
-        cfg.dilution_factor.log2().fract()
-    }
-
-    /// Create a new instance of `Phase2` which would grow `lineages` enough to
-    /// approximate some fractional number of `doublings`
-    pub fn new(lineages: &Lineages, doublings: f64) -> Self {
-        let delta_t = doublings / lineages.avg_W();
+    /// Create a new instance of `Phase2` which would grow `lineages` enough to bring its total
+    /// population size to the Nmax defined in `cfg`
+    pub fn new(lineages: &Lineages, cfg: &SimConfig) -> Self {
+        // Use approximation N_final = 2^(avg_W * delta_t)*N_initial
+        let delta_t = (cfg.max_pop_size as f64 / lineages.sum_N() as f64).log2() / lineages.avg_W();
         Phase2 { delta_t }
     }
 }

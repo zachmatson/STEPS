@@ -40,8 +40,6 @@ pub struct SimulationHandler {
     cfg: SimConfig,
     /// Number of phase 1 doublings to perform
     phase_1_doublings: usize,
-    /// Number of phase 2 doublings to perform
-    phase_2_doublings: f64,
     /// `Lineages` being handled  
     /// Must be created/reset with `new` before a new replicate
     lineages: Option<Lineages>,
@@ -55,7 +53,6 @@ impl SimulationHandler {
     /// Create a new `SimulationHandler` with new RNG
     pub fn new(cfg: SimConfig, track_mutations: bool) -> Self {
         let phase_1_doublings = Phase1::doublings_required(&cfg);
-        let phase_2_doublings = Phase2::doublings_required(&cfg);
 
         let rng = default_sim_rng(&cfg);
 
@@ -67,7 +64,6 @@ impl SimulationHandler {
         Self {
             cfg,
             phase_1_doublings,
-            phase_2_doublings,
             lineages: None,
             new_mutations,
             rng,
@@ -96,7 +92,7 @@ impl SimulationHandler {
                 phase_1.grow_lineages(lineages, &self.cfg, &mut self.rng, &mut self.new_mutations);
         }
 
-        let phase_2 = Phase2::new(&lineages, self.phase_2_doublings);
+        let phase_2 = Phase2::new(&lineages, &self.cfg);
         lineages =
             phase_2.grow_lineages(lineages, &self.cfg, &mut self.rng, &mut self.new_mutations);
 
