@@ -90,7 +90,7 @@ impl GrowthCalculator for Phase1 {
 
         // Poisson sampling will fail if lambda is not positive
         let N_mut: u64 = if lineage.U > 0.0 {
-            fast_distr::direct_poisson(lineage.U * (N_after_growth - lineage.N) as f64, rng)
+            fast_distr::poisson(lineage.U * (N_after_growth - lineage.N) as f64, rng)
         } else {
             0
         };
@@ -144,7 +144,7 @@ impl GrowthCalculator for Phase2 {
 
         // Estimate how many new mutants survived bottlenecking
         let N_mut = if lineage.U > 0.0 {
-            fast_distr::direct_poisson(
+            fast_distr::poisson(
                 lineage.U
                     * N_bottlenecked as f64
                     * (1.0 - (lineage.W * self.delta_t).exp2().recip()),
