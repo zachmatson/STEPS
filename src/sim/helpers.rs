@@ -164,10 +164,10 @@ impl GrowthCalculator for Phase2 {
 pub fn new_mutant<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> Lineage {
     let mutation_type = cfg.sample_mutation_type(rng).unwrap();
 
-    let W = match mutation_type {
-        MutationType::Beneficial => fitness_after_beneficial_mutation(parent, cfg, rng),
-        MutationType::Deleterious => fitness_after_deleterious_mutation(parent, cfg, rng),
-        MutationType::Neutral | MutationType::MutationRate => parent.W,
+    let (W, lambda) = match mutation_type {
+        MutationType::Beneficial => updates_after_beneficial_mutation(parent, cfg, rng),
+        MutationType::Deleterious => updates_after_deleterious_mutation(parent, cfg, rng),
+        MutationType::Neutral | MutationType::MutationRate => (parent.W, parent.lambda)
     };
 
     // let U = match mutation_type {
@@ -175,25 +175,24 @@ pub fn new_mutant<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> Line
     //     _ => parent.U,
     // };
 
-    Lineage { N: 1, W, ..parent }
+    Lineage { N: 1, W, lambda, ..parent }
 }
 
-/// Generate fitness of a descendant of `parent` after undergoing a beneficial mutation
-fn fitness_after_beneficial_mutation<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> f64 {
-    // Update mean mutation size with diminishing returns epistasis
-    let lambda = (1.0 + cfg.diminishing_returns_epistasis_strength * (parent.W - 1.0))
-        / cfg.initial_beneficial_mutation_size;
-    let mutation_size = rand_distr::Exp::new(lambda).unwrap().sample(rng);
+/// Generate fitness and mutation size lambda of a descendant of `parent` after undergoing a beneficial mutation
+fn updates_after_beneficial_mutation<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> (f64, f64) {
+    let mutation_size = rand_distr::Exp::new(parent.lambda).unwrap().sample(rng);
+    let lambda_new = parent.lambda * (1.0 + cfg.diminishing_returns_epistasis_strength * mutation_size);
+    let W_new = parent.W * (1.0 + mutation_size);
 
-    parent.W + mutation_size
+    (W_new, lambda_new)
 }
 
-/// Generate fitness of a descendant of `parent` after undergoing a deleterious mutation
+/// Generate fitness and mutation size lambda of a descendant of `parent` after undergoing a deleterious mutation
 #[allow(unused_variables)]
-fn fitness_after_deleterious_mutation<R: Rng>(
+fn updates_after_deleterious_mutation<R: Rng>(
     parent: Lineage,
     cfg: &SimConfig,
     rng: &mut R,
-) -> f64 {
+) -> (f64, f64) {
     deleterious_todo()
 }

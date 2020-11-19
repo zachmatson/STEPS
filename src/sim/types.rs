@@ -19,6 +19,9 @@ pub struct Lineage {
     /// but defer to relevant `SimConfig` to determine type
     pub U: f64,
 
+    /// Reciprocal of the mean of the beneficial mutation size
+    pub lambda: f64,
+
     /// Unique lineage identifier
     /// (also uniquely identifies the mutation
     /// between the parent and this lineage)
@@ -62,6 +65,7 @@ impl Lineages {
             N: 0,
             W: 1.0,
             U: cfg.total_mutation_rate,
+            lambda: cfg.initial_beneficial_mutation_size.recip(),
             id: 0,
             parent_id: 0,
             marker: 0,
@@ -78,11 +82,8 @@ impl Lineages {
                 &ancestor,
                 Lineage {
                     N,
-                    W: 1.0,
-                    U: cfg.total_mutation_rate,
-                    id: 0,
-                    parent_id: 0,
                     marker: m,
+                    ..ancestor
                 },
                 mutations_vec,
             );
