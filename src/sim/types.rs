@@ -43,7 +43,7 @@ pub struct Lineages {
     /// Tracked sum of population size of all lineages stored
     sum_N: u64,
     /// Sum of fitnesses weighted by population size for all lineages stored
-    weighted_log_prod_W: f64,
+    weighted_sum_W: f64,
     /// Sum of population size of all lineages which have marker 1
     sum_N_marker_1: u64,
 
@@ -113,7 +113,7 @@ impl Lineages {
         if lineage.marker == 1 {
             self.sum_N_marker_1 += lineage.N;
         }
-        self.weighted_log_prod_W += lineage.N as f64 * lineage.W.log2();
+        self.weighted_sum_W += lineage.N as f64 * lineage.W;
         self.lineages.push(lineage);
     }
 
@@ -153,7 +153,7 @@ impl Lineages {
     /// Return the average fitness of all stored lineages, with proper
     /// weighting by population size
     pub fn avg_W(&self) -> f64 {
-        (self.weighted_log_prod_W / self.sum_N as f64).exp2()
+        self.weighted_sum_W / self.sum_N as f64
     }
 
     /// Return the ratio of the population size of all stored lineages with marker 1
