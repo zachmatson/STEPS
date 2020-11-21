@@ -53,7 +53,7 @@ pub trait GrowthCalculator {
 /// Get the population size of a `Lineage` after growing for `delta_t` time
 #[inline(always)]
 fn calculate_N_after_growth(lineage: Lineage, delta_t: f64) -> u64 {
-    ((lineage.W * delta_t).exp2() * lineage.N as f64).round() as u64
+    ((lineage.W * delta_t).exp2() * lineage.N as f64).ceil() as u64
 }
 
 /// Phase 1 doubling  
