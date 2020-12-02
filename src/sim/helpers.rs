@@ -14,7 +14,7 @@ pub trait GrowthCalculator {
         lineage: Lineage,
         cfg: &SimConfig,
         rng: &mut R,
-    ) -> (u64, u64);
+    ) -> (f64, u64);
 
     /// Grow the lineages and add necessary mutants
     fn grow_lineages<R: Rng>(
@@ -33,7 +33,7 @@ pub trait GrowthCalculator {
 
             // Depending on bottlenecking behavior, the original lineage may have new size zero
             // and an empty lineage should be dropped
-            if new_N > 0 {
+            if new_N > 0.0 {
                 output.push(Lineage {
                     N: new_N,
                     ..*lineage
@@ -52,8 +52,8 @@ pub trait GrowthCalculator {
 
 /// Get the population size of a `Lineage` after growing for `delta_t` time
 #[inline(always)]
-fn calculate_N_after_growth(lineage: Lineage, delta_t: f64) -> u64 {
-    ((lineage.W * delta_t).exp2() * lineage.N as f64).ceil() as u64
+fn calculate_N_after_growth(lineage: Lineage, delta_t: f64) -> f64 {
+    ((lineage.W * delta_t).exp2() * lineage.N).ceil()
 }
 
 /// Phase 1 doubling  
@@ -84,18 +84,18 @@ impl GrowthCalculator for Phase1 {
         lineage: Lineage,
         _: &SimConfig,
         rng: &mut R,
-    ) -> (u64, u64) {
+    ) -> (f64, u64) {
         // Total population size including new mutants
         let N_after_growth = calculate_N_after_growth(lineage, self.delta_t);
 
         // Poisson sampling will fail if lambda is not positive
         let N_mut: u64 = if lineage.U > 0.0 {
-            fast_distr::poisson(lineage.U * (N_after_growth - lineage.N) as f64, rng)
+            fast_distr::poisson(lineage.U * (N_after_growth - lineage.N), rng)
         } else {
             0
         };
 
-        let new_N = N_after_growth - N_mut;
+        let new_N = N_after_growth - N_mut as f64;
 
         // This shouldn't happen
         // Would indicate that N_mut is greater than the number of new cells added during doubling
@@ -118,7 +118,7 @@ impl Phase2 {
     /// population size to the Nmax defined in `cfg`
     pub fn new(lineages: &Lineages, cfg: &SimConfig) -> Self {
         // Use approximation N_final = 2^(avg_W * delta_t)*N_initial
-        let delta_t = (cfg.max_pop_size as f64 / lineages.sum_N() as f64).log2() / lineages.avg_W();
+        let delta_t = (cfg.max_pop_size as f64 / lineages.sum_N()).log2() / lineages.avg_W();
         Phase2 { delta_t }
     }
 }
@@ -129,24 +129,24 @@ impl GrowthCalculator for Phase2 {
         lineage: Lineage,
         cfg: &SimConfig,
         rng: &mut R,
-    ) -> (u64, u64) {
+    ) -> (f64, u64) {
         // Population size after growth and *before* bottleneck
         let N_after_growth = calculate_N_after_growth(lineage, self.delta_t);
         // Bottlenecked size including mutants
-        let N_bottlenecked = rand_distr::Binomial::new(N_after_growth, cfg.dilution_factor.recip())
+        let N_bottlenecked = rand_distr::Binomial::new(N_after_growth.ceil() as u64, cfg.dilution_factor.recip())
             .unwrap()
-            .sample(rng);
+            .sample(rng) as f64;
 
         // Other calculations not needed if no cells survivied bottleneck
-        if N_bottlenecked == 0 {
-            return (0, 0);
+        if N_bottlenecked <= 0.0 {
+            return (0.0, 0);
         }
 
         // Estimate how many new mutants survived bottlenecking
         let N_mut = if lineage.U > 0.0 {
             fast_distr::poisson(
                 lineage.U
-                    * N_bottlenecked as f64
+                    * N_bottlenecked
                     * (1.0 - (lineage.W * self.delta_t).exp2().recip()),
                 rng,
             )
@@ -154,7 +154,7 @@ impl GrowthCalculator for Phase2 {
             0
         };
 
-        let new_N = N_bottlenecked - N_mut;
+        let new_N = N_bottlenecked - N_mut as f64;
 
         (new_N, N_mut)
     }
@@ -175,7 +175,7 @@ pub fn new_mutant<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> Line
     //     _ => parent.U,
     // };
 
-    Lineage { N: 1, W, lambda, ..parent }
+    Lineage { N: 1.0, W, lambda, ..parent }
 }
 
 /// Generate fitness and mutation size lambda of a descendant of `parent` after undergoing a beneficial mutation

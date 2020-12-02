@@ -11,7 +11,7 @@ use super::*;
 #[derive(Copy, Clone, Debug, Serialize_tuple, Deserialize_tuple)]
 pub struct Lineage {
     /// Population size of the lineage
-    pub N: u64,
+    pub N: f64,
     /// Fitness of the lineage
     pub W: f64,
     /// Total mutation rate of the lineage  
@@ -41,11 +41,11 @@ pub struct Lineages {
     lineages: Vec<Lineage>,
 
     /// Tracked sum of population size of all lineages stored
-    sum_N: u64,
+    sum_N: f64,
     /// Sum of fitnesses weighted by population size for all lineages stored
     weighted_sum_W: f64,
     /// Sum of population size of all lineages which have marker 1
-    sum_N_marker_1: u64,
+    sum_N_marker_1: f64,
 
     #[serde(skip)]
     /// Counter which saves the *last ID* that was assigned
@@ -62,7 +62,7 @@ impl Lineages {
 
         // Size, parent ID, and marker won't matter
         let ancestor = Lineage {
-            N: 0,
+            N: 0.0,
             W: 1.0,
             U: cfg.total_mutation_rate,
             lambda: cfg.initial_beneficial_mutation_size.recip(),
@@ -73,7 +73,7 @@ impl Lineages {
 
         // Initialize with a lineage for each marker and a population size of
         // Nmax/D, evenly divided between the markers
-        let N = (cfg.max_pop_size as f64 / cfg.dilution_factor / cfg.markers as f64).round() as u64;
+        let N = (cfg.max_pop_size as f64 / cfg.dilution_factor / cfg.markers as f64).round();
 
         // 1 index the markers beacuse "0" ID is reserved for the immediate ancestor of the neutral marker mutations
         for m in 1..=cfg.markers {
@@ -113,7 +113,7 @@ impl Lineages {
         if lineage.marker == 1 {
             self.sum_N_marker_1 += lineage.N;
         }
-        self.weighted_sum_W += lineage.N as f64 * lineage.W;
+        self.weighted_sum_W += lineage.N * lineage.W;
         self.lineages.push(lineage);
     }
 
@@ -146,20 +146,20 @@ impl Lineages {
     }
 
     /// Return the total population of all stored lineages
-    pub fn sum_N(&self) -> u64 {
+    pub fn sum_N(&self) -> f64 {
         self.sum_N
     }
 
     /// Return the average fitness of all stored lineages, with proper
     /// weighting by population size
     pub fn avg_W(&self) -> f64 {
-        self.weighted_sum_W / self.sum_N as f64
+        self.weighted_sum_W / self.sum_N
     }
 
     /// Return the ratio of the population size of all stored lineages with marker 1
     /// to the population size of all other stored lineages
     pub fn marker_1_ratio(&self) -> f64 {
-        self.sum_N_marker_1 as f64 / (self.sum_N - self.sum_N_marker_1) as f64
+        self.sum_N_marker_1 / (self.sum_N - self.sum_N_marker_1)
     }
 }
 
