@@ -3,8 +3,8 @@
 
 use super::*;
 
-/// Sample a Poisson random variate from a distribution with mean `lambda` using provided `rng` 
-/// Will *panic* on invalid lambda 
+/// Sample a Poisson random variate from a distribution with mean `lambda` using provided `rng`
+/// Will *panic* on invalid lambda
 pub fn poisson<R: Rng>(lambda: f64, rng: &mut R) -> u64 {
     if lambda <= 10.0 {
         direct_poisson(lambda, rng)

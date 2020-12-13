@@ -41,7 +41,7 @@ pub trait GrowthCalculator {
             }
 
             for _ in 0..N_mut {
-                let mutant = new_mutant(*lineage, cfg, rng);
+                let mutant = new_mutant_old(*lineage, cfg, rng);
                 output.push_child(lineage, mutant, mutations_vec);
             }
         }
@@ -54,6 +54,10 @@ pub trait GrowthCalculator {
 #[inline(always)]
 fn calculate_N_after_growth(lineage: Lineage, delta_t: f64) -> f64 {
     ((lineage.W * delta_t).exp2() * lineage.N).ceil()
+}
+
+pub fn phase_1_doublings_required(cfg: &SimConfig) -> usize {
+    cfg.dilution_factor.log2().floor() as usize
 }
 
 /// Phase 1 doubling  
@@ -133,9 +137,10 @@ impl GrowthCalculator for Phase2 {
         // Population size after growth and *before* bottleneck
         let N_after_growth = calculate_N_after_growth(lineage, self.delta_t);
         // Bottlenecked size including mutants
-        let N_bottlenecked = rand_distr::Binomial::new(N_after_growth.ceil() as u64, cfg.dilution_factor.recip())
-            .unwrap()
-            .sample(rng) as f64;
+        let N_bottlenecked =
+            rand_distr::Binomial::new(N_after_growth.ceil() as u64, cfg.dilution_factor.recip())
+                .unwrap()
+                .sample(rng) as f64;
 
         // Other calculations not needed if no cells survivied bottleneck
         if N_bottlenecked <= 0.0 {
@@ -145,9 +150,7 @@ impl GrowthCalculator for Phase2 {
         // Estimate how many new mutants survived bottlenecking
         let N_mut = if lineage.U > 0.0 {
             fast_distr::poisson(
-                lineage.U
-                    * N_bottlenecked
-                    * (1.0 - (lineage.W * self.delta_t).exp2().recip()),
+                lineage.U * N_bottlenecked * (1.0 - (lineage.W * self.delta_t).exp2().recip()),
                 rng,
             )
         } else {
@@ -161,13 +164,13 @@ impl GrowthCalculator for Phase2 {
 }
 
 /// Generate a descendant lineage from `parent`
-pub fn new_mutant<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> Lineage {
+pub fn new_mutant_old<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> Lineage {
     let mutation_type = cfg.sample_mutation_type(rng).unwrap();
 
     let (W, lambda) = match mutation_type {
-        MutationType::Beneficial => updates_after_beneficial_mutation(parent, cfg, rng),
-        MutationType::Deleterious => updates_after_deleterious_mutation(parent, cfg, rng),
-        MutationType::Neutral | MutationType::MutationRate => (parent.W, parent.lambda)
+        MutationType::Beneficial => updates_after_beneficial_mutation_old(parent, cfg, rng),
+        MutationType::Deleterious => updates_after_deleterious_mutation_old(parent, cfg, rng),
+        MutationType::Neutral | MutationType::MutationRate => (parent.W, parent.lambda),
     };
 
     // let U = match mutation_type {
@@ -175,13 +178,75 @@ pub fn new_mutant<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> Line
     //     _ => parent.U,
     // };
 
-    Lineage { N: 1.0, W, lambda, ..parent }
+    Lineage {
+        N: 1.0,
+        W,
+        lambda,
+        ..parent
+    }
 }
 
 /// Generate fitness and mutation size lambda of a descendant of `parent` after undergoing a beneficial mutation
-fn updates_after_beneficial_mutation<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> (f64, f64) {
+fn updates_after_beneficial_mutation_old<R: Rng>(
+    parent: Lineage,
+    cfg: &SimConfig,
+    rng: &mut R,
+) -> (f64, f64) {
     let mutation_size = rand_distr::Exp::new(parent.lambda).unwrap().sample(rng);
-    let lambda_new = parent.lambda * (1.0 + cfg.diminishing_returns_epistasis_strength * mutation_size);
+    let lambda_new =
+        parent.lambda * (1.0 + cfg.diminishing_returns_epistasis_strength * mutation_size);
+    let W_new = parent.W * (1.0 + mutation_size);
+
+    (W_new, lambda_new)
+}
+
+/// Generate fitness and mutation size lambda of a descendant of `parent` after undergoing a deleterious mutation
+#[allow(unused_variables)]
+fn updates_after_deleterious_mutation_old<R: Rng>(
+    parent: Lineage,
+    cfg: &SimConfig,
+    rng: &mut R,
+) -> (f64, f64) {
+    deleterious_todo()
+}
+
+/// Generate a descendant lineage from `parent`
+pub fn new_mutant<R: Rng>(parent: LineageData, cfg: &SimConfig, rng: &mut R) -> LineageData {
+    let mutation_type = cfg.sample_mutation_type(rng).unwrap();
+
+    let (W, lambda) = match mutation_type {
+        MutationType::Beneficial => updates_after_beneficial_mutation(parent, cfg, rng),
+        MutationType::Deleterious => updates_after_deleterious_mutation(parent, cfg, rng),
+        MutationType::Neutral | MutationType::MutationRate => (parent.W, parent.secondary.lambda),
+    };
+
+    // let U = match mutation_type {
+    //     MutationType::MutationRate => mutation_rate_todo(),
+    //     _ => parent.U,
+    // };
+
+    LineageData {
+        N: 1.0,
+        W,
+        secondary: SecondaryLineageData {
+            lambda,
+            ..parent.secondary
+        },
+        ..parent
+    }
+}
+
+/// Generate fitness and mutation size lambda of a descendant of `parent` after undergoing a beneficial mutation
+fn updates_after_beneficial_mutation<R: Rng>(
+    parent: LineageData,
+    cfg: &SimConfig,
+    rng: &mut R,
+) -> (f64, f64) {
+    let mutation_size = rand_distr::Exp::new(parent.secondary.lambda)
+        .unwrap()
+        .sample(rng);
+    let lambda_new = parent.secondary.lambda
+        * (1.0 + cfg.diminishing_returns_epistasis_strength * mutation_size);
     let W_new = parent.W * (1.0 + mutation_size);
 
     (W_new, lambda_new)
@@ -190,7 +255,7 @@ fn updates_after_beneficial_mutation<R: Rng>(parent: Lineage, cfg: &SimConfig, r
 /// Generate fitness and mutation size lambda of a descendant of `parent` after undergoing a deleterious mutation
 #[allow(unused_variables)]
 fn updates_after_deleterious_mutation<R: Rng>(
-    parent: Lineage,
+    parent: LineageData,
     cfg: &SimConfig,
     rng: &mut R,
 ) -> (f64, f64) {
