@@ -145,9 +145,7 @@ impl GrowthCalculator for Phase2 {
         // Estimate how many new mutants survived bottlenecking
         let N_mut = if lineage.U > 0.0 {
             fast_distr::poisson(
-                lineage.U
-                    * N_bottlenecked
-                    * (1.0 - (lineage.W * self.delta_t).exp2().recip()),
+                lineage.U * N_bottlenecked * (1.0 - (lineage.N / N_after_growth)),
                 rng,
             )
         } else {
