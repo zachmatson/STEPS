@@ -244,8 +244,7 @@ impl SummaryOutputter {
     ) -> Result<(), Box<dyn Error>> {
         if self.needs_ratio {
             let (marker_1_ratio, avg_W) = sim::kernels::marker_1_ratio_and_avg_W(&lineages);
-            self.wtr
-                .serialize((r, t, avg_W, marker_1_ratio))?;
+            self.wtr.serialize((r, t, avg_W, marker_1_ratio))?;
         } else {
             let avg_W = sim::kernels::sum_N_and_avg_W(&lineages).1;
             self.wtr.serialize((r, t, avg_W))?;

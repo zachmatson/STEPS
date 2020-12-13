@@ -60,5 +60,8 @@ pub fn marker_1_ratio_and_avg_W(data: &LineagesData) -> (f64, f64) {
         }
     }
 
-    (sum_N_marker_1 / (sum_N - sum_N_marker_1), weighted_sum_W / sum_N)
+    (
+        sum_N_marker_1 / (sum_N - sum_N_marker_1),
+        weighted_sum_W / sum_N,
+    )
 }
