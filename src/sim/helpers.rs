@@ -75,7 +75,9 @@ fn add_mutants<R: Rng>(
     }
 
     let cutoffs_dist = Uniform::new(0.0, expected_mutations);
-    let mut cutoffs: Vec<f64> = (0..num_mutations).map(|_| cutoffs_dist.sample(rng)).collect();
+    let mut cutoffs: Vec<f64> = (0..num_mutations)
+        .map(|_| cutoffs_dist.sample(rng))
+        .collect();
     cutoffs.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
 
     let mut expected_mutations_cumsum = 0.0;
