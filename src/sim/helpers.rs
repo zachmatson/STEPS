@@ -51,7 +51,7 @@ pub fn growth_phase_2<R: Rng>(
             let N_after_growth = lineage.N;
             lineage.N = N_bottlenecked as f64;
             bottlenecked_data.push(lineage);
-            delta_N.push(1.0 - old_N[i] / N_after_growth);
+            delta_N.push(lineage.N * (1.0 - old_N[i] / N_after_growth));
         }
     }
 
