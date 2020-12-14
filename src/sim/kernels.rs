@@ -12,7 +12,7 @@ pub fn grow_lineages_inplace(data: &mut LineagesData, delta_t: f64) {
     }
 }
 
-pub fn expected_mutation_counts(data: &LineagesData, old_N: &[f64]) -> Vec<f64> {
+pub fn expected_mutation_counts_old(data: &LineagesData, old_N: &[f64]) -> Vec<f64> {
     // Tell the compiler we have equal length slices
     // Elide inner loop bounds checks and allow vectorization
     let len = data.N.len();
@@ -23,6 +23,33 @@ pub fn expected_mutation_counts(data: &LineagesData, old_N: &[f64]) -> Vec<f64> 
 
     for i in 0..len {
         output[i] = U[i] * (N[i] - old_N[i]);
+    }
+
+    output
+}
+
+pub fn delta_N_inplace<'a>(data: &LineagesData, old_N: &'a mut [f64]) -> &'a mut [f64] {
+    let len = data.N.len();
+    let N = &data.N[0..len];
+    let old_N = &mut old_N[0..len];
+
+    for i in 0..len {
+        old_N[i] = N[i] - old_N[i];
+    }
+
+    old_N
+}
+
+pub fn expected_mutation_counts(data: &LineagesData, delta_N: &[f64]) -> Vec<f64> {
+    // Tell the compiler we have equal length slices
+    // Elide inner loop bounds checks and allow vectorization
+    let len = data.U.len();
+    let U = &data.U[0..len];
+    let delta_N = &delta_N[0..len];
+    let mut output = vec![0.0; len];
+
+    for i in 0..len {
+        output[i] = U[i] * delta_N[i];
     }
 
     output

@@ -1,6 +1,8 @@
 //! Helper structs, traits, and functions for doubling lineages and adding mutants  
 //! Finer implementation details of the transfer process
 
+use rand::distributions::{Distribution, Uniform};
+
 use super::*;
 
 pub fn phase_1_doublings_required(cfg: &SimConfig) -> usize {
@@ -16,26 +18,11 @@ pub fn growth_phase_1<R: Rng>(
     let avg_W = sum_N_and_avg_W(data).1;
     let delta_t = avg_W.recip();
 
-    let old_N = data.N.clone();
+    let mut old_N = data.N.clone();
     grow_lineages_inplace(data, delta_t);
-    let expected_mutation_counts = expected_mutation_counts(data, &old_N);
+    let delta_N = delta_N_inplace(data, &mut old_N);
 
-    let len = data.N.len();
-    let expected_mutation_counts = &expected_mutation_counts[0..len];
-
-    for i in 0..len {
-        let lambda = expected_mutation_counts[i];
-        let N_mut = distr::poisson(lambda, rng);
-        if N_mut > 0 {
-            data.N[i] -= N_mut as f64;
-            let current_lineage = unsafe { data.get_unchecked(i) };
-
-            for _ in 0..N_mut {
-                let mutant = new_mutant(current_lineage, cfg, rng);
-                data.push_child(mutant, current_lineage, mutations_vec);
-            }
-        }
-    }
+    add_mutants(data, delta_N, cfg, rng, mutations_vec);
 }
 
 pub fn growth_phase_2<R: Rng>(
@@ -52,49 +39,69 @@ pub fn growth_phase_2<R: Rng>(
 
     let len = data.N.len();
     let mut bottlenecked_data = LineagesData::successor(&data);
-    // let survivor_indices = Vec::new();
-    let mut survivor_old_N = Vec::new();
-    let mut survivor_N_after_growth = Vec::new();
+    let mut delta_N = Vec::new();
 
     for i in 0..len {
         let mut lineage = unsafe { data.get_unchecked(i) };
-        let N_bottlenecked = rand_distr::Binomial::new(lineage.N as u64, cfg.dilution_coefficient)
-            .unwrap()
-            .sample(rng);
+        let N_bottlenecked =
+            rand_distr::Binomial::new(lineage.N.ceil() as u64, cfg.dilution_coefficient)
+                .unwrap()
+                .sample(rng);
         if N_bottlenecked > 0 {
-            survivor_old_N.push(old_N[i]);
-            survivor_N_after_growth.push(lineage.N);
+            let N_after_growth = lineage.N;
             lineage.N = N_bottlenecked as f64;
             bottlenecked_data.push(lineage);
+            delta_N.push(1.0 - old_N[i] / N_after_growth);
         }
     }
 
     *data = bottlenecked_data;
 
-    let len = data.N.len();
-    let survivor_old_N = &survivor_old_N[0..len];
-    let survivor_N_after_growth = &survivor_N_after_growth[0..len];
+    add_mutants(data, &mut delta_N, cfg, rng, mutations_vec);
+}
 
-    for i in 0..len {
-        let old_N = survivor_old_N[i];
-        let N_after_growth = survivor_N_after_growth[i];
+fn add_mutants<R: Rng>(
+    data: &mut LineagesData,
+    delta_N: &[f64],
+    cfg: &SimConfig,
+    rng: &mut R,
+    mutations_vec: &mut Option<Vec<Mutation>>,
+) {
+    let expected_mutation_counts = expected_mutation_counts(data, delta_N);
+    let expected_mutations = expected_mutation_counts.iter().sum::<f64>();
+    let num_mutations = distr::poisson(expected_mutations, rng);
+    if num_mutations == 0 {
+        return;
+    }
 
-        let lambda = data.U[i] * data.N[i] * (1.0 - (old_N / N_after_growth));
-        let N_mut = distr::poisson(lambda, rng);
-        if N_mut > 0 {
-            data.N[i] -= N_mut as f64;
-            let current_lineage = unsafe { data.get_unchecked(i) };
+    let cutoffs_dist = Uniform::new(0.0, expected_mutations);
+    let mut cutoffs: Vec<f64> = (0..num_mutations).map(|_| cutoffs_dist.sample(rng)).collect();
+    cutoffs.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
 
-            for _ in 0..N_mut {
-                let mutant = new_mutant(current_lineage, cfg, rng);
-                data.push_child(mutant, current_lineage, mutations_vec);
+    let mut expected_mutations_cumsum = 0.0;
+    let mut cutoff_i = 0;
+    let len = expected_mutation_counts.len();
+    'outer: for i in 0..len {
+        expected_mutations_cumsum += expected_mutation_counts[i];
+
+        if expected_mutations_cumsum >= cutoffs[cutoff_i] {
+            let lineage = unsafe { data.get_unchecked(i) };
+            while expected_mutations_cumsum >= cutoffs[cutoff_i] {
+                let mutant = new_mutant(lineage, cfg, rng);
+                data.push_child(mutant, lineage, mutations_vec);
+
+                cutoff_i += 1;
+
+                if cutoff_i >= cutoffs.len() {
+                    break 'outer;
+                }
             }
         }
     }
 }
 
 /// Generate a descendant lineage from `parent`
-pub fn new_mutant<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> Lineage {
+fn new_mutant<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> Lineage {
     let mutation_type = cfg.sample_mutation_type(rng).unwrap();
 
     let (W, lambda) = match mutation_type {
