@@ -242,6 +242,7 @@ impl SummaryOutputter {
         t: u32,
         lineages: &LineagesData,
     ) -> Result<(), Box<dyn Error>> {
+        #![allow(non_snake_case)]
         if self.needs_ratio {
             let (marker_1_ratio, avg_W) = sim::kernels::marker_1_ratio_and_avg_W(&lineages);
             self.wtr.serialize((r, t, avg_W, marker_1_ratio))?;

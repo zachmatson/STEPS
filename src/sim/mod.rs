@@ -13,11 +13,9 @@ mod types;
 pub use types::*;
 pub mod kernels;
 use kernels::*;
-mod pipeline;
-use pipeline::*;
 mod helpers;
 use helpers::*;
-mod fast_distr;
+mod distr;
 
 /// RNG used for the simulations  
 /// Implements `Rng` trait from `rand`   
@@ -44,8 +42,8 @@ pub struct SimulationHandler {
     cfg: SimConfig,
     /// Number of phase 1 doublings to perform
     phase_1_doublings: usize,
-    /// `Lineages` being handled  
-    /// Must be created/reset with `new` before a new replicate
+    /// Lineages in the simulation  
+    /// Must be created/reset before a new replicate
     lineages: LineagesData,
     /// Mutations added in the last transfer
     new_mutations: Option<Vec<Mutation>>,
@@ -85,7 +83,6 @@ impl SimulationHandler {
     pub fn transfer(&mut self) {
         self.reset_new_mutations();
 
-        // estimate_delta_t gives the *number of times* that phase 1 must be repeated
         for _ in 0..self.phase_1_doublings {
             growth_phase_1(
                 &mut self.lineages,
@@ -103,7 +100,7 @@ impl SimulationHandler {
         );
     }
 
-    /// Get reference to the `Lineages` struct owned by the handler  
+    /// Get reference to the `LineagesData` struct owned by the handler  
     /// The lineages will be updated after each transfer  
     pub fn lineages(&self) -> &LineagesData {
         &self.lineages
