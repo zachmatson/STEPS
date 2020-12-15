@@ -6,23 +6,29 @@ use serde_tuple::*;
 use super::*;
 
 /// Container for data on a population of lineages
+///
+/// **Do not** change the length of the vectors when accessing them directly
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct LineagesData {
+    // Visibilities set to pub(super) so only this module can access them
+    // This will prevent outside modification which could break the invariant
+    // that all of the lenghts must remain equal
     /// Population sizes of lineages
-    pub N: Vec<f64>,
+    pub(super) N: Vec<f64>,
     /// Fitnesses of lineages
-    pub W: Vec<f64>,
-    /// Total mutation rate of lineages
-    /// Defer to `SimConfig` for specific rates
-    pub U: Vec<f64>,
+    pub(super) W: Vec<f64>,
+    /// Total mutation rates of lineages
+    /// Defer to `SimConfig` for relative rates of specific mutation types
+    pub(super) U: Vec<f64>,
     /// Additional data in AoS format
-    pub secondary: Vec<SecondaryLineageData>,
+    pub(super) secondary: Vec<SecondaryLineageData>,
 
     #[serde(skip)]
     /// Counter which saves the *last ID* that was assigned
     unique_id_counter: u64,
 }
 
+/// Complete data for a single lineage
 #[derive(Copy, Clone, Debug)]
 pub struct Lineage {
     /// Population size
@@ -35,6 +41,10 @@ pub struct Lineage {
     pub secondary: SecondaryLineageData,
 }
 
+/// Secondary data for lineages  
+///
+/// Used for data that is not accessed in vectorized computational kernels,
+/// and therefore can be efficiently stored in individual structs
 #[derive(Copy, Clone, Default, Debug, Serialize_tuple, Deserialize_tuple)]
 pub struct SecondaryLineageData {
     /// Reciprocal of the mean of the beneficial mutation size
@@ -61,9 +71,12 @@ impl LineagesData {
         // Size, parent ID, and marker won't matter
         let ancestor = Lineage {
             N: 0.0,
+            // W and U may be used for comparison to the markers
+            // in the case of mutation tracking
             W: 1.0,
             U: cfg.total_mutation_rate,
             secondary: SecondaryLineageData {
+                // Lambda will be carried over the the children
                 lambda: cfg.initial_beneficial_mutation_size.recip(),
                 id: 0,
                 parent_id: 0,
@@ -93,11 +106,20 @@ impl LineagesData {
         output
     }
 
+    /// Reserve additional capacity in all of the vectors being used
+    fn reserve(&mut self, additional: usize) {
+        self.N.reserve(additional);
+        self.W.reserve(additional);
+        self.U.reserve(additional);
+        self.secondary.reserve(additional);
+    }
+
     /// Create a new, empty instance from an old instance, which will have a capacity scaled based on
     /// the old instance (currently 1x the length of the old instance) and preserve the
     /// counter used to generate unique IDs.
     ///
-    /// This is the proper way to generate a new instance to transfer into from an old instance.  
+    /// This is the proper way to generate a new instance to move lineages into from an old instance,
+    /// such as when bottlenecking.  
     /// To start a new replicate, use `LineagesData::from_simconfig`
     pub fn successor(old: &LineagesData) -> Self {
         let mut new = LineagesData::default();
@@ -144,6 +166,11 @@ impl LineagesData {
         }
     }
 
+    /// Access a `Lineage` from the collection, without performing a bounds check
+    ///
+    /// # Safety
+    /// Calling with an index which is out of bounds for any of the component arrays
+    /// is undefined behavior
     pub unsafe fn get_unchecked(&self, index: usize) -> Lineage {
         Lineage {
             N: *self.N.get_unchecked(index),
@@ -151,13 +178,6 @@ impl LineagesData {
             U: *self.U.get_unchecked(index),
             secondary: *self.secondary.get_unchecked(index),
         }
-    }
-
-    fn reserve(&mut self, additional: usize) {
-        self.N.reserve(additional);
-        self.W.reserve(additional);
-        self.U.reserve(additional);
-        self.secondary.reserve(additional);
     }
 }
 

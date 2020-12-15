@@ -193,7 +193,7 @@ pub struct SimConfig {
     /// Total mutation rate
     pub total_mutation_rate: f64,
     #[structopt(skip)]
-    #[serde(skip_deserializing)]
+    #[serde(skip)]
     /// Reciprocal of dilution factor
     pub dilution_coefficient: f64,
 

@@ -5,10 +5,19 @@ use rand::distributions::{Distribution, Uniform};
 
 use super::*;
 
+/// Get the number of phase 1 doublings that must take place before phase 2,
+/// given the dilution factor in `cfg`
 pub fn phase_1_doublings_required(cfg: &SimConfig) -> usize {
+    // cfg.dilution_factor.log2().ceil() as usize - 1
     cfg.dilution_factor.log2().floor() as usize
 }
 
+/// Perform a single Phase 1 doubling on `data`
+/// Optionally track mutations if `mutations_vec` is provided
+///
+/// The total population size is approximately doubled, with growth
+/// run for whatever time step will provide that.  
+/// New mutants are added and no bottlenecking occurs
 pub fn growth_phase_1<R: Rng>(
     data: &mut LineagesData,
     cfg: &SimConfig,
@@ -20,11 +29,18 @@ pub fn growth_phase_1<R: Rng>(
 
     let mut old_N = data.N.clone();
     grow_lineages_inplace(data, delta_t);
-    let delta_N = delta_N_inplace(data, &mut old_N);
+    let delta_N = old_N_to_delta_N(data, &mut old_N);
 
     add_mutants(data, delta_N, cfg, rng, mutations_vec);
 }
 
+/// Perform a single Phase 2 doubling on `data`
+/// Optionally track mutations if `mutations_vec` is provided
+///
+/// Growth is run for whatever time step will bring the total population
+/// size to approximately Nmax   
+/// New mutants are added and bottlenecking occurs  
+/// Only mutations which survive bottlenecking are generated and tracked
 pub fn growth_phase_2<R: Rng>(
     data: &mut LineagesData,
     cfg: &SimConfig,
@@ -32,12 +48,16 @@ pub fn growth_phase_2<R: Rng>(
     mutations_vec: &mut Option<Vec<Mutation>>,
 ) {
     let (sum_N, avg_W) = sum_N_and_avg_W(data);
+    // Must grow population size to Nmax
+    // Where growth is approximately a factor of 2^(avg_W * delta_t)
     let delta_t = (cfg.max_pop_size as f64 / sum_N).log2() / avg_W;
 
+    // old_N needed to calculate delta_N
     let old_N = data.N.clone();
     grow_lineages_inplace(data, delta_t);
 
     let len = data.N.len();
+    // Need new container because length will change from lineages that don't survive
     let mut bottlenecked_data = LineagesData::successor(&data);
     let mut delta_N = Vec::new();
 
@@ -55,11 +75,16 @@ pub fn growth_phase_2<R: Rng>(
         }
     }
 
+    // Make data refer to the bottlenecked data,
+    // dropping the old data from the heap
     *data = bottlenecked_data;
 
-    add_mutants(data, &mut delta_N, cfg, rng, mutations_vec);
+    add_mutants(data, &delta_N, cfg, rng, mutations_vec);
 }
 
+/// Add the mutants corresponding to `delta_N` change in population size
+/// to `data`, while adjusting existing population sizes in `data` to
+/// remove the new mutants from old lineage sizes
 fn add_mutants<R: Rng>(
     data: &mut LineagesData,
     delta_N: &[f64],
@@ -74,10 +99,16 @@ fn add_mutants<R: Rng>(
         return;
     }
 
+    // Cutoffs store the number of expected mutations into the population
+    // that each mutation occurs at,
+    // If the cumulative sum of expected mutations passes a cutoff when a 
+    // lineage is added, that lineage gets the mutation associated with
+    // that cutoff
     let cutoffs_dist = Uniform::new(0.0, expected_mutations);
     let mut cutoffs: Vec<f64> = (0..num_mutations)
         .map(|_| cutoffs_dist.sample(rng))
         .collect();
+    // Cutoffs must be in order for the iteration
     cutoffs.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
 
     let mut expected_mutations_cumsum = 0.0;
@@ -88,12 +119,14 @@ fn add_mutants<R: Rng>(
 
         if expected_mutations_cumsum >= cutoffs[cutoff_i] {
             let lineage = unsafe { data.get_unchecked(i) };
+            // One lineage may get multiple mutations
             while expected_mutations_cumsum >= cutoffs[cutoff_i] {
                 let mutant = new_mutant(lineage, cfg, rng);
                 data.push_child(mutant, lineage, mutations_vec);
+                // N still includes the mutants that come from the lineage up until this point
+                data.N[i] = (data.N[i] - 1.0).max(0.0);
 
                 cutoff_i += 1;
-
                 if cutoff_i >= cutoffs.len() {
                     break 'outer;
                 }

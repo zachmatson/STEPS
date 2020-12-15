@@ -11,8 +11,9 @@ use crate::cfg::*;
 
 mod types;
 pub use types::*;
-pub mod kernels;
+mod kernels;
 use kernels::*;
+pub use kernels::{marker_1_ratio_and_avg_W, sum_N_and_avg_W};
 mod helpers;
 use helpers::*;
 mod distr;
@@ -20,7 +21,7 @@ mod distr;
 /// RNG used for the simulations  
 /// Implements `Rng` trait from `rand`   
 #[allow(non_camel_case_types)]
-pub type SIM_RNG = Pcg64;
+type SIM_RNG = Pcg64;
 
 /// Instantiate RNG to use for the simulations  
 /// Uses seed if one is given, otherwise seeds from system entropy  
@@ -34,7 +35,7 @@ fn default_sim_rng(cfg: &SimConfig) -> SIM_RNG {
 /// Opaque handler for populations and transfer processes  
 /// Manages transfer details and owns its RNG and a set of lineages
 ///
-/// Must create with the `new` function and call `start_replicate` before each replicate
+/// **Must** create with the `new` function and call `start_replicate` before each replicate
 /// including the first replicate  
 /// Then use `transfer` to perform each transfer within a replicate
 pub struct SimulationHandler {
@@ -55,9 +56,7 @@ impl SimulationHandler {
     /// Create a new `SimulationHandler` with new RNG
     pub fn new(cfg: SimConfig, track_mutations: bool) -> Self {
         let phase_1_doublings = phase_1_doublings_required(&cfg);
-
         let rng = default_sim_rng(&cfg);
-
         let new_mutations = match track_mutations {
             true => Some(Vec::new()),
             false => None,
@@ -73,7 +72,7 @@ impl SimulationHandler {
     }
 
     /// Initialize the lineages for a replicate while continuing to use same RNG  
-    /// Must call before every replicate
+    /// Must call this before every replicate
     pub fn start_replicate(&mut self) {
         self.reset_new_mutations();
         self.lineages = LineagesData::from_simconfig(&self.cfg, &mut self.new_mutations);
@@ -81,6 +80,7 @@ impl SimulationHandler {
 
     /// Perform a transfer and update the lineages
     pub fn transfer(&mut self) {
+        // Mutations vec only stores data from the current transfer
         self.reset_new_mutations();
 
         for _ in 0..self.phase_1_doublings {
@@ -100,7 +100,7 @@ impl SimulationHandler {
         );
     }
 
-    /// Get reference to the `LineagesData` struct owned by the handler  
+    /// Get reference to the `LineagesData` owned by the handler  
     /// The lineages will be updated after each transfer  
     pub fn lineages(&self) -> &LineagesData {
         &self.lineages
@@ -112,6 +112,7 @@ impl SimulationHandler {
         self.new_mutations.as_ref()
     }
 
+    /// Reset the `new_mutations` vector *if* it exists
     fn reset_new_mutations(&mut self) {
         if let Some(new_mutations) = &mut self.new_mutations {
             new_mutations.clear();
