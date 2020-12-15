@@ -58,22 +58,6 @@ pub fn expected_mutation_counts(data: &LineagesData, delta_N: &[f64]) -> Vec<f64
     output
 }
 
-// pub fn sum_N_and_avg_W(data: &LineagesData) -> (f64, f64) {
-//     let N = &data.N;
-//     let len = N.len();
-//     let W = &data.W[0..len];
-
-//     let mut sum_N = 0.0;
-//     let mut weighted_sum_W = 0.0;
-
-//     for i in 0..len {
-//         sum_N += N[i];
-//         weighted_sum_W += N[i] * W[i];
-//     }
-
-//     (sum_N, weighted_sum_W / sum_N)
-// }
-
 /// Get the total population size and arithmetic mean fitness
 /// of all of the lineages in `data`
 ///
@@ -81,40 +65,14 @@ pub fn expected_mutation_counts(data: &LineagesData, delta_N: &[f64]) -> Vec<f64
 ///
 /// The length of any vector in `data` will *not* be changed
 pub fn sum_N_and_avg_W(data: &LineagesData) -> (f64, f64) {
-    // Tell the compiler we have equal length slices
-    let len = data.N.len();
-    let N = &data.N[0..len];
+    let N = &data.N;
+    let len = N.len();
     let W = &data.W[0..len];
 
-    // Sum in chunks of width 8
-    // to promote autovectorization
-    const WIDTH: usize = 8;
-    let mut sum_N = [0.0; WIDTH];
-    let mut weighted_sum_W = [0.0; WIDTH];
-    // Length of the vectorizable portion
-    let main_len = len - (len % WIDTH);
+    let mut sum_N = 0.0;
+    let mut weighted_sum_W = 0.0;
 
-    // Iterate through size WIDTH chunks which can be added to the accumulator array
-    for (N_chunk, W_chunk) in N[..main_len].chunks(WIDTH).zip(W[..main_len].chunks(WIDTH)) {
-        // Iterate through the items in each chunk and add them
-        for ((sum_N, weighted_sum_W), (n, w)) in sum_N
-            .iter_mut()
-            .zip(weighted_sum_W.iter_mut())
-            .zip(N_chunk.iter().zip(W_chunk))
-        {
-            *sum_N += *n;
-            *weighted_sum_W += *n * *w;
-        }
-    }
-
-    // Reduce the arrays of partial sums to scalars
-    let mut sum_N = sum_N.iter().sum();
-    let mut weighted_sum_W = weighted_sum_W.iter().sum::<f64>();
-
-    // Get the portions which could not be added in the main loop
-    let N = &N[main_len..len];
-    let W = &W[main_len..len];
-    for i in 0..(len - main_len) {
+    for i in 0..len {
         sum_N += N[i];
         weighted_sum_W += N[i] * W[i];
     }
