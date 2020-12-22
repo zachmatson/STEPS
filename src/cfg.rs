@@ -192,6 +192,10 @@ pub struct SimConfig {
     #[serde(skip_deserializing)]
     /// Total mutation rate
     pub total_mutation_rate: f64,
+    #[structopt(skip)]
+    #[serde(skip)]
+    /// Reciprocal of dilution factor
+    pub dilution_coefficient: f64,
 
     // Private fields
     #[structopt(skip)]
@@ -220,6 +224,8 @@ impl SimConfig {
             + self.deleterious_mutation_rate
             + self.neutral_mutation_rate
             + self.mutation_rate_mutation_rate;
+
+        self.dilution_coefficient = self.dilution_factor.recip();
 
         // Weights for the elements of Self::MUTATION_TYPES
         self.mutation_type_index_distribution = if self.total_mutation_rate > 0.0 {

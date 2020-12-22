@@ -11,7 +11,7 @@ use serde_tuple::*;
 
 use crate::{
     cfg::{OutputConfig, SimConfig},
-    sim::{Lineages, Mutation},
+    sim::{self, LineagesData, Mutation},
 };
 
 /// Type which handles the details of outputting simulation results
@@ -65,7 +65,7 @@ impl OutputHandler {
         &mut self,
         r: u32,
         t: u32,
-        lineages: &Lineages,
+        lineages: &LineagesData,
         new_mutations: Option<&Vec<Mutation>>,
     ) -> Result<(), Box<dyn Error>> {
         // Must output no matter the sampling frequency
@@ -136,14 +136,14 @@ impl Metadata {
 struct LineagesRecord<'a> {
     r: u32,
     t: u32,
-    lineages: &'a Lineages,
+    lineages: &'a LineagesData,
 }
 
 #[derive(Serialize_tuple, Deserialize_tuple)]
 struct OwnedLineagesRecord {
     r: u32,
     t: u32,
-    lineages: Lineages,
+    lineages: LineagesData,
 }
 
 impl OwnedLineagesRecord {
@@ -191,7 +191,7 @@ impl RawOutputter {
         &mut self,
         r: u32,
         t: u32,
-        lineages: &Lineages,
+        lineages: &LineagesData,
     ) -> Result<(), Box<dyn Error>> {
         let record = LineagesRecord { r, t, lineages };
         serde_json::to_writer(&mut self.buf, &record)?;
@@ -240,13 +240,15 @@ impl SummaryOutputter {
         &mut self,
         r: u32,
         t: u32,
-        lineages: &Lineages,
+        lineages: &LineagesData,
     ) -> Result<(), Box<dyn Error>> {
+        #![allow(non_snake_case)]
         if self.needs_ratio {
-            self.wtr
-                .serialize((r, t, lineages.avg_W(), lineages.marker_1_ratio()))?;
+            let (marker_1_ratio, avg_W) = sim::marker_1_ratio_and_avg_W(&lineages);
+            self.wtr.serialize((r, t, avg_W, marker_1_ratio))?;
         } else {
-            self.wtr.serialize((r, t, lineages.avg_W()))?;
+            let avg_W = sim::sum_N_and_avg_W(&lineages).1;
+            self.wtr.serialize((r, t, avg_W))?;
         }
 
         Ok(())
@@ -437,7 +439,7 @@ impl RawResultsReader {
 }
 
 impl Iterator for RawResultsReader {
-    type Item = Result<(u32, u32, Lineages), Box<dyn Error>>;
+    type Item = Result<(u32, u32, LineagesData), Box<dyn Error>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let line = self.lines.next()?;

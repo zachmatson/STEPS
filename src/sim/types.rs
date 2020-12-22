@@ -1,24 +1,52 @@
 //! Types used for storing simulation data
 
-use derive_more::*;
 use serde::{Deserialize, Serialize};
 use serde_tuple::*;
 
 use super::*;
 
-/// A single lineage with size, fitness, mutation rate, and identifier  
-/// Also keeps identifier of parent lineage and initial marker mutation
-#[derive(Copy, Clone, Debug, Serialize_tuple, Deserialize_tuple)]
-pub struct Lineage {
-    /// Population size of the lineage
-    pub N: f64,
-    /// Fitness of the lineage
-    pub W: f64,
-    /// Total mutation rate of the lineage  
-    /// Use to calculate chance of mutations happening,
-    /// but defer to relevant `SimConfig` to determine type
-    pub U: f64,
+/// Container for data on a population of lineages
+///
+/// **Do not** change the length of the vectors when accessing them directly
+#[derive(Default, Debug, Serialize, Deserialize)]
+pub struct LineagesData {
+    // Visibilities set to pub(super) so only this module can access them
+    // This will prevent outside modification which could break the invariant
+    // that all of the lenghts must remain equal
+    /// Population sizes of lineages
+    pub(super) N: Vec<f64>,
+    /// Fitnesses of lineages
+    pub(super) W: Vec<f64>,
+    /// Total mutation rates of lineages
+    /// Defer to `SimConfig` for relative rates of specific mutation types
+    pub(super) U: Vec<f64>,
+    /// Additional data in AoS format
+    pub(super) secondary: Vec<SecondaryLineageData>,
 
+    #[serde(skip)]
+    /// Counter which saves the *last ID* that was assigned
+    unique_id_counter: u64,
+}
+
+/// Complete data for a single lineage
+#[derive(Copy, Clone, Debug)]
+pub struct Lineage {
+    /// Population size
+    pub N: f64,
+    /// Fitness
+    pub W: f64,
+    /// Mutation rate
+    pub U: f64,
+    /// Additional data
+    pub secondary: SecondaryLineageData,
+}
+
+/// Secondary data for lineages  
+///
+/// Used for data that is not accessed in vectorized computational kernels,
+/// and therefore can be efficiently stored in individual structs
+#[derive(Copy, Clone, Default, Debug, Serialize_tuple, Deserialize_tuple)]
+pub struct SecondaryLineageData {
     /// Reciprocal of the mean of the beneficial mutation size
     pub lambda: f64,
 
@@ -32,43 +60,28 @@ pub struct Lineage {
     pub marker: u16,
 }
 
-/// Container of `Lineage`s with `Vec` like interface which tracks important characteristics  
-/// and assigns identifiers
-#[derive(Default, Debug, Deref, Serialize, Deserialize)]
-pub struct Lineages {
-    #[deref]
-    /// Actual `Vec` of lineages
-    lineages: Vec<Lineage>,
-
-    /// Tracked sum of population size of all lineages stored
-    sum_N: f64,
-    /// Sum of fitnesses weighted by population size for all lineages stored
-    weighted_sum_W: f64,
-    /// Sum of population size of all lineages which have marker 1
-    sum_N_marker_1: f64,
-
-    #[serde(skip)]
-    /// Counter which saves the *last ID* that was assigned
-    unique_id_counter: u64,
-}
-
-impl Lineages {
+impl LineagesData {
     /// Create new instance from `SimConfig`  
     ///
     /// Use this only to start a new replicate. For creating a new container to transfer
-    /// into use `Lineages::successor` to ensure that the IDs remain properly numbered
+    /// into use `LineagesData::successor` to ensure that the IDs remain properly numbered
     pub fn from_simconfig(cfg: &SimConfig, mutations_vec: &mut Option<Vec<Mutation>>) -> Self {
         let mut output = Self::default();
 
         // Size, parent ID, and marker won't matter
         let ancestor = Lineage {
             N: 0.0,
+            // W and U may be used for comparison to the markers
+            // in the case of mutation tracking
             W: 1.0,
             U: cfg.total_mutation_rate,
-            lambda: cfg.initial_beneficial_mutation_size.recip(),
-            id: 0,
-            parent_id: 0,
-            marker: 0,
+            secondary: SecondaryLineageData {
+                // Lambda will be carried over the the children
+                lambda: cfg.initial_beneficial_mutation_size.recip(),
+                id: 0,
+                parent_id: 0,
+                marker: 0,
+            },
         };
 
         // Initialize with a lineage for each marker and a population size of
@@ -78,88 +91,93 @@ impl Lineages {
         // 1 index the markers beacuse "0" ID is reserved for the immediate ancestor of the neutral marker mutations
         for m in 1..=cfg.markers {
             // ID and parent ID will be assigned by push_child so it doesn't matter what we use for them here
-            output.push_child(
-                &ancestor,
-                Lineage {
-                    N,
+            let marker_mutant = Lineage {
+                N,
+                secondary: SecondaryLineageData {
                     marker: m,
-                    ..ancestor
+                    ..ancestor.secondary
                 },
-                mutations_vec,
-            );
+                ..ancestor
+            };
+
+            output.push_child(marker_mutant, ancestor, mutations_vec);
         }
 
         output
     }
 
+    /// Reserve additional capacity in all of the vectors being used
+    fn reserve(&mut self, additional: usize) {
+        self.N.reserve(additional);
+        self.W.reserve(additional);
+        self.U.reserve(additional);
+        self.secondary.reserve(additional);
+    }
+
     /// Create a new, empty instance from an old instance, which will have a capacity scaled based on
-    /// the old instance (currently 2x the length of the old instance) and preserve the
+    /// the old instance (currently 1x the length of the old instance) and preserve the
     /// counter used to generate unique IDs.
     ///
-    /// This is the proper way to generate a new instance to transfer into from an old instance.  
-    /// To start a new replicate, use `Lineages::from_simconfig`
-    pub fn successor(old: &Lineages) -> Self {
-        Lineages {
-            lineages: Vec::with_capacity(2 * old.len()),
-            unique_id_counter: old.unique_id_counter,
-            ..Default::default()
-        }
+    /// This is the proper way to generate a new instance to move lineages into from an old instance,
+    /// such as when bottlenecking.  
+    /// To start a new replicate, use `LineagesData::from_simconfig`
+    pub fn successor(old: &LineagesData) -> Self {
+        let mut new = LineagesData::default();
+        new.reserve(old.N.len());
+        new.unique_id_counter = old.unique_id_counter;
+
+        new
     }
 
     /// Push a new `Lineage` to the collection
-    pub fn push(&mut self, lineage: Lineage) {
-        // Must update internal trackers before pushing
-        self.sum_N += lineage.N;
-        if lineage.marker == 1 {
-            self.sum_N_marker_1 += lineage.N;
-        }
-        self.weighted_sum_W += lineage.N * lineage.W;
-        self.lineages.push(lineage);
+    pub fn push(&mut self, data: Lineage) {
+        self.N.push(data.N);
+        self.W.push(data.W);
+        self.U.push(data.U);
+        self.secondary.push(data.secondary);
     }
 
-    /// Push a new `child` `Lineage` of `Parent` to the collection
+    /// Push a new `child` `Lineage` of `parent` to the collection
     /// Properly assigning its Parent ID, its own ID, and tracking sequencing
     /// information if necessary
     pub fn push_child(
         &mut self,
-        parent: &Lineage,
         mut child: Lineage,
+        parent: Lineage,
         mutations_vec: &mut Option<Vec<Mutation>>,
     ) {
-        child.parent_id = parent.id;
+        // Appropriate parent_id must be assigned
+        child.secondary.parent_id = parent.secondary.id;
         // unique_id_counter stores last assigned ID
         // starting with 0 as the ID of the common ancestor to each marker
         // which is never actually used by any lineage,
         // so must increment *before* using the ID
         self.unique_id_counter += 1;
-        child.id = self.unique_id_counter;
+        child.secondary.id = self.unique_id_counter;
+
+        self.push(child);
 
         if let Some(mutations_vec) = mutations_vec {
             mutations_vec.push(Mutation {
-                id: child.id,
-                background_id: parent.id,
+                id: child.secondary.id,
+                background_id: parent.secondary.id,
                 delta_W: child.W - parent.W,
             });
         }
-
-        self.push(child);
     }
 
-    /// Return the total population of all stored lineages
-    pub fn sum_N(&self) -> f64 {
-        self.sum_N
-    }
-
-    /// Return the average fitness of all stored lineages, with proper
-    /// weighting by population size
-    pub fn avg_W(&self) -> f64 {
-        self.weighted_sum_W / self.sum_N
-    }
-
-    /// Return the ratio of the population size of all stored lineages with marker 1
-    /// to the population size of all other stored lineages
-    pub fn marker_1_ratio(&self) -> f64 {
-        self.sum_N_marker_1 / (self.sum_N - self.sum_N_marker_1)
+    /// Access a `Lineage` from the collection, without performing a bounds check
+    ///
+    /// # Safety
+    /// Calling with an index which is out of bounds for any of the component arrays
+    /// is undefined behavior
+    pub unsafe fn get_unchecked(&self, index: usize) -> Lineage {
+        Lineage {
+            N: *self.N.get_unchecked(index),
+            W: *self.W.get_unchecked(index),
+            U: *self.U.get_unchecked(index),
+            secondary: *self.secondary.get_unchecked(index),
+        }
     }
 }
 

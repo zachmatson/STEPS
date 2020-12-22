@@ -3,8 +3,8 @@
 
 use super::*;
 
-/// Sample a Poisson random variate from a distribution with mean `lambda` using provided `rng` 
-/// Will *panic* on invalid lambda 
+/// Sample a Poisson random variate from a distribution with mean `lambda` using provided `rng`
+/// Will *panic* on invalid lambda
 pub fn poisson<R: Rng>(lambda: f64, rng: &mut R) -> u64 {
     if lambda <= 10.0 {
         direct_poisson(lambda, rng)
@@ -29,3 +29,17 @@ fn direct_poisson<R: Rng>(lambda: f64, rng: &mut R) -> u64 {
 
     x
 }
+
+// fn sorted_uniform<R: Rng>(scale: f64, size: usize, rng: &mut R) -> Vec<f64> {
+//     let mut samples = vec![0.0; size as usize];
+//     let mut n = size as f64;
+//     let mut a = 0.0;
+//     for i in 0..(size as usize) {
+//         let Fa = rng.gen::<f64>();
+//         a = 1.0 + (a - 1.0) * (1.0 - Fa).powf(n.recip());
+//         samples[i] = scale * a;
+//         n -= 1.0;
+//     }
+
+//     samples
+// }

@@ -1,6 +1,6 @@
 [package]
 name = "relltee"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -9,7 +9,6 @@ edition = "2018"
 lto = "thin"
 
 [dependencies]
-derive_more = "0.99"
 structopt = "0.3.15"
 rand = "0.7"
 rand_pcg = "0.2"
