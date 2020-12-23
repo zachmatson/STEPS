@@ -1,5 +1,5 @@
-//! Helper structs, traits, and functions for doubling lineages and adding mutants  
-//! Finer implementation details of the transfer process
+//! Helper functions for doubling lineages and adding mutants  
+//! Low to mid-level implementation details of the transfer process
 
 use rand::distributions::{Distribution, Uniform};
 
@@ -101,7 +101,7 @@ fn add_mutants<R: Rng>(
 
     // Cutoffs store the number of expected mutations into the population
     // that each mutation occurs at,
-    // If the cumulative sum of expected mutations passes a cutoff when a 
+    // If the cumulative sum of expected mutations passes a cutoff when a
     // lineage is added, that lineage gets the mutation associated with
     // that cutoff
     let cutoffs_dist = Uniform::new(0.0, expected_mutations);

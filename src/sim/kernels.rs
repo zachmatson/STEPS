@@ -1,4 +1,6 @@
-#![allow(non_snake_case)]
+//! Performance sensitive and optimized computational kernels for the simulations  
+//! Transform or summarize the data in a `LineagesData`  
+//! Lower-level implementation details of the transfer process  
 
 use super::LineagesData;
 

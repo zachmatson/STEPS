@@ -4,7 +4,7 @@
 use super::*;
 
 /// Sample a Poisson random variate from a distribution with mean `lambda` using provided `rng`
-/// Will *panic* on invalid lambda
+/// May panic or produce incorrect results on invalid lambda
 pub fn poisson<R: Rng>(lambda: f64, rng: &mut R) -> u64 {
     if lambda <= 10.0 {
         direct_poisson(lambda, rng)
@@ -15,7 +15,7 @@ pub fn poisson<R: Rng>(lambda: f64, rng: &mut R) -> u64 {
 
 /// Sample a Poisson random variate from a distribution with mean `lambda` using provided `rng`  
 /// Uses the Algorithm 3 described in https://www.jstor.org/stable/2347913  
-/// Assumes `lambda` is value for results to be meaningful
+/// Assumes `lambda` is valid for results to be meaningful
 fn direct_poisson<R: Rng>(lambda: f64, rng: &mut R) -> u64 {
     let mut x = 0;
     let mut p = (-lambda).exp();
