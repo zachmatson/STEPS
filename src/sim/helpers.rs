@@ -135,7 +135,7 @@ fn add_mutants<R: Rng>(
         expected_mutations_cumsum += expected_mutation_counts[i];
 
         if cutoff < expected_mutations_cumsum {
-            let mut lineage = unsafe { data.get_unchecked(i) };
+            let lineage = unsafe { data.get_unchecked(i) };
             // Iterate through mutants from the lineage
             while cutoff < expected_mutations_cumsum {
                 // Find the number of mutations in the mutant
