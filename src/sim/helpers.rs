@@ -100,10 +100,7 @@ fn add_mutants<R: Rng>(
     }
 
     // Cutoffs store the number of expected mutations into the population
-    // that each mutation occurs at,
-    // If the cumulative sum of expected mutations passes a cutoff when a
-    // lineage is added, that lineage gets the mutation associated with
-    // that cutoff
+    // that each mutation occurs at
     let cutoffs_dist = Uniform::new(0.0, expected_mutations);
     let mut cutoffs: Vec<f64> = (0..num_mutations)
         .map(|_| cutoffs_dist.sample(rng))
@@ -111,22 +108,63 @@ fn add_mutants<R: Rng>(
     // Cutoffs must be in order for the iteration
     cutoffs.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
 
-    let mut expected_mutations_cumsum = 0.0;
     let mut cutoff_i = 0;
+    let mut cutoff = cutoffs[cutoff_i];
+    let mut expected_mutations_cumsum = 0.0;
+    // Underlying data vector size will increase because mutants are being added
+    // But we are only iterating through the lineages that already existed by
+    // using the length of expected_mutation_counts, whose elements correspond
+    // to the starting elements of data
     let len = expected_mutation_counts.len();
     'outer: for i in 0..len {
+        // expected_mutations_cumsum increases with each loop, going from
+        // expected_mutation_counts[1] after the first addition, to
+        // expected_mutations after the last
+        //
+        // The cutoffs correspond to the cumulative sums but are along
+        // the half-open interval [0, expected_mutations)
+        //
+        // For each lineage i (zero-indexed),
+        // expected_mutation_counts[i] = delta_N[i] * data.U[i] =: Δ
+        //
+        // The lineage will get an interval of cutoffs [start, start + Δ)
+        // Where start = expected_mutations_cumsum[i-1]
+        // Each individual j (zero-indexed) in the lineage then gets an interval [start + j*U, start + (j+1)*U)
+
+        let prev_cumsum = expected_mutations_cumsum;
         expected_mutations_cumsum += expected_mutation_counts[i];
 
-        if expected_mutations_cumsum >= cutoffs[cutoff_i] {
-            let lineage = unsafe { data.get_unchecked(i) };
-            // One lineage may get multiple mutations
-            while expected_mutations_cumsum >= cutoffs[cutoff_i] {
+        if cutoff < expected_mutations_cumsum {
+            let mut lineage = unsafe { data.get_unchecked(i) };
+            // Iterate through mutants from the lineage
+            while cutoff < expected_mutations_cumsum {
+                // Find the number of mutations in the mutant
+                let mut mutant_order: u32 = 0;
+                // Upper bound (exclusive) corresponding to the same new individual mutant in the lineage
+                let individual_max_cutoff = {
+                    // Find start + (j+1)*U explained at top of 'outer
+                    // Without knowing j
+                    let tmp = cutoff - prev_cumsum;
+                    tmp - tmp.rem_euclid(lineage.U) + lineage.U + prev_cumsum
+                };
+                while cutoff < individual_max_cutoff {
+                    mutant_order += 1;
+
+                    if cutoff_i < cutoffs.len() {
+                        cutoff = cutoffs[cutoff_i];
+                        cutoff_i += 1;
+                    } else {
+                        break;
+                    }
+                }
+
                 let mutant = new_mutant(lineage, cfg, rng);
                 data.push_child(mutant, lineage, mutations_vec);
                 // N still includes the mutants that come from the lineage up until this point
+                // No need to update `lineage` because its N field is not used here
                 data.N[i] = (data.N[i] - 1.0).max(0.0);
 
-                cutoff_i += 1;
+                // No more cutoffs to try
                 if cutoff_i >= cutoffs.len() {
                     break 'outer;
                 }
