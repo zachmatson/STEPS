@@ -18,5 +18,5 @@ serde_tuple = "0.5"
 serde_json = "1.0"
 csv = "1.1"
 indicatif = "0.15"
-sleef-sys = { git = "https://github.com/zachmatson/sleef-sys/", rev = "d28c89b" }
+sleef-sys = { git = "https://github.com/zachmatson/sleef-sys/", rev = "a13688c" }
 cfg-if = "1.0.0"
