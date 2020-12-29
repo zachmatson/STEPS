@@ -149,7 +149,7 @@ pub fn marker_1_ratio_and_avg_W(data: &LineagesData) -> (f64, f64) {
         weighted_sum_W += N[i] * W[i];
 
         if secondary[i].marker == 1 {
-            sum_N_marker_1 += 1.0;
+            sum_N_marker_1 += N[i];
         }
     }
 
