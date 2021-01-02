@@ -19,7 +19,7 @@ pub fn grow_lineages_inplace(data: &mut LineagesData, delta_t: f64) {
     let W = &data.W[0..len];
 
     cfg_if! {
-        if #[cfg(all(target_arch = "x86_64", target_feature = "avx2", target_feature="fma"))] {
+        if #[cfg(all(target_arch = "x86_64", target_feature = "avx2", target_feature = "fma", feature = "sleef"))] {
             use sleef_sys::*;
             use core::arch::x86_64::*;
             const VEC_LEN: usize = 4;
