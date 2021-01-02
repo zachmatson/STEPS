@@ -1,7 +1,7 @@
 //! Functions to run the simulations and output results with command line display
 //! after configuration options are retrieved and processed
 
-use std::error::Error;
+use std::{error::Error, time};
 
 use indicatif::{ProgressBar, ProgressStyle};
 
@@ -28,6 +28,10 @@ fn run_simulations_inner(
     sim_cfg: &SimConfig,
 ) -> Result<(), Box<dyn Error>> {
     let replicate_bar = styled_bar(sim_cfg.replicates as u64, "Replicate:");
+    // To pick how often to update the transfers bar
+    let mut update_interval = 2;
+    let mut last_update = time::Instant::now();
+    const TARGET_UPDATE_INTERVAL: time::Duration = time::Duration::from_millis(75);
     // Objects which manage the underlying simulations and the outputting of results
     let mut population_handler = SimulationHandler::new(
         sim_cfg.to_owned(),
@@ -59,8 +63,15 @@ fn run_simulations_inner(
             )?;
 
             // Update progress bar only periodically to reduce time spent redrawing it
-            if t % 4096 == 0 {
+            if t % update_interval == 0 {
                 transfer_bar.set_position(t as u64);
+                // Update to try to get the interval to the target interval
+                let duration = last_update.elapsed().as_secs_f64();
+                update_interval = (TARGET_UPDATE_INTERVAL.as_secs_f64() / duration
+                    * update_interval as f64)
+                    .round()
+                    .clamp(1.0, 4096.0) as u32;
+                last_update = time::Instant::now();
             }
         }
 
