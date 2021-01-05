@@ -143,7 +143,8 @@ fn add_mutants<R: Rng>(
                 // Upper bound (exclusive) corresponding to the same new individual mutant in the lineage
                 let individual_max_cutoff = {
                     // Find start + (j+1)*U explained at top of 'outer
-                    // Without knowing j
+                    // given cutoff = start + (j+ε)*U for ε in [0, 1),
+                    // without knowing j
                     let tmp = cutoff - prev_cumsum;
                     tmp - tmp % lineage.U + lineage.U + prev_cumsum
                 };
