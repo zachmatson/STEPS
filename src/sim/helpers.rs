@@ -8,8 +8,7 @@ use super::*;
 /// Get the number of phase 1 doublings that must take place before phase 2,
 /// given the dilution factor in `cfg`
 pub fn phase_1_doublings_required(cfg: &SimConfig) -> usize {
-    // cfg.dilution_factor.log2().ceil() as usize - 1
-    cfg.dilution_factor.log2().floor() as usize
+    cfg.dilution_factor.log2().ceil() as usize - 1
 }
 
 /// Perform a single Phase 1 doubling on `data`
