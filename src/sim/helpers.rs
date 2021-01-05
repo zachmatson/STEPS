@@ -145,7 +145,7 @@ fn add_mutants<R: Rng>(
                     // Find start + (j+1)*U explained at top of 'outer
                     // Without knowing j
                     let tmp = cutoff - prev_cumsum;
-                    tmp - tmp.rem_euclid(lineage.U) + lineage.U + prev_cumsum
+                    tmp - tmp % lineage.U + lineage.U + prev_cumsum
                 };
                 while cutoff < individual_max_cutoff {
                     mutant_order += 1;
