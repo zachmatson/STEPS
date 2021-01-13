@@ -99,10 +99,7 @@ fn add_mutants<R: Rng>(
     }
 
     // Cutoffs store the number of expected mutations into the population
-    // that each mutation occurs at,
-    // If the cumulative sum of expected mutations passes a cutoff when a
-    // lineage is added, that lineage gets the mutation associated with
-    // that cutoff
+    // that each mutation occurs at
     let cutoffs_dist = Uniform::new(0.0, expected_mutations);
     let mut cutoffs: Vec<f64> = (0..num_mutations)
         .map(|_| cutoffs_dist.sample(rng))
@@ -110,22 +107,64 @@ fn add_mutants<R: Rng>(
     // Cutoffs must be in order for the iteration
     cutoffs.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
 
-    let mut expected_mutations_cumsum = 0.0;
     let mut cutoff_i = 0;
+    let mut cutoff = cutoffs[cutoff_i];
+    let mut expected_mutations_cumsum = 0.0;
+    // Underlying data vector size will increase because mutants are being added
+    // But we are only iterating through the lineages that already existed by
+    // using the length of expected_mutation_counts, whose elements correspond
+    // to the starting elements of data
     let len = expected_mutation_counts.len();
     'outer: for i in 0..len {
+        // expected_mutations_cumsum increases with each loop, going from
+        // expected_mutation_counts[1] after the first addition, to
+        // expected_mutations after the last
+        //
+        // The cutoffs correspond to the cumulative sums but are along
+        // the half-open interval [0, expected_mutations)
+        //
+        // For each lineage i (zero-indexed),
+        // expected_mutation_counts[i] = delta_N[i] * data.U[i] =: Δ
+        //
+        // The lineage will get an interval of cutoffs [start, start + Δ)
+        // Where start = expected_mutations_cumsum[i-1]
+        // Each individual j (zero-indexed) in the lineage then gets an interval [start + j*U, start + (j+1)*U)
+
+        let prev_cumsum = expected_mutations_cumsum;
         expected_mutations_cumsum += expected_mutation_counts[i];
 
-        if expected_mutations_cumsum >= cutoffs[cutoff_i] {
+        if cutoff < expected_mutations_cumsum {
             let lineage = unsafe { data.get_unchecked(i) };
-            // One lineage may get multiple mutations
-            while expected_mutations_cumsum >= cutoffs[cutoff_i] {
-                let mutant = new_mutant(lineage, cfg, rng);
+            // Iterate through mutants from the lineage
+            while cutoff < expected_mutations_cumsum {
+                // Find the number of mutations in the mutant
+                let mut mutant_order: u32 = 0;
+                // Upper bound (exclusive) corresponding to the same new individual mutant in the lineage
+                let individual_max_cutoff = {
+                    // Find start + (j+1)*U explained at top of 'outer
+                    // given cutoff = start + (j+ε)*U for ε in [0, 1),
+                    // without knowing j
+                    let tmp = cutoff - prev_cumsum;
+                    tmp - tmp % lineage.U + lineage.U + prev_cumsum
+                };
+                while cutoff < individual_max_cutoff {
+                    mutant_order += 1;
+
+                    if cutoff_i < cutoffs.len() {
+                        cutoff = cutoffs[cutoff_i];
+                        cutoff_i += 1;
+                    } else {
+                        break;
+                    }
+                }
+
+                let mutant = new_mutant(lineage, mutant_order, cfg, rng);
                 data.push_child(mutant, lineage, mutations_vec);
                 // N still includes the mutants that come from the lineage up until this point
+                // No need to update `lineage` because its N field is not used here
                 data.N[i] = (data.N[i] - 1.0).max(0.0);
 
-                cutoff_i += 1;
+                // No more cutoffs to try
                 if cutoff_i >= cutoffs.len() {
                     break 'outer;
                 }
@@ -135,19 +174,23 @@ fn add_mutants<R: Rng>(
 }
 
 /// Generate a descendant lineage from `parent`
-fn new_mutant<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> Lineage {
-    let mutation_type = cfg.sample_mutation_type(rng).unwrap();
+fn new_mutant<R: Rng>(parent: Lineage, order: u32, cfg: &SimConfig, rng: &mut R) -> Lineage {
+    let mut W = parent.W;
+    let mut lambda = parent.secondary.lambda;
 
-    let (W, lambda) = match mutation_type {
-        MutationType::Beneficial => updates_after_beneficial_mutation(parent, cfg, rng),
-        MutationType::Deleterious => updates_after_deleterious_mutation(parent, cfg, rng),
-        MutationType::Neutral | MutationType::MutationRate => (parent.W, parent.secondary.lambda),
-    };
+    for _ in 0..order {
+        let mutation_type = cfg.sample_mutation_type(rng).unwrap();
 
-    // let U = match mutation_type {
-    //     MutationType::MutationRate => mutation_rate_todo(),
-    //     _ => parent.U,
-    // };
+        match mutation_type {
+            MutationType::Beneficial => {
+                let size = beneficial_mutation_size(parent, rng);
+                let results = apply_beneficial_mutation((W, lambda), size, cfg);
+                W = results.0;
+                lambda = results.1;
+            }
+            _ => (),
+        }
+    }
 
     Lineage {
         N: 1.0,
@@ -161,27 +204,29 @@ fn new_mutant<R: Rng>(parent: Lineage, cfg: &SimConfig, rng: &mut R) -> Lineage 
 }
 
 /// Generate fitness and mutation size lambda of a descendant of `parent` after undergoing a beneficial mutation
-fn updates_after_beneficial_mutation<R: Rng>(
-    parent: Lineage,
-    cfg: &SimConfig,
-    rng: &mut R,
-) -> (f64, f64) {
-    let mutation_size = rand_distr::Exp::new(parent.secondary.lambda)
+fn beneficial_mutation_size<R: Rng>(parent: Lineage, rng: &mut R) -> f64 {
+    rand_distr::Exp::new(parent.secondary.lambda)
         .unwrap()
-        .sample(rng);
-    let lambda_new = parent.secondary.lambda
-        * (1.0 + cfg.diminishing_returns_epistasis_strength * mutation_size);
-    let W_new = parent.W * (1.0 + mutation_size);
-
-    (W_new, lambda_new)
+        .sample(rng)
 }
 
 /// Generate fitness and mutation size lambda of a descendant of `parent` after undergoing a deleterious mutation
-#[allow(unused_variables)]
-fn updates_after_deleterious_mutation<R: Rng>(
-    parent: Lineage,
-    cfg: &SimConfig,
-    rng: &mut R,
-) -> (f64, f64) {
+#[allow(unused_variables, dead_code)]
+fn deleterious_mutation_size<R: Rng>(parent: Lineage, rng: &mut R) -> f64 {
     deleterious_todo()
+}
+
+/// Apply a beneficial mutation to an existing fitness  
+/// Takes `W` and `lambda` for existing lineage as well as `mutation_size` and returns
+/// `(W, lambda)` tuple after the mutation
+#[inline(always)]
+fn apply_beneficial_mutation(
+    (W, lambda): (f64, f64),
+    mutation_size: f64,
+    cfg: &SimConfig,
+) -> (f64, f64) {
+    (
+        W * (1.0 + mutation_size),
+        lambda * (1.0 + cfg.diminishing_returns_epistasis_strength * mutation_size),
+    )
 }
