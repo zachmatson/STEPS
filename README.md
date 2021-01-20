@@ -18,3 +18,4 @@
     - `RUSTFLAGS="[...] -C target-feature=+crt-static" cargo build --release [...] --target=x86_64-unknown-linux-gnu`
 - The recommended settings when compiling *for* the HPCC are then `RUSTFLAGS="-C target-cpu=skylake -C target-feature=+crt-static" cargo build --release --features sleef --target=x86_64-unknown-linux-gnu`
   - Currently, the `sleef` feature cannot be enabled when compiling *on* the HPCC because of the Clang installation. Working on a way around this. Compiling with these settings on another machine would produce an executable that can run well on all HPCC nodes.
+  - When compiling *on* the HPCC, use the release mode and target `skylake` as mentioned in the first compilation options bullet point
