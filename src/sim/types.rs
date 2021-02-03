@@ -3,6 +3,8 @@
 use serde::{Deserialize, Serialize};
 use serde_tuple::*;
 
+use std::collections::HashMap;
+
 use super::*;
 
 /// Container for data on a population of lineages
@@ -65,7 +67,7 @@ impl LineagesData {
     ///
     /// Use this only to start a new replicate. For creating a new container to transfer
     /// into use `LineagesData::successor` to ensure that the IDs remain properly numbered
-    pub fn from_simconfig(cfg: &SimConfig, mutations_vec: &mut Option<Vec<Mutation>>) -> Self {
+    pub fn from_simconfig(cfg: &SimConfig, mutations: &mut Option<MutationsData>) -> Self {
         let mut output = Self::default();
 
         // Size, parent ID, and marker won't matter
@@ -100,7 +102,7 @@ impl LineagesData {
                 ..ancestor
             };
 
-            output.push_child(marker_mutant, ancestor, mutations_vec);
+            output.push_child(marker_mutant, ancestor, mutations);
         }
 
         output
@@ -144,7 +146,7 @@ impl LineagesData {
         &mut self,
         mut child: Lineage,
         parent: Lineage,
-        mutations_vec: &mut Option<Vec<Mutation>>,
+        mutations: &mut Option<MutationsData>,
     ) {
         // Appropriate parent_id must be assigned
         child.secondary.parent_id = parent.secondary.id;
@@ -157,12 +159,8 @@ impl LineagesData {
 
         self.push(child);
 
-        if let Some(mutations_vec) = mutations_vec {
-            mutations_vec.push(Mutation {
-                id: child.secondary.id,
-                background_id: parent.secondary.id,
-                delta_W: child.W - parent.W,
-            });
+        if let Some(mutations) = mutations {
+            mutations.register(child, parent);
         }
     }
 
@@ -195,7 +193,7 @@ pub enum MutationType {
 }
 
 #[derive(Debug)]
-pub struct Mutation {
+pub struct MutationOld {
     /// ID of the `Mutation` corresponding to the ID of
     /// the first `Lineage` instance with this mutation
     pub id: u64,
@@ -205,4 +203,48 @@ pub struct Mutation {
     pub background_id: u64,
     /// Change in fitness as a result of this mutation
     pub delta_W: f64,
+}
+
+#[derive(Debug)]
+pub struct MutationsData {
+    pub muts: HashMap<u64, Mutation>,
+    pub on_transfer: u32,
+}
+
+impl MutationsData {
+    pub fn new() -> Self {
+        Self {
+            muts: HashMap::new(),
+            on_transfer: 0,
+        }
+    }
+
+    pub fn increment_transfer(&mut self) {
+        self.on_transfer += 1;
+    }
+
+    pub fn register(&mut self, child: Lineage, parent: Lineage) {
+        let mutation = Mutation {
+            id: child.secondary.id,
+            background_id: parent.secondary.id,
+            delta_W: child.W - parent.W,
+            delta_U: child.U - parent.U,
+            first_transfer: self.on_transfer,
+            prunable: true,
+            N: Vec::new(),
+        };
+
+        self.muts.insert(child.secondary.id, mutation);
+    }
+}
+
+#[derive(Debug, Serialize_tuple)]
+pub struct Mutation {
+    pub id: u64,
+    pub background_id: u64,
+    pub delta_W: f64,
+    pub delta_U: f64,
+    pub first_transfer: u32,
+    pub prunable: bool,
+    pub N: Vec<f64>,
 }

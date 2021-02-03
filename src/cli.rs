@@ -27,7 +27,7 @@ fn run_simulations_inner(
     output_cfg: &OutputConfig,
     sim_cfg: &SimConfig,
 ) -> Result<(), Box<dyn Error>> {
-    let replicate_bar = styled_bar(sim_cfg.replicates as u64, "Replicate:");
+    // let replicate_bar = styled_bar(sim_cfg.replicates as u64, "Replicate:");
     // To pick how often to update the transfers bar
     let mut update_interval = 2;
     let mut last_update = time::Instant::now();
@@ -40,7 +40,7 @@ fn run_simulations_inner(
     let mut output_handler = OutputHandler::new(&output_cfg, &sim_cfg)?;
 
     for r in 1..=sim_cfg.replicates {
-        let transfer_bar = styled_bar(sim_cfg.transfers as u64, "Transfer:");
+        // let transfer_bar = styled_bar(sim_cfg.transfers as u64, "Transfer:");
 
         population_handler.start_replicate();
         // All other lineages will be handled after transferring
@@ -49,7 +49,6 @@ fn run_simulations_inner(
             r,
             0,
             population_handler.lineages(),
-            population_handler.new_mutations(),
         )?;
 
         // 1 index because t is day *1* after the first transfer
@@ -59,12 +58,11 @@ fn run_simulations_inner(
                 r,
                 t,
                 population_handler.lineages(),
-                population_handler.new_mutations(),
             )?;
 
             // Update progress bar only periodically to reduce time spent redrawing it
             if t % update_interval == 0 {
-                transfer_bar.set_position(t as u64);
+                // transfer_bar.set_position(t as u64);
                 // Update to try to get the interval to the target interval
                 let duration = last_update.elapsed().as_secs_f64();
                 update_interval = (TARGET_UPDATE_INTERVAL.as_secs_f64() / duration
@@ -75,10 +73,12 @@ fn run_simulations_inner(
             }
         }
 
+        println!("{:#?}", population_handler.mutations());
+
         // Must reset the transfer bar this way to make the display work for the replicate bar
         // when it gets incremented
-        transfer_bar.finish_and_clear();
-        replicate_bar.inc(1);
+        // transfer_bar.finish_and_clear();
+        // replicate_bar.inc(1);
     }
 
     Ok(())

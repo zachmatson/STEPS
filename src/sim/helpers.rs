@@ -21,7 +21,7 @@ pub fn growth_phase_1<R: Rng>(
     data: &mut LineagesData,
     cfg: &SimConfig,
     rng: &mut R,
-    mutations_vec: &mut Option<Vec<Mutation>>,
+    mutations: &mut Option<MutationsData>,
 ) {
     let avg_W = sum_N_and_avg_W(data).1;
     let delta_t = avg_W.recip();
@@ -30,7 +30,7 @@ pub fn growth_phase_1<R: Rng>(
     grow_lineages_inplace(data, delta_t);
     let delta_N = old_N_to_delta_N(data, &mut old_N);
 
-    add_mutants(data, delta_N, cfg, rng, mutations_vec);
+    add_mutants(data, delta_N, cfg, rng, mutations);
 }
 
 /// Perform a single Phase 2 doubling on `data`
@@ -44,7 +44,7 @@ pub fn growth_phase_2<R: Rng>(
     data: &mut LineagesData,
     cfg: &SimConfig,
     rng: &mut R,
-    mutations_vec: &mut Option<Vec<Mutation>>,
+    mutations: &mut Option<MutationsData>,
 ) {
     let (sum_N, avg_W) = sum_N_and_avg_W(data);
     // Must grow population size to Nmax
@@ -78,7 +78,7 @@ pub fn growth_phase_2<R: Rng>(
     // dropping the old data from the heap
     *data = bottlenecked_data;
 
-    add_mutants(data, &delta_N, cfg, rng, mutations_vec);
+    add_mutants(data, &delta_N, cfg, rng, mutations);
 }
 
 /// Add the mutants corresponding to `delta_N` change in population size
@@ -89,7 +89,7 @@ fn add_mutants<R: Rng>(
     delta_N: &[f64],
     cfg: &SimConfig,
     rng: &mut R,
-    mutations_vec: &mut Option<Vec<Mutation>>,
+    mutations: &mut Option<MutationsData>,
 ) {
     let expected_mutation_counts = expected_mutation_counts(data, delta_N);
     let expected_mutations = expected_mutation_counts.iter().sum::<f64>();
@@ -159,7 +159,7 @@ fn add_mutants<R: Rng>(
                 }
 
                 let mutant = new_mutant(lineage, mutant_order, cfg, rng);
-                data.push_child(mutant, lineage, mutations_vec);
+                data.push_child(mutant, lineage, mutations);
                 // N still includes the mutants that come from the lineage up until this point
                 // No need to update `lineage` because its N field is not used here
                 data.N[i] = (data.N[i] - 1.0).max(0.0);

@@ -6,6 +6,7 @@
 
 use rand::prelude::*;
 use rand_pcg::Pcg64;
+use sequencing::update_frequencies;
 
 use crate::cfg::*;
 
@@ -17,6 +18,7 @@ pub use kernels::{marker_1_ratio_and_avg_W, sum_N_and_avg_W};
 mod helpers;
 use helpers::*;
 mod distr;
+mod sequencing;
 
 /// RNG used for the simulations  
 /// Implements `Rng` trait from `rand`   
@@ -47,7 +49,7 @@ pub struct SimulationHandler {
     /// Must be created/reset before a new replicate
     lineages: LineagesData,
     /// Mutations added in the last transfer
-    new_mutations: Option<Vec<Mutation>>,
+    mutations: Option<MutationsData>,
     /// RNG to use for all replicates
     rng: SIM_RNG,
 }
@@ -57,8 +59,8 @@ impl SimulationHandler {
     pub fn new(cfg: SimConfig, track_mutations: bool) -> Self {
         let phase_1_doublings = phase_1_doublings_required(&cfg);
         let rng = default_sim_rng(&cfg);
-        let new_mutations = match track_mutations {
-            true => Some(Vec::new()),
+        let mutations = match track_mutations {
+            true => Some(MutationsData::new()),
             false => None,
         };
 
@@ -66,7 +68,7 @@ impl SimulationHandler {
             cfg,
             phase_1_doublings,
             lineages: LineagesData::default(),
-            new_mutations,
+            mutations,
             rng,
         }
     }
@@ -74,21 +76,21 @@ impl SimulationHandler {
     /// Initialize the lineages for a replicate while continuing to use same RNG  
     /// Must call this before every replicate
     pub fn start_replicate(&mut self) {
-        self.reset_new_mutations();
-        self.lineages = LineagesData::from_simconfig(&self.cfg, &mut self.new_mutations);
+        self.lineages = LineagesData::from_simconfig(&self.cfg, &mut self.mutations);
     }
 
     /// Perform a transfer and update the lineages
     pub fn transfer(&mut self) {
-        // Mutations vec only stores data from the current transfer
-        self.reset_new_mutations();
+        if let Some(mutations) = &mut self.mutations {
+            mutations.increment_transfer();
+        }
 
         for _ in 0..self.phase_1_doublings {
             growth_phase_1(
                 &mut self.lineages,
                 &self.cfg,
                 &mut self.rng,
-                &mut self.new_mutations,
+                &mut self.mutations,
             );
         }
 
@@ -96,8 +98,12 @@ impl SimulationHandler {
             &mut self.lineages,
             &self.cfg,
             &mut self.rng,
-            &mut self.new_mutations,
+            &mut self.mutations,
         );
+
+        if let Some(mutations) = &mut self.mutations {
+            sequencing::update_frequencies(mutations, &self.lineages);
+        }
     }
 
     /// Get reference to the `LineagesData` owned by the handler  
@@ -106,16 +112,7 @@ impl SimulationHandler {
         &self.lineages
     }
 
-    /// Get reference to the new mutations added in the *previous transfer*  
-    /// Will be `None` if sequencing mode is not enabled (`track_mutations` set to `false`)
-    pub fn new_mutations(&self) -> Option<&Vec<Mutation>> {
-        self.new_mutations.as_ref()
-    }
-
-    /// Reset the `new_mutations` vector *if* it exists
-    fn reset_new_mutations(&mut self) {
-        if let Some(new_mutations) = &mut self.new_mutations {
-            new_mutations.clear();
-        }
+    pub fn mutations(&self) -> Option<&MutationsData> {
+        self.mutations.as_ref()
     }
 }

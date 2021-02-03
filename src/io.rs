@@ -11,7 +11,7 @@ use serde_tuple::*;
 
 use crate::{
     cfg::{OutputConfig, SimConfig},
-    sim::{self, LineagesData, Mutation},
+    sim::{self, LineagesData, MutationOld},
 };
 
 /// Type which handles the details of outputting simulation results
@@ -66,14 +66,7 @@ impl OutputHandler {
         r: u32,
         t: u32,
         lineages: &LineagesData,
-        new_mutations: Option<&Vec<Mutation>>,
     ) -> Result<(), Box<dyn Error>> {
-        // Must output no matter the sampling frequency
-        // to ensure the complete hierarchy is preserved
-        if let Some(sequencing_outputter) = &mut self.sequencing_outputter {
-            sequencing_outputter.record_mutations(r, t, new_mutations.unwrap())?;
-        }
-
         // Only output if at the sampling frequency
         if t % self.sampling_frequency == 0 {
             if let Some(raw_outputter) = &mut self.raw_outputter {
@@ -284,7 +277,7 @@ impl SequencingOutputter {
         &mut self,
         r: u32,
         t: u32,
-        new_mutations: &[Mutation],
+        new_mutations: &[MutationOld],
     ) -> Result<(), Box<dyn Error>> {
         for mutation in new_mutations {
             self.wtr
