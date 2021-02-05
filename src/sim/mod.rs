@@ -77,6 +77,10 @@ impl SimulationHandler {
     /// Must call this before every replicate
     pub fn start_replicate(&mut self) {
         self.lineages = LineagesData::from_simconfig(&self.cfg, &mut self.mutations);
+
+        if let Some(mutations) = &mut self.mutations {
+            sequencing::update_frequencies(mutations, &self.lineages);
+        }
     }
 
     /// Perform a transfer and update the lineages

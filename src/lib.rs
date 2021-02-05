@@ -4,6 +4,8 @@
 //!
 //! [Find this project on GitHub](https://github.com/zachmatson/DevinsSimulations)
 
+#![feature(hash_drain_filter)]
+
 pub mod cfg;
 pub mod cli;
 mod io;

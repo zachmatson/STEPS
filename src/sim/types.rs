@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_tuple::*;
 
 use std::collections::HashMap;
+use fnv::FnvHashMap;
 
 use super::*;
 
@@ -207,14 +208,16 @@ pub struct MutationOld {
 
 #[derive(Debug)]
 pub struct MutationsData {
-    pub muts: HashMap<u64, Mutation>,
+    pub muts: FnvHashMap<u64, Mutation>,
+    pub pruned_muts: Vec<Mutation>,
     pub on_transfer: u32,
 }
 
 impl MutationsData {
     pub fn new() -> Self {
         Self {
-            muts: HashMap::new(),
+            muts: FnvHashMap::default(),
+            pruned_muts: Vec::default(),
             on_transfer: 0,
         }
     }
@@ -230,7 +233,7 @@ impl MutationsData {
             delta_W: child.W - parent.W,
             delta_U: child.U - parent.U,
             first_transfer: self.on_transfer,
-            prunable: true,
+            just_updated: false,
             N: Vec::new(),
         };
 
@@ -245,6 +248,7 @@ pub struct Mutation {
     pub delta_W: f64,
     pub delta_U: f64,
     pub first_transfer: u32,
-    pub prunable: bool,
+    #[serde(skip)]
+    pub just_updated: bool,
     pub N: Vec<f64>,
 }

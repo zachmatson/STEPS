@@ -45,20 +45,12 @@ fn run_simulations_inner(
         population_handler.start_replicate();
         // All other lineages will be handled after transferring
         // Must handle the output for the initial lineages before any transfers
-        output_handler.handle_output(
-            r,
-            0,
-            population_handler.lineages(),
-        )?;
+        output_handler.handle_output(r, 0, population_handler.lineages())?;
 
         // 1 index because t is day *1* after the first transfer
         for t in 1..=sim_cfg.transfers {
             population_handler.transfer();
-            output_handler.handle_output(
-                r,
-                t,
-                population_handler.lineages(),
-            )?;
+            output_handler.handle_output(r, t, population_handler.lineages())?;
 
             // Update progress bar only periodically to reduce time spent redrawing it
             if t % update_interval == 0 {
@@ -73,7 +65,10 @@ fn run_simulations_inner(
             }
         }
 
-        println!("{:#?}", population_handler.mutations());
+        let mutations = population_handler.mutations().unwrap();
+        for mutation in mutations.muts.values().chain(mutations.pruned_muts.iter()) {
+            println!("{}", serde_json::to_string(mutation).unwrap());
+        }
 
         // Must reset the transfer bar this way to make the display work for the replicate bar
         // when it gets incremented
