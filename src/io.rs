@@ -59,7 +59,7 @@ impl OutputHandler {
         })
     }
 
-    /// Output information from `Lineages` as necessary
+    /// Output information from `lineages` as necessary
     #[inline(always)]
     pub fn handle_lineages_output(
         &mut self,

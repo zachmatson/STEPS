@@ -1,6 +1,6 @@
 use super::*;
 
-/// Update the population sizes of mutations being tracked in `sequencing_data` based on 
+/// Update the population sizes of mutations being tracked in `sequencing_data` based on
 /// the lineages in `population_data`
 ///
 /// Mutations must already have been registered to be updated, this will not create/register
@@ -39,17 +39,19 @@ pub fn update_sizes(sequencing_data: &mut MutationsData, population_data: &Linea
         }
     }
 
-    // Anything which has empty N did not correspond to any lineage in this update,
-    // and has never corresponded to any lineage
-    // This indicates it was registered then went extinct before updating sizes
-    // Because of this it can be deleted instead of pruned
-    map.retain(|_, m| !m.N.is_empty());
     // Any mutation which has fixed or gone extinct after having its population
     // size tracked can be pruned
     let prunable = |_: &u64, m: &mut Mutation| {
         !m.just_updated || (*m.N.last().unwrap() - sum_N).abs() < f64::EPSILON
     };
-    sequencing_data
-        .pruned_muts
-        .extend(map.drain_filter(prunable).map(|(_, v)| v));
+    // Anything which has empty N did not correspond to any lineage in this update,
+    // and has never corresponded to any lineage
+    // This indicates it was registered then went extinct before updating sizes
+    // Because of this it can be deleted instead of pruned
+    let not_deletable = |m: &Mutation| !m.N.is_empty();
+    sequencing_data.pruned_muts.extend(
+        map.drain_filter(prunable)
+            .map(|(_, v)| v)
+            .filter(not_deletable),
+    );
 }
