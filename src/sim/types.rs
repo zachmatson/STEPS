@@ -3,8 +3,7 @@
 use serde::{Deserialize, Serialize};
 use serde_tuple::*;
 
-use std::collections::HashMap;
-use fnv::FnvHashMap;
+use hashbrown::HashMap;
 
 use super::*;
 
@@ -193,33 +192,16 @@ pub enum MutationType {
     MutationRate,
 }
 
-#[derive(Debug)]
-pub struct MutationOld {
-    /// ID of the `Mutation` corresponding to the ID of
-    /// the first `Lineage` instance with this mutation
-    pub id: u64,
-    /// ID of the background of the `Mutation` corresponding
-    /// to the ID of the *parent* of the first `Lineage`
-    /// instance with this mutation
-    pub background_id: u64,
-    /// Change in fitness as a result of this mutation
-    pub delta_W: f64,
-}
-
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct MutationsData {
-    pub muts: FnvHashMap<u64, Mutation>,
+    pub muts: HashMap<u64, Mutation>,
     pub pruned_muts: Vec<Mutation>,
     pub on_transfer: u32,
 }
 
 impl MutationsData {
     pub fn new() -> Self {
-        Self {
-            muts: FnvHashMap::default(),
-            pruned_muts: Vec::default(),
-            on_transfer: 0,
-        }
+        Self::default()
     }
 
     pub fn increment_transfer(&mut self) {
@@ -243,9 +225,16 @@ impl MutationsData {
 
 #[derive(Debug, Serialize_tuple)]
 pub struct Mutation {
+    /// ID of the `Mutation` corresponding to the ID of
+    /// the first `Lineage` instance with this mutation
     pub id: u64,
+    /// ID of the background of the `Mutation` corresponding
+    /// to the ID of the *parent* of the first `Lineage`
+    /// instance with this mutation
     pub background_id: u64,
+    /// Additive change in fitness as a result of this mutation
     pub delta_W: f64,
+    /// Additive change in mutation rate as a result of this mutation
     pub delta_U: f64,
     pub first_transfer: u32,
     #[serde(skip)]

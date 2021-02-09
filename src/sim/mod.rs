@@ -6,7 +6,6 @@
 
 use rand::prelude::*;
 use rand_pcg::Pcg64;
-use sequencing::update_frequencies;
 
 use crate::cfg::*;
 
@@ -48,7 +47,10 @@ pub struct SimulationHandler {
     /// Lineages in the simulation  
     /// Must be created/reset before a new replicate
     lineages: LineagesData,
-    /// Mutations added in the last transfer
+    /// Mutations data for sequencing
+    ///
+    /// Owner of SimulationHandler is responsible for
+    /// clearing pruned mutations as they see fit
     mutations: Option<MutationsData>,
     /// RNG to use for all replicates
     rng: SIM_RNG,
@@ -60,7 +62,7 @@ impl SimulationHandler {
         let phase_1_doublings = phase_1_doublings_required(&cfg);
         let rng = default_sim_rng(&cfg);
         let mutations = match track_mutations {
-            true => Some(MutationsData::new()),
+            true => Some(MutationsData::default()),
             false => None,
         };
 
@@ -76,6 +78,7 @@ impl SimulationHandler {
     /// Initialize the lineages for a replicate while continuing to use same RNG  
     /// Must call this before every replicate
     pub fn start_replicate(&mut self) {
+        self.mutations = self.mutations.as_ref().map(|_| MutationsData::new());
         self.lineages = LineagesData::from_simconfig(&self.cfg, &mut self.mutations);
 
         if let Some(mutations) = &mut self.mutations {
@@ -118,5 +121,11 @@ impl SimulationHandler {
 
     pub fn mutations(&self) -> Option<&MutationsData> {
         self.mutations.as_ref()
+    }
+
+    pub fn clear_pruned_mutations(&mut self) {
+        if let Some(mutations) = &mut self.mutations {
+            mutations.pruned_muts.clear();
+        }
     }
 }

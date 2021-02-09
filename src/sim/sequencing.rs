@@ -25,8 +25,8 @@ pub fn update_frequencies(sequencing_data: &mut MutationsData, population_data: 
         }
     }
 
-    map.retain(|_, m| m.N.len() != 0);
-    let prunable = |_: &u64, m: &mut Mutation| !m.just_updated || *m.N.last().unwrap() == sum_N;
+    map.retain(|_, m| !m.N.is_empty());
+    let prunable = |_: &u64, m: &mut Mutation| !m.just_updated || (*m.N.last().unwrap() - sum_N).abs() < f64::EPSILON;
     sequencing_data
         .pruned_muts
         .extend(map.drain_filter(prunable).map(|(_, v)| v));

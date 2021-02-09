@@ -11,7 +11,7 @@ use serde_tuple::*;
 
 use crate::{
     cfg::{OutputConfig, SimConfig},
-    sim::{self, LineagesData, MutationOld},
+    sim::{self, LineagesData, Mutation, MutationsData},
 };
 
 /// Type which handles the details of outputting simulation results
@@ -61,7 +61,7 @@ impl OutputHandler {
 
     /// Output information from `Lineages` as necessary
     #[inline(always)]
-    pub fn handle_output(
+    pub fn handle_lineages_output(
         &mut self,
         r: u32,
         t: u32,
@@ -80,6 +80,28 @@ impl OutputHandler {
 
         Ok(())
     }
+
+    pub fn output_pruned_mutations(
+        &mut self,
+        mutations_data: &MutationsData,
+    ) -> Result<(), Box<dyn Error>> {
+        self.sequencing_outputter
+            .as_mut()
+            .unwrap()
+            .record_pruned_mutations(mutations_data)?;
+        Ok(())
+    }
+
+    pub fn finish_transfer_mutations(
+        &mut self,
+        mutations_data: &MutationsData,
+    ) -> Result<(), Box<dyn Error>> {
+        self.sequencing_outputter
+            .as_mut()
+            .unwrap()
+            .record_active_mutations(mutations_data)?;
+        Ok(())
+    }
 }
 
 /// Type of output to produce
@@ -89,7 +111,7 @@ enum OutputMode {
     Raw,
     /// Population summary information only, as CSV
     Summary,
-    /// Information about each mutation that occurs, as CSV
+    /// Information about each mutation that occurs, as ndjson
     Sequencing,
 }
 
@@ -252,7 +274,7 @@ impl SummaryOutputter {
 /// including owning the file handle for the output
 struct SequencingOutputter {
     /// Buffered file writer to write data into
-    wtr: csv::Writer<File>,
+    buf: BufWriter<File>,
 }
 
 impl SequencingOutputter {
@@ -260,30 +282,36 @@ impl SequencingOutputter {
     ///
     /// Allocates internal buffer and obtains file handle
     fn initialize(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
-        let mut wtr = csv_writer_with_metadata(
+        let buf = create_file_with_header(
             output_cfg.sequencing_output_path.as_ref().unwrap(),
             sim_cfg,
             OutputMode::Sequencing,
+            "",
+            BUFFER_CAPACITY,
         )?;
 
-        // Header must be done manually
-        wtr.write_record(&["replicate", "transfer", "id", "background", "delta_W"])?;
-
-        Ok(Self { wtr })
+        Ok(Self { buf })
     }
 
-    /// Output new mutation data for `Lineages`
-    fn record_mutations(
-        &mut self,
-        r: u32,
-        t: u32,
-        new_mutations: &[MutationOld],
-    ) -> Result<(), Box<dyn Error>> {
-        for mutation in new_mutations {
-            self.wtr
-                .serialize((r, t, mutation.id, mutation.background_id, mutation.delta_W))?;
+    fn record_pruned_mutations(&mut self, mutations: &MutationsData) -> Result<(), Box<dyn Error>> {
+        for mutation in mutations.pruned_muts.iter() {
+            self.record_mutation(mutation)?;
         }
 
+        Ok(())
+    }
+
+    fn record_active_mutations(&mut self, mutations: &MutationsData) -> Result<(), Box<dyn Error>> {
+        for mutation in mutations.muts.values() {
+            self.record_mutation(mutation)?;
+        }
+
+        Ok(())
+    }
+
+    fn record_mutation(&mut self, mutation: &Mutation) -> Result<(), Box<dyn Error>> {
+        serde_json::to_writer(&mut self.buf, mutation)?;
+        writeln!(&mut self.buf)?;
         Ok(())
     }
 }

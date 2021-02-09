@@ -27,30 +27,37 @@ fn run_simulations_inner(
     output_cfg: &OutputConfig,
     sim_cfg: &SimConfig,
 ) -> Result<(), Box<dyn Error>> {
-    // let replicate_bar = styled_bar(sim_cfg.replicates as u64, "Replicate:");
+    let replicate_bar = styled_bar(sim_cfg.replicates as u64, "Replicate:");
     // To pick how often to update the transfers bar
     let mut update_interval = 2;
     let mut last_update = time::Instant::now();
     const TARGET_UPDATE_INTERVAL: time::Duration = time::Duration::from_millis(75);
+
     // Objects which manage the underlying simulations and the outputting of results
-    let mut population_handler = SimulationHandler::new(
-        sim_cfg.to_owned(),
-        output_cfg.sequencing_output_path.is_some(),
-    );
+    let track_mutations = output_cfg.sequencing_output_path.is_some();
+    let mut population_handler = SimulationHandler::new(sim_cfg.to_owned(), track_mutations);
     let mut output_handler = OutputHandler::new(&output_cfg, &sim_cfg)?;
 
     for r in 1..=sim_cfg.replicates {
-        // let transfer_bar = styled_bar(sim_cfg.transfers as u64, "Transfer:");
+        let transfer_bar = styled_bar(sim_cfg.transfers as u64, "Transfer:");
 
         population_handler.start_replicate();
         // All other lineages will be handled after transferring
         // Must handle the output for the initial lineages before any transfers
-        output_handler.handle_output(r, 0, population_handler.lineages())?;
+        output_handler.handle_lineages_output(r, 0, population_handler.lineages())?;
+        if track_mutations {
+            output_handler.output_pruned_mutations(population_handler.mutations().unwrap())?;
+            population_handler.clear_pruned_mutations();
+        }
 
         // 1 index because t is day *1* after the first transfer
         for t in 1..=sim_cfg.transfers {
             population_handler.transfer();
-            output_handler.handle_output(r, t, population_handler.lineages())?;
+            output_handler.handle_lineages_output(r, t, population_handler.lineages())?;
+            if track_mutations {
+                output_handler.output_pruned_mutations(population_handler.mutations().unwrap())?;
+                population_handler.clear_pruned_mutations();
+            }
 
             // Update progress bar only periodically to reduce time spent redrawing it
             if t % update_interval == 0 {
@@ -65,15 +72,14 @@ fn run_simulations_inner(
             }
         }
 
-        let mutations = population_handler.mutations().unwrap();
-        for mutation in mutations.muts.values().chain(mutations.pruned_muts.iter()) {
-            println!("{}", serde_json::to_string(mutation).unwrap());
+        if track_mutations {
+            output_handler.finish_transfer_mutations(population_handler.mutations().unwrap())?;
         }
 
         // Must reset the transfer bar this way to make the display work for the replicate bar
         // when it gets incremented
-        // transfer_bar.finish_and_clear();
-        // replicate_bar.inc(1);
+        transfer_bar.finish_and_clear();
+        replicate_bar.inc(1);
     }
 
     Ok(())
