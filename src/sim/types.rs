@@ -192,6 +192,15 @@ pub enum MutationType {
     MutationRate,
 }
 
+/// Data on a set of `Mutation`s being sequenced  
+/// 
+/// To use when sequencing, you must call the `register`
+/// method every time a new mutation you want to track
+/// arises, so that mutation's information will be stored
+///
+/// You must also call `increment_transfer` after each
+/// transfer to have meaningful data about the transfer
+/// times each mutation occurred at
 #[derive(Debug, Default)]
 pub struct MutationsData {
     pub muts: HashMap<u64, Mutation>,
@@ -223,6 +232,8 @@ impl MutationsData {
     }
 }
 
+/// Data for one Mutation being tracked  
+/// Should not be edited outside of sequencing functions
 #[derive(Debug, Serialize_tuple)]
 pub struct Mutation {
     /// ID of the `Mutation` corresponding to the ID of
@@ -236,8 +247,15 @@ pub struct Mutation {
     pub delta_W: f64,
     /// Additive change in mutation rate as a result of this mutation
     pub delta_U: f64,
+    /// The first transfer at which this mutation appeared  
+    /// This is also the transfer corresponding to the first
+    /// entry in the vector of population sizes
     pub first_transfer: u32,
     #[serde(skip)]
+    /// Was the mutation just updated in the last round of updating
+    /// sizes?
     pub just_updated: bool,
+    /// Vector of population sizes for each transfer tracked starting
+    /// from `self.first_transfer`
     pub N: Vec<f64>,
 }

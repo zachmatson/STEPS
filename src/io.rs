@@ -81,6 +81,11 @@ impl OutputHandler {
         Ok(())
     }
 
+    /// Output the pruned mutations from a `MutationsData`
+    ///
+    /// This will output *all* currently stored pruned mutations,
+    /// so mutations will be output more than once if this is called
+    /// repeatedly without clearing the pruned mutations in between calls
     pub fn output_pruned_mutations(
         &mut self,
         mutations_data: &MutationsData,
@@ -92,10 +97,24 @@ impl OutputHandler {
         Ok(())
     }
 
+    /// Finish outputting mutations at the end of a transfer
+    ///
+    /// This outputs all mutations, pruned or otherwise,
+    /// so if `output_pruned_mutations` was called without
+    /// clearing pruned mutations in between, pruned
+    /// mutations would be output again
+    ///
+    /// Additionally, calling this and continuing to run transfers
+    /// afterwards will cause undesired behavior, because upon outputting
+    /// again will output a second and newer version of the data for some
+    /// mutations, coexisting with the old version. The function should therefore
+    /// only be called at the *end* of a replicate, whether or not pruned
+    /// mutations are cleared.
     pub fn finish_transfer_mutations(
         &mut self,
         mutations_data: &MutationsData,
     ) -> Result<(), Box<dyn Error>> {
+        self.output_pruned_mutations(mutations_data)?;
         self.sequencing_outputter
             .as_mut()
             .unwrap()
@@ -293,6 +312,7 @@ impl SequencingOutputter {
         Ok(Self { buf })
     }
 
+    /// Record mutations in a `MutationsData` which have been pruned
     fn record_pruned_mutations(&mut self, mutations: &MutationsData) -> Result<(), Box<dyn Error>> {
         for mutation in mutations.pruned_muts.iter() {
             self.record_mutation(mutation)?;
@@ -301,6 +321,7 @@ impl SequencingOutputter {
         Ok(())
     }
 
+    /// Record mutations in a `MutationsData` which are still being tracked and have not been pruned
     fn record_active_mutations(&mut self, mutations: &MutationsData) -> Result<(), Box<dyn Error>> {
         for mutation in mutations.muts.values() {
             self.record_mutation(mutation)?;
@@ -309,6 +330,7 @@ impl SequencingOutputter {
         Ok(())
     }
 
+    /// Record an individual `Mutation`
     fn record_mutation(&mut self, mutation: &Mutation) -> Result<(), Box<dyn Error>> {
         serde_json::to_writer(&mut self.buf, mutation)?;
         writeln!(&mut self.buf)?;

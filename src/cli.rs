@@ -45,16 +45,14 @@ fn run_simulations_inner(
         // All other lineages will be handled after transferring
         // Must handle the output for the initial lineages before any transfers
         output_handler.handle_lineages_output(r, 0, population_handler.lineages())?;
-        if track_mutations {
-            output_handler.output_pruned_mutations(population_handler.mutations().unwrap())?;
-            population_handler.clear_pruned_mutations();
-        }
 
         // 1 index because t is day *1* after the first transfer
         for t in 1..=sim_cfg.transfers {
             population_handler.transfer();
             output_handler.handle_lineages_output(r, t, population_handler.lineages())?;
             if track_mutations {
+                // Pruned mutations, no longer being used for sequencing, can be output then
+                // cleared so the population_handler no longer has to keep them in memory
                 output_handler.output_pruned_mutations(population_handler.mutations().unwrap())?;
                 population_handler.clear_pruned_mutations();
             }
@@ -72,6 +70,8 @@ fn run_simulations_inner(
             }
         }
 
+        // Only *pruned* mutations have been output up until this point
+        // Many mutations will not have been pruned by the end of simulations
         if track_mutations {
             output_handler.finish_transfer_mutations(population_handler.mutations().unwrap())?;
         }

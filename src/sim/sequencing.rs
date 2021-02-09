@@ -1,20 +1,34 @@
 use super::*;
 
-pub fn update_frequencies(sequencing_data: &mut MutationsData, population_data: &LineagesData) {
+/// Update the population sizes of mutations being tracked in `sequencing_data` based on 
+/// the lineages in `population_data`
+///
+/// Mutations must already have been registered to be updated, this will not create/register
+/// any new mutations
+///
+/// Calling this function may cause some mutations to become pruned, after which point
+/// they will no longer be updated
+pub fn update_sizes(sequencing_data: &mut MutationsData, population_data: &LineagesData) {
     let length = population_data.N.len();
+    // Ensure N and secondary are the same size, and remove future bounds checks
     let N = &population_data.N[..length];
-    let sum_N: f64 = N.iter().sum();
     let secondary = &population_data.secondary[..length];
+    let sum_N: f64 = N.iter().sum();
 
     let map = &mut sequencing_data.muts;
 
+    // No mutations are "just_updated" now
+    // After updating they will be
     for mutation in map.values_mut() {
         mutation.just_updated = false;
     }
 
     for i in 0..length {
+        // Search through parent_id's until none is found
+        // Indicating that the parent has been pruned or is not being tracked
         let mut id = secondary[i].id;
         while let Some(mutation) = map.get_mut(&id) {
+            // Only a newly updated mutation has an N entry for this transfer
             if mutation.just_updated {
                 *mutation.N.last_mut().unwrap() += N[i];
             } else {
@@ -25,8 +39,16 @@ pub fn update_frequencies(sequencing_data: &mut MutationsData, population_data: 
         }
     }
 
+    // Anything which has empty N did not correspond to any lineage in this update,
+    // and has never corresponded to any lineage
+    // This indicates it was registered then went extinct before updating sizes
+    // Because of this it can be deleted instead of pruned
     map.retain(|_, m| !m.N.is_empty());
-    let prunable = |_: &u64, m: &mut Mutation| !m.just_updated || (*m.N.last().unwrap() - sum_N).abs() < f64::EPSILON;
+    // Any mutation which has fixed or gone extinct after having its population
+    // size tracked can be pruned
+    let prunable = |_: &u64, m: &mut Mutation| {
+        !m.just_updated || (*m.N.last().unwrap() - sum_N).abs() < f64::EPSILON
+    };
     sequencing_data
         .pruned_muts
         .extend(map.drain_filter(prunable).map(|(_, v)| v));

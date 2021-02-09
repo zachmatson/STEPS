@@ -50,7 +50,8 @@ pub struct SimulationHandler {
     /// Mutations data for sequencing
     ///
     /// Owner of SimulationHandler is responsible for
-    /// clearing pruned mutations as they see fit
+    /// clearing or not clearing pruned mutations as they see fit,
+    /// the `SimulationHandler` doesn't care about them
     mutations: Option<MutationsData>,
     /// RNG to use for all replicates
     rng: SIM_RNG,
@@ -82,7 +83,7 @@ impl SimulationHandler {
         self.lineages = LineagesData::from_simconfig(&self.cfg, &mut self.mutations);
 
         if let Some(mutations) = &mut self.mutations {
-            sequencing::update_frequencies(mutations, &self.lineages);
+            sequencing::update_sizes(mutations, &self.lineages);
         }
     }
 
@@ -109,7 +110,7 @@ impl SimulationHandler {
         );
 
         if let Some(mutations) = &mut self.mutations {
-            sequencing::update_frequencies(mutations, &self.lineages);
+            sequencing::update_sizes(mutations, &self.lineages);
         }
     }
 
@@ -119,10 +120,17 @@ impl SimulationHandler {
         &self.lineages
     }
 
+    /// Get optional reference to the `MutationsData`
+    /// owned by the handler, which is only available
+    /// if it was created with the `track_mutations` option
     pub fn mutations(&self) -> Option<&MutationsData> {
         self.mutations.as_ref()
     }
 
+    /// Clear all pruned mutations being tracked,
+    /// if sequencing/mutation tracking is enabled
+    ///
+    /// If it is disabled, nothing will happen
     pub fn clear_pruned_mutations(&mut self) {
         if let Some(mutations) = &mut self.mutations {
             mutations.pruned_muts.clear();
