@@ -73,7 +73,7 @@ fn run_simulations_inner(
         // Only *pruned* mutations have been output up until this point
         // Many mutations will not have been pruned by the end of simulations
         if track_mutations {
-            output_handler.finish_transfer_mutations(population_handler.mutations().unwrap())?;
+            output_handler.finish_replicate_mutations(population_handler.mutations().unwrap())?;
         }
 
         // Must reset the transfer bar this way to make the display work for the replicate bar

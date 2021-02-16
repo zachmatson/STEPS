@@ -44,14 +44,8 @@ pub fn update_sizes(sequencing_data: &mut MutationsData, population_data: &Linea
     let prunable = |_: &u64, m: &mut Mutation| {
         !m.just_updated || (*m.N.last().unwrap() - sum_N).abs() < f64::EPSILON
     };
-    // Anything which has empty N did not correspond to any lineage in this update,
-    // and has never corresponded to any lineage
-    // This indicates it was registered then went extinct before updating sizes
-    // Because of this it can be deleted instead of pruned
-    let not_deletable = |m: &Mutation| !m.N.is_empty();
     sequencing_data.pruned_muts.extend(
         map.drain_filter(prunable)
             .map(|(_, v)| v)
-            .filter(not_deletable),
     );
 }

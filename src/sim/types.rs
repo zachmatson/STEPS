@@ -225,7 +225,7 @@ impl MutationsData {
             delta_U: child.U - parent.U,
             first_transfer: self.on_transfer,
             just_updated: false,
-            N: Vec::new(),
+            N: Vec::with_capacity(0),
         };
 
         self.muts.insert(child.secondary.id, mutation);

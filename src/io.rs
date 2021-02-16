@@ -97,7 +97,7 @@ impl OutputHandler {
         Ok(())
     }
 
-    /// Finish outputting mutations at the end of a transfer
+    /// Finish outputting mutations at the end of a replicate
     ///
     /// This outputs all mutations, pruned or otherwise,
     /// so if `output_pruned_mutations` was called without
@@ -110,15 +110,16 @@ impl OutputHandler {
     /// mutations, coexisting with the old version. The function should therefore
     /// only be called at the *end* of a replicate, whether or not pruned
     /// mutations are cleared.
-    pub fn finish_transfer_mutations(
+    pub fn finish_replicate_mutations(
         &mut self,
         mutations_data: &MutationsData,
     ) -> Result<(), Box<dyn Error>> {
         self.output_pruned_mutations(mutations_data)?;
-        self.sequencing_outputter
+        let mut sequencing_outputter = self.sequencing_outputter
             .as_mut()
-            .unwrap()
-            .record_active_mutations(mutations_data)?;
+            .unwrap();
+        sequencing_outputter.record_active_mutations(mutations_data)?;
+        sequencing_outputter.deliminate_replicate_end();
         Ok(())
     }
 }
@@ -333,6 +334,14 @@ impl SequencingOutputter {
     /// Record an individual `Mutation`
     fn record_mutation(&mut self, mutation: &Mutation) -> Result<(), Box<dyn Error>> {
         serde_json::to_writer(&mut self.buf, mutation)?;
+        writeln!(&mut self.buf)?;
+        Ok(())
+    }
+
+    /// Deliminate the end of a replicate
+    ///
+    /// Currently, this writes an extra newline character to the output
+    fn deliminate_replicate_end(&mut self) -> Result<(), Box<dyn Error>> {
         writeln!(&mut self.buf)?;
         Ok(())
     }
