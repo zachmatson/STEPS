@@ -221,8 +221,8 @@ impl MutationsData {
         let mutation = Mutation {
             id: child.secondary.id,
             background_id: parent.secondary.id,
-            delta_W: child.W - parent.W,
-            delta_U: child.U - parent.U,
+            delta_W: (child.W / parent.W) - 1.0,
+            delta_U: 0.0,
             first_transfer: self.on_transfer,
             just_updated: false,
             N: Vec::with_capacity(0),
