@@ -4,10 +4,6 @@
 
 use super::LineagesData;
 
-extern "C" {
-    fn grow_lineages_inplace_c(len: cty::size_t, N: *mut cty::c_double, W: *const cty::c_double, delta_t: cty::c_double);
-}
-
 /// Grow the lineages `delta_t` time forward, using the fitnesses and starting
 /// sizes in `data`, and leaving the resulting grown lineages inside `data`  
 /// Uses formula `N_new = (N_old * (W * delta_t).exp2()).ceil()`
@@ -18,6 +14,13 @@ pub fn grow_lineages_inplace(data: &mut LineagesData, delta_t: f64) {
     let len = data.N.len();
     let N = data.N[0..len].as_mut_ptr();
     let W = data.W[0..len].as_ptr();
+
+    extern "C" {
+        /// Defined in kernels.c
+        ///
+        /// Designed to autovectorize with gcc/glibc libmvec
+        fn grow_lineages_inplace_c(len: cty::size_t, N: *mut cty::c_double, W: *const cty::c_double, delta_t: cty::c_double);
+    }
 
     unsafe {
         grow_lineages_inplace_c(len, N, W, delta_t);
