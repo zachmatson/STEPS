@@ -2,9 +2,11 @@
 //! Transform or summarize the data in a `LineagesData`  
 //! Lower-level implementation details of the transfer process  
 
-use cfg_if::cfg_if;
-
 use super::LineagesData;
+
+extern "C" {
+    fn grow_lineages_inplace_c(len: cty::size_t, N: *mut cty::c_double, W: *const cty::c_double, delta_t: cty::c_double);
+}
 
 /// Grow the lineages `delta_t` time forward, using the fitnesses and starting
 /// sizes in `data`, and leaving the resulting grown lineages inside `data`  
@@ -12,55 +14,13 @@ use super::LineagesData;
 ///
 /// The length of any vector in `data` will *not* be changed
 pub fn grow_lineages_inplace(data: &mut LineagesData, delta_t: f64) {
-    // Force matching sizes, eliminate bounds checks in inner loop to allow vectorization
-    // For explicitly vectorized version, these bound checks ensure safety
+    // Bounds check now to make sure the C code will be safe
     let len = data.N.len();
-    let N = &mut data.N[0..len];
-    let W = &data.W[0..len];
+    let N = data.N[0..len].as_mut_ptr();
+    let W = data.W[0..len].as_ptr();
 
-    cfg_if! {
-        if #[cfg(all(target_arch = "x86_64", target_feature = "avx2", target_feature = "fma", feature = "sleef"))] {
-            use sleef_sys::*;
-            use core::arch::x86_64::*;
-            const VEC_LEN: usize = 4;
-
-            let mut N = N.as_mut_ptr();
-            let mut W = W.as_ptr();
-            let delta_t_packed = unsafe { _mm256_set1_pd(delta_t) };
-
-            let main_len = len / VEC_LEN;
-            let remainder_len = len % VEC_LEN;
-
-            for _ in 0..main_len {
-                unsafe {
-                    let N_vec = _mm256_loadu_pd(N);
-                    let W_vec = _mm256_loadu_pd(W);
-
-                    let mut tmp = _mm256_mul_pd(W_vec, delta_t_packed);
-                    tmp = Sleef_exp2d4_u10avx2(tmp);
-                    tmp = _mm256_ceil_pd(_mm256_mul_pd(N_vec, tmp));
-
-                    _mm256_storeu_pd(N, tmp);
-
-                    N = N.offset(VEC_LEN as isize);
-                    W = W.offset(VEC_LEN as isize);
-                }
-            }
-
-            for _ in 0..remainder_len {
-                unsafe {
-                    *N = (*N * (*W * delta_t).exp2()).ceil();
-
-                    N = N.offset(1);
-                    W = W.offset(1);
-                }
-            }
-        } else {
-            for i in 0..len {
-                N[i] *= (W[i] * delta_t).exp2();
-                N[i] = N[i].ceil();
-            }
-        }
+    unsafe {
+        grow_lineages_inplace_c(len, N, W, delta_t);
     }
 }
 

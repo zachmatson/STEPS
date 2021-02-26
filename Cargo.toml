@@ -8,9 +8,6 @@ edition = "2018"
 [profile.release]
 lto = "thin"
 
-[features]
-sleef = ["sleef-sys"]
-
 [dependencies]
 structopt = "0.3.15"
 indicatif = "0.15"
@@ -22,5 +19,4 @@ hashbrown = "0.9.1"
 rand = "0.7"
 rand_pcg = "0.2"
 rand_distr = "0.2"
-sleef-sys = { git = "https://github.com/zachmatson/sleef-sys/", rev = "a13688c", optional = true }
-cfg-if = "1.0.0"
+cty = "0.2.1"
