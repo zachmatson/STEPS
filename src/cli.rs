@@ -59,7 +59,7 @@ fn run_simulations_inner(
 
             // Update progress bar only periodically to reduce time spent redrawing it
             if t % update_interval == 0 {
-                // transfer_bar.set_position(t as u64);
+                transfer_bar.set_position(t as u64);
                 // Update to try to get the interval to the target interval
                 let duration = last_update.elapsed().as_secs_f64();
                 update_interval = (TARGET_UPDATE_INTERVAL.as_secs_f64() / duration
