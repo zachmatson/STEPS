@@ -19,7 +19,12 @@ pub fn grow_lineages_inplace(data: &mut LineagesData, delta_t: f64) {
         /// Defined in kernels.c
         ///
         /// Designed to autovectorize with gcc/glibc libmvec
-        fn grow_lineages_inplace_c(len: cty::size_t, N: *mut cty::c_double, W: *const cty::c_double, delta_t: cty::c_double);
+        fn grow_lineages_inplace_c(
+            len: cty::size_t,
+            N: *mut cty::c_double,
+            W: *const cty::c_double,
+            delta_t: cty::c_double,
+        );
     }
 
     unsafe {

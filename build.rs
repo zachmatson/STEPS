@@ -1,4 +1,8 @@
-use std::{process::{exit, Command}, env, error::Error};
+use std::{
+    env,
+    error::Error,
+    process::{exit, Command},
+};
 
 fn build_kernels_inner() -> Result<bool, Box<dyn Error>> {
     let target_features = env::var("CARGO_CFG_TARGET_FEATURE").unwrap();
@@ -25,7 +29,7 @@ fn build_kernels() -> String {
             eprintln!("Failed to build RELLTEE C kernels");
             exit(1);
         }
-        _ => ()
+        _ => (),
     }
 
     env::var("OUT_DIR").unwrap()
@@ -38,11 +42,14 @@ fn main() {
 
     // Build the kernels with make
     let relltee_lib_dir = build_kernels();
-    
+
     // Link the kernels
     println!("cargo:rustc-link-search=native={}", relltee_lib_dir);
     println!("cargo:rustc-link-lib=static=rellteekernels");
     // Link SLEEF
-    println!("cargo:rustc-link-search=native={}", sleef_shim::get_lib_dir().display());
+    println!(
+        "cargo:rustc-link-search=native={}",
+        sleef_shim::get_lib_dir().display()
+    );
     println!("cargo:rustc-link-lib=static=sleef");
 }
