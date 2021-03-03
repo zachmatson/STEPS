@@ -18,7 +18,7 @@ pub fn grow_lineages_inplace(data: &mut LineagesData, delta_t: f64) {
     extern "C" {
         /// Defined in kernels.c
         ///
-        /// Designed to autovectorize with gcc/glibc libmvec
+        /// Explicitly vectorized where AVX2 is available
         fn grow_lineages_inplace_c(
             len: cty::size_t,
             N: *mut cty::c_double,
