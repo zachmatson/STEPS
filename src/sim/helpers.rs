@@ -117,18 +117,19 @@ fn add_mutants<R: Rng>(
     let len = expected_mutation_counts.len();
     'outer: for i in 0..len {
         // expected_mutations_cumsum increases with each loop, going from
-        // expected_mutation_counts[1] after the first addition, to
+        // expected_mutation_counts[0] after the first addition, to
         // expected_mutations after the last
         //
-        // The cutoffs correspond to the cumulative sums but are along
+        // The cutoffs correspond to the cumulative sums and are along
         // the half-open interval [0, expected_mutations)
         //
         // For each lineage i (zero-indexed),
         // expected_mutation_counts[i] = delta_N[i] * data.U[i] =: Δ
         //
         // The lineage will get an interval of cutoffs [start, start + Δ)
-        // Where start = expected_mutations_cumsum[i-1]
-        // Each individual j (zero-indexed) in the lineage then gets an interval [start + j*U, start + (j+1)*U)
+        // Where start = previous expected_mutations_cumsum
+        // and start + Δ = new expected_mutations_cumsum
+        // Each new individual j (zero-indexed) in the lineage then gets an interval [start + j*U, start + (j+1)*U)
 
         let prev_cumsum = expected_mutations_cumsum;
         expected_mutations_cumsum += expected_mutation_counts[i];
@@ -149,10 +150,10 @@ fn add_mutants<R: Rng>(
                 };
                 while cutoff < individual_max_cutoff {
                     mutant_order += 1;
-
+                    
+                    cutoff_i += 1;
                     if cutoff_i < cutoffs.len() {
                         cutoff = cutoffs[cutoff_i];
-                        cutoff_i += 1;
                     } else {
                         break;
                     }
