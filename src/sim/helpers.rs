@@ -130,6 +130,16 @@ fn add_mutants<R: Rng>(
         // Where start = previous expected_mutations_cumsum
         // and start + Δ = new expected_mutations_cumsum
         // Each new individual j (zero-indexed) in the lineage then gets an interval [start + j*U, start + (j+1)*U)
+        // If the individual is the fractional part of the population size, its interval will be [start + j*U, start + Δ)
+
+        // If all cells of a lineage became mutants, it may persist in the vector
+        // with size 0.0 until the next bottleneck
+        // This is a strict and not approximate equality because it should only
+        // check for this narrow case, not just small lineages
+        #[allow(clippy::float_cmp_const)]
+        if expected_mutation_counts[i] == 0.0 {
+            continue;
+        }
 
         let prev_cumsum = expected_mutations_cumsum;
         expected_mutations_cumsum += expected_mutation_counts[i];
@@ -145,9 +155,10 @@ fn add_mutants<R: Rng>(
                     // Find start + (j+1)*U explained at top of 'outer
                     // given cutoff = start + (j+ε)*U for ε in [0, 1),
                     // without knowing j
+                    // Min with expected_mutations_cumsum for fractional case
                     let tmp = cutoff - prev_cumsum;
                     tmp - tmp % lineage.U + lineage.U + prev_cumsum
-                };
+                }.min(expected_mutations_cumsum);
                 while cutoff < individual_max_cutoff {
                     mutant_order += 1;
                     
