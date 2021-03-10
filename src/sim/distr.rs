@@ -17,6 +17,7 @@ pub fn poisson<R: Rng>(lambda: f64, rng: &mut R) -> u64 {
 /// Uses the Algorithm 3 described in https://www.jstor.org/stable/2347913  
 /// Assumes `lambda` is valid for results to be meaningful
 fn direct_poisson<R: Rng>(lambda: f64, rng: &mut R) -> u64 {
+    assert!(lambda >= 0.0, "Poisson called with negative lambda");
     let mut x = 0;
     let mut p = (-lambda).exp();
     let mut u = rng.gen::<f64>();
