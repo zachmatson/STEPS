@@ -19,7 +19,6 @@ void grow_lineages_inplace_c(size_t len, double *N, const double *W, const doubl
             __m256d temp = _mm256_mul_pd(W_vec, delta_t_packed);
            temp = Sleef_exp2d4_u10avx2(temp);
            temp = _mm256_mul_pd(N_vec, temp);
-           temp = _mm256_ceil_pd(temp);
            _mm256_storeu_pd(N, temp);
 
            N += VEC_LEN;
@@ -30,6 +29,5 @@ void grow_lineages_inplace_c(size_t len, double *N, const double *W, const doubl
     #endif
     for (size_t i = 0; i < len; ++i) {
         N[i] *= exp2(W[i] * delta_t);
-        N[i] = ceil(N[i]);
     }
 }

@@ -68,7 +68,7 @@ pub fn growth_phase_2<R: Rng>(
     for i in 0..len {
         let mut lineage = unsafe { data.get_unchecked(i) };
         let N_bottlenecked =
-            rand_distr::Binomial::new(lineage.N.ceil() as u64, cfg.dilution_coefficient)
+            rand_distr::Binomial::new(lineage.N.round() as u64, cfg.dilution_coefficient)
                 .unwrap()
                 .sample(rng);
         if N_bottlenecked > 0 {
