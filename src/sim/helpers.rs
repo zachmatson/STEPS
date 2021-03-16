@@ -51,6 +51,11 @@ pub fn growth_phase_2<R: Rng>(
     // Where growth is approximately a factor of 2^(avg_W * delta_t)
     let delta_t = (cfg.max_pop_size as f64 / sum_N).log2() / avg_W;
 
+    if delta_t.abs() < f64::EPSILON {
+        return;
+    }
+    assert!(delta_t >= 0.0);
+
     // old_N needed to calculate delta_N
     let old_N = data.N.clone();
     grow_lineages_inplace(data, delta_t);
@@ -93,6 +98,7 @@ fn add_mutants<R: Rng>(
 ) {
     let expected_mutation_counts = expected_mutation_counts(data, delta_N);
     let expected_mutations = expected_mutation_counts.iter().sum::<f64>();
+    assert!(expected_mutations >= 0.0);
     let num_mutations = distr::poisson(expected_mutations, rng);
     if num_mutations == 0 {
         return;
@@ -159,6 +165,7 @@ fn add_mutants<R: Rng>(
                     let tmp = cutoff - prev_cumsum;
                     tmp - tmp % lineage.U + lineage.U + prev_cumsum
                 }.clamp(next_float(cutoff), expected_mutations_cumsum);
+                // Above clamp guarantees individual_max_cutoff ∈ (cutoff, expected_mutations_cumsum]
                 while cutoff < individual_max_cutoff {
                     mutant_order += 1;
                     
@@ -246,7 +253,7 @@ fn apply_beneficial_mutation(
 /// Get next float for non-infinite and non-NaN floats
 /// If float is not finite, results may be strange
 fn next_float(x: f64) -> f64 {
-    debug_assert!(x.is_finite());
+    assert!(x.is_finite());
     unsafe{
         std::mem::transmute(std::mem::transmute::<_, u64>(x) + 1)
     }
