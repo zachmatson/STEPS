@@ -44,8 +44,7 @@ pub fn update_sizes(sequencing_data: &mut MutationsData, population_data: &Linea
     let prunable = |_: &u64, m: &mut Mutation| {
         !m.just_updated || (*m.N.last().unwrap() - sum_N).abs() < f64::EPSILON
     };
-    sequencing_data.pruned_muts.extend(
-        map.drain_filter(prunable)
-            .map(|(_, v)| v)
-    );
+    sequencing_data
+        .pruned_muts
+        .extend(map.drain_filter(prunable).map(|(_, v)| v));
 }

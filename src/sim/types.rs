@@ -193,7 +193,7 @@ pub enum MutationType {
 }
 
 /// Data on a set of `Mutation`s being sequenced  
-/// 
+///
 /// To use when sequencing, you must call the `register`
 /// method every time a new mutation you want to track
 /// arises, so that mutation's information will be stored

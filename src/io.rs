@@ -115,9 +115,7 @@ impl OutputHandler {
         mutations_data: &MutationsData,
     ) -> Result<(), Box<dyn Error>> {
         self.output_pruned_mutations(mutations_data)?;
-        let sequencing_outputter = self.sequencing_outputter
-            .as_mut()
-            .unwrap();
+        let sequencing_outputter = self.sequencing_outputter.as_mut().unwrap();
         sequencing_outputter.record_active_mutations(mutations_data)?;
         sequencing_outputter.deliminate_replicate_end()?;
         Ok(())

@@ -164,11 +164,12 @@ fn add_mutants<R: Rng>(
                     // Min with expected_mutations_cumsum for fractional case
                     let tmp = cutoff - prev_cumsum;
                     tmp - tmp % lineage.U + lineage.U + prev_cumsum
-                }.clamp(next_float(cutoff), expected_mutations_cumsum);
+                }
+                .clamp(next_float(cutoff), expected_mutations_cumsum);
                 // Above clamp guarantees individual_max_cutoff ∈ (cutoff, expected_mutations_cumsum]
                 while cutoff < individual_max_cutoff {
                     mutant_order += 1;
-                    
+
                     cutoff_i += 1;
                     if cutoff_i < cutoffs.len() {
                         cutoff = cutoffs[cutoff_i];
@@ -254,7 +255,5 @@ fn apply_beneficial_mutation(
 /// If float is not finite, results may be strange
 fn next_float(x: f64) -> f64 {
     assert!(x.is_finite());
-    unsafe{
-        std::mem::transmute(std::mem::transmute::<_, u64>(x) + 1)
-    }
+    unsafe { std::mem::transmute(std::mem::transmute::<_, u64>(x) + 1) }
 }
