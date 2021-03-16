@@ -158,7 +158,7 @@ fn add_mutants<R: Rng>(
                     // Min with expected_mutations_cumsum for fractional case
                     let tmp = cutoff - prev_cumsum;
                     tmp - tmp % lineage.U + lineage.U + prev_cumsum
-                }.min(expected_mutations_cumsum);
+                }.clamp(next_float(cutoff), expected_mutations_cumsum);
                 while cutoff < individual_max_cutoff {
                     mutant_order += 1;
                     
@@ -241,4 +241,13 @@ fn apply_beneficial_mutation(
         W * (1.0 + mutation_size),
         lambda * (1.0 + cfg.diminishing_returns_epistasis_strength * mutation_size),
     )
+}
+
+/// Get next float for non-infinite and non-NaN floats
+/// If float is not finite, results may be strange
+fn next_float(x: f64) -> f64 {
+    debug_assert!(x.is_finite());
+    unsafe{
+        std::mem::transmute(std::mem::transmute::<_, u64>(x) + 1)
+    }
 }
