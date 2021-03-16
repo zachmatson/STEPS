@@ -251,8 +251,11 @@ fn apply_beneficial_mutation(
     )
 }
 
-/// Get next float for non-infinite and non-NaN floats
-/// If float is not finite, results may be strange
+/// Get next float for finite floats
+///
+/// # Panics
+///
+/// Panics if `x` is `NaN` or infinite
 fn next_float(x: f64) -> f64 {
     assert!(x.is_finite());
     unsafe { std::mem::transmute(std::mem::transmute::<_, u64>(x) + 1) }
