@@ -10,11 +10,6 @@ use super::LineagesData;
 ///
 /// The length of any vector in `data` will *not* be changed
 pub fn grow_lineages_inplace(data: &mut LineagesData, delta_t: f64) {
-    // Bounds check now to make sure the C code will be safe
-    let len = data.N.len();
-    let N = data.N[0..len].as_mut_ptr();
-    let W = data.W[0..len].as_ptr();
-
     extern "C" {
         /// Defined in kernels.c
         ///
@@ -27,8 +22,11 @@ pub fn grow_lineages_inplace(data: &mut LineagesData, delta_t: f64) {
         );
     }
 
+    // Bounds check now to make sure the C code will be safe
+    let len = data.N.len();
+    assert_eq!(len, data.W.len());
     unsafe {
-        grow_lineages_inplace_c(len, N, W, delta_t);
+        grow_lineages_inplace_c(len, data.N.as_mut_ptr(), data.W.as_ptr(), delta_t);
     }
 }
 
