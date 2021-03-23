@@ -9,6 +9,7 @@ edition = "2018"
 lto = "thin"
 
 [dependencies]
+itertools = "0.10.0"
 structopt = "0.3.15"
 indicatif = "0.15"
 serde = "1.0"
