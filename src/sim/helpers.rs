@@ -60,11 +60,13 @@ pub fn growth_phase_2<R: Rng>(
     let old_N = data.N.clone();
     grow_lineages_inplace(data, delta_t);
 
-    let len = data.N.len();
     // Need new container because length will change from lineages that don't survive
     let mut bottlenecked_data = LineagesData::successor(&data);
     let mut delta_N = Vec::new();
 
+    let len = data.N.len();
+    // Ensures safety of unsafe region, length is only increased in the loop
+    data.assert_len_ge(len);
     for i in 0..len {
         let mut lineage = unsafe { data.get_unchecked(i) };
         let N_bottlenecked =
@@ -121,6 +123,7 @@ fn add_mutants<R: Rng>(
     // using the length of expected_mutation_counts, whose elements correspond
     // to the starting elements of data
     let len = expected_mutation_counts.len();
+    data.assert_len_ge(len);
     'outer: for i in 0..len {
         // expected_mutations_cumsum increases with each loop, going from
         // expected_mutation_counts[0] after the first addition, to

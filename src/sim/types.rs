@@ -167,8 +167,9 @@ impl LineagesData {
     /// Access a `Lineage` from the collection, without performing a bounds check
     ///
     /// # Safety
-    /// Calling with an index which is out of bounds for any of the component arrays
-    /// is undefined behavior
+    /// Calling with an index which is out of bounds for any of the component vectors
+    /// is undefined behavior. `LineagesData::assert_len_ge` can be used to ensure minimum
+    /// size across all vectors
     pub unsafe fn get_unchecked(&self, index: usize) -> Lineage {
         Lineage {
             N: *self.N.get_unchecked(index),
@@ -176,6 +177,17 @@ impl LineagesData {
             U: *self.U.get_unchecked(index),
             secondary: *self.secondary.get_unchecked(index),
         }
+    }
+
+    /// Asserts that the length of all component vectors is greater than or equal to `len`
+    ///
+    /// # Panics
+    /// Panics if any of the component vectors have lengths less than `len`
+    pub fn assert_len_ge(&self, len: usize) {
+        assert!(self.N.len() >= len);
+        assert!(self.W.len() >= len);
+        assert!(self.U.len() >= len);
+        assert!(self.secondary.len() >= len);
     }
 }
 
