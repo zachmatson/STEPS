@@ -51,9 +51,6 @@ pub fn growth_phase_2<R: Rng>(
     // Where growth is approximately a factor of 2^(avg_W * delta_t)
     let delta_t = (cfg.max_pop_size as f64 / sum_N).log2() / avg_W;
 
-    if delta_t.abs() < f64::EPSILON {
-        return;
-    }
     assert!(delta_t >= 0.0);
 
     // old_N needed to calculate delta_N
