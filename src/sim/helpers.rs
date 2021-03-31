@@ -193,62 +193,46 @@ fn add_mutants<R: Rng>(
     }
 }
 
-/// Generate a descendant lineage from `parent`
+/// Generate a descendant lineage from `parent` with population size `1.0`  
+/// Does not handle updating of IDs
 fn new_mutant<R: Rng>(parent: Lineage, order: u32, cfg: &SimConfig, rng: &mut R) -> Lineage {
-    let mut W = parent.W;
-    let mut lambda = parent.secondary.lambda;
+    let mut mutant = Lineage { N: 1.0, ..parent };
 
     for _ in 0..order {
         let mutation_type = cfg.sample_mutation_type(rng).unwrap();
 
+        use MutationType::*;
         match mutation_type {
-            MutationType::Beneficial => {
-                let size = beneficial_mutation_size(parent, rng);
-                let results = apply_beneficial_mutation((W, lambda), size, cfg);
-                W = results.0;
-                lambda = results.1;
-            }
-            _ => (),
+            Beneficial => apply_beneficial_mutation(&mut mutant, cfg, rng),
+            Neutral => (),
+            Deleterious => apply_deleterious_mutation(&mut mutant, cfg, rng),
+            MutationRate => apply_mutation_rate_mutation(&mut mutant, cfg, rng),
         }
     }
 
-    Lineage {
-        N: 1.0,
-        W,
-        secondary: SecondaryLineageData {
-            lambda,
-            ..parent.secondary
-        },
-        ..parent
-    }
+    mutant
 }
 
-/// Generate fitness and mutation size lambda of a descendant of `parent` after undergoing a beneficial mutation
-fn beneficial_mutation_size<R: Rng>(parent: Lineage, rng: &mut R) -> f64 {
-    rand_distr::Exp::new(parent.secondary.lambda)
+/// Applies a beneficial mutation to `lineage` in-place
+fn apply_beneficial_mutation<R: Rng>(lineage: &mut Lineage, cfg: &SimConfig, rng: &mut R) {
+    let size = rand_distr::Exp::new(lineage.secondary.lambda)
         .unwrap()
-        .sample(rng)
+        .sample(rng);
+
+    lineage.W *= 1.0 + size;
+    lineage.secondary.lambda *= 1.0 + cfg.diminishing_returns_epistasis_strength * size;
 }
 
-/// Generate fitness and mutation size lambda of a descendant of `parent` after undergoing a deleterious mutation
-#[allow(unused_variables, dead_code)]
-fn deleterious_mutation_size<R: Rng>(parent: Lineage, rng: &mut R) -> f64 {
+/// Applies a deleterious mutation to `lineage` in-place
+#[allow(unused_variables)]
+fn apply_deleterious_mutation<R: Rng>(lineage: &mut Lineage, cfg: &SimConfig, rng: &mut R) {
     deleterious_todo()
 }
 
-/// Apply a beneficial mutation to an existing fitness  
-/// Takes `W` and `lambda` for existing lineage as well as `mutation_size` and returns
-/// `(W, lambda)` tuple after the mutation
-#[inline(always)]
-fn apply_beneficial_mutation(
-    (W, lambda): (f64, f64),
-    mutation_size: f64,
-    cfg: &SimConfig,
-) -> (f64, f64) {
-    (
-        W * (1.0 + mutation_size),
-        lambda * (1.0 + cfg.diminishing_returns_epistasis_strength * mutation_size),
-    )
+/// Applies a mutation rate mutation to `lineage` in-place
+#[allow(unused_variables)]
+fn apply_mutation_rate_mutation<R: Rng>(lineage: &mut Lineage, cfg: &SimConfig, rng: &mut R) {
+    mutation_rate_todo()
 }
 
 /// Get next float for finite floats
