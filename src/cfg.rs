@@ -215,11 +215,6 @@ impl SimConfig {
 
     /// Finish initialization for fields that require additional steps
     pub fn finish_initialization(&mut self) {
-        // Validate that unimplemented parameters aren't in use
-        if self.mutation_rate_mutation_rate != 0.0 {
-            mutation_rate_todo();
-        }
-
         self.total_mutation_rate = self.beneficial_mutation_rate
             + self.deleterious_mutation_rate
             + self.neutral_mutation_rate
