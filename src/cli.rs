@@ -3,7 +3,7 @@
 
 use std::{error::Error, time};
 
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 
 use crate::{cfg::*, io::*, sim::*};
 
@@ -28,10 +28,20 @@ fn run_simulations_inner(
     sim_cfg: &SimConfig,
 ) -> Result<(), Box<dyn Error>> {
     let replicate_bar = styled_bar(sim_cfg.replicates as u64, "Replicate:");
+    let transfer_bar = styled_bar(sim_cfg.transfers as u64, "Transfer:");
+    // ProgressBars are Arc under the hood, clone is Arc clone
+    // Need to do this so bars don't interfere with panic messages
+    let replicate_bar_hook = replicate_bar.clone();
+    let transfer_bar_hook = transfer_bar.clone();
+    let hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        replicate_bar_hook.abandon();
+        transfer_bar_hook.abandon();
+        hook(info);
+    }));
     // To pick how often to update the transfers bar
-    let mut update_interval = 2;
     let mut last_update = time::Instant::now();
-    const TARGET_UPDATE_INTERVAL: time::Duration = time::Duration::from_millis(75);
+    const TARGET_UPDATE_INTERVAL: time::Duration = time::Duration::from_millis(500);
 
     // Objects which manage the underlying simulations and the outputting of results
     let track_mutations = output_cfg.sequencing_output_path.is_some();
@@ -39,8 +49,6 @@ fn run_simulations_inner(
     let mut output_handler = OutputHandler::new(&output_cfg, &sim_cfg)?;
 
     for r in 1..=sim_cfg.replicates {
-        let transfer_bar = styled_bar(sim_cfg.transfers as u64, "Transfer:");
-
         population_handler.start_replicate();
         // All other lineages will be handled after transferring
         // Must handle the output for the initial lineages before any transfers
@@ -58,30 +66,26 @@ fn run_simulations_inner(
             }
 
             // Update progress bar only periodically to reduce time spent redrawing it
-            if t % update_interval == 0 {
+            if last_update.elapsed() >= TARGET_UPDATE_INTERVAL {
+                if replicate_bar.position() <= r as u64 {
+                    transfer_bar.finish_and_clear();
+                    replicate_bar.set_position(r as u64 - 1);
+                    transfer_bar.reset();
+                }
                 transfer_bar.set_position(t as u64);
-                // Update to try to get the interval to the target interval
-                let duration = last_update.elapsed().as_secs_f64();
-                update_interval = (TARGET_UPDATE_INTERVAL.as_secs_f64() / duration
-                    * update_interval as f64)
-                    .round()
-                    .clamp(1.0, 4096.0) as u32;
                 last_update = time::Instant::now();
             }
         }
 
         // Only *pruned* mutations have been output up until this point
-        // Many mutations will not have been pruned by the end of simulations
+        // Many mutations will not have been pruned by the end of replicate
         if track_mutations {
             output_handler.finish_replicate_mutations(population_handler.mutations().unwrap())?;
         }
-
-        // Must reset the transfer bar this way to make the display work for the replicate bar
-        // when it gets incremented
-        transfer_bar.finish_and_clear();
-        replicate_bar.inc(1);
     }
 
+    transfer_bar.finish_and_clear();
+    replicate_bar.finish_and_clear();
     Ok(())
 }
 
@@ -108,7 +112,7 @@ pub fn reproduce_simulations(cfg: &ReproduceConfig) {
 
 /// Get `ProgressBar` with style options and a custom prefix set to use for displaying progress
 fn styled_bar(len: u64, prefix: &str) -> ProgressBar {
-    let bar = ProgressBar::new(len)
+    let bar = ProgressBar::with_draw_target(len, ProgressDrawTarget::stderr_nohz())
         .with_style(ProgressStyle::default_bar().template("{prefix} {wide_bar} [{pos}/{len}]"));
     bar.set_prefix(prefix);
 
