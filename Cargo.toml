@@ -24,7 +24,7 @@ cty = "0.2.1"
 
 [build-dependencies]
 cc = "1.0"
-sleef-shim = { path = "./deps/sleef" }
+sleef-shim = { git = "https://github.com/zachmatson/sleef-shim-rs", branch = "main" }
 
 [target.'cfg(all(target_arch = "x86_64", target_feature = "avx2"))'.build-dependencies]
-sleef-shim = { path = "./deps/sleef", features = ["build-sleef"] }
+sleef-shim = { git = "https://github.com/zachmatson/sleef-shim-rs", branch = "main", features = ["build-sleef"] }
