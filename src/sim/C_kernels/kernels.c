@@ -1,9 +1,10 @@
 #include <stddef.h>
-#include <math.h>
 #ifdef KERNELS_USE_AVX2
     #include <immintrin.h>
     #include "sleef.h"
 #endif
+
+double exp2(double);
 
 void grow_lineages_inplace_c(size_t len, double *N, const double *W, const double delta_t) {
     #ifdef KERNELS_USE_AVX2

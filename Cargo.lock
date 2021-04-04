@@ -365,6 +365,7 @@ checksum = "b5eb417147ba9860a96cfe72a0b93bf88fee1744b5636ec99ab20c1aa9376581"
 name = "relltee"
 version = "0.2.2"
 dependencies = [
+ "cc",
  "csv",
  "cty",
  "hashbrown",
@@ -376,7 +377,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_tuple",
- "sleef-shim-rs",
+ "sleef-shim",
  "structopt",
 ]
 
@@ -439,9 +440,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "sleef-shim-rs"
+name = "sleef-shim"
 version = "0.1.0"
-source = "git+https://github.com/zachmatson/sleef-shim-rs?branch=main#2599c5976538525707710b1641aff1f4ed225b1b"
 dependencies = [
  "cmake",
 ]
