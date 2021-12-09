@@ -11,7 +11,7 @@ use super::*;
 /// Calling this function may cause some mutations to become pruned, after which point
 /// they will no longer be updated
 pub fn update_sizes(sequencing_data: &mut MutationsData, population_data: &LineagesData) {
-    let LineagesData {N, secondary, ..} = population_data;
+    let LineagesData { N, secondary, .. } = population_data;
     assert_eq!(N.len(), secondary.len());
     let sum_N: f64 = N.iter().sum();
 
@@ -24,8 +24,8 @@ pub fn update_sizes(sequencing_data: &mut MutationsData, population_data: &Linea
     }
 
     for (N, secondary) in izip!(N, secondary) {
-        // Search through parent_id's until none is found
-        // Indicating that the parent has been pruned or is not being tracked
+        // Search through background_id's until none is found
+        // Indicating that the background mutation has been pruned or is not being tracked
         let mut id = secondary.id;
         while let Some(mutation) = map.get_mut(&id) {
             // Only a newly updated mutation has an N entry for this transfer

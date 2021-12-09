@@ -12,9 +12,9 @@ use super::*;
 /// **Do not** change the length of the vectors when accessing them directly
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct LineagesData {
-    // Visibilities set to pub(super) so only this module can access them
+    // Visibilities set to pub(super) so only the sim module can access them
     // This will prevent outside modification which could break the invariant
-    // that all of the lenghts must remain equal
+    // that all of the lengths must remain equal
     /// Population sizes of lineages
     pub(super) N: Vec<f64>,
     /// Fitnesses of lineages
@@ -78,7 +78,7 @@ impl LineagesData {
             W: 1.0,
             U: cfg.total_mutation_rate,
             secondary: SecondaryLineageData {
-                // Lambda will be carried over the the children
+                // Lambda will be carried over to the children
                 lambda: cfg.initial_beneficial_mutation_size.recip(),
                 id: 0,
                 parent_id: 0,
@@ -88,7 +88,7 @@ impl LineagesData {
 
         // Initialize with a lineage for each marker and a population size of
         // Nmax/D, evenly divided between the markers
-        let N = (cfg.max_pop_size as f64 / cfg.dilution_factor / cfg.markers as f64).round();
+        let N = (cfg.max_pop_size / cfg.dilution_factor / cfg.markers as f64).round();
 
         // 1 index the markers beacuse "0" ID is reserved for the immediate ancestor of the neutral marker mutations
         for m in 1..=cfg.markers {
@@ -124,10 +124,11 @@ impl LineagesData {
     /// such as when bottlenecking.  
     /// To start a new replicate, use `LineagesData::from_simconfig`
     pub fn successor(old: &LineagesData) -> Self {
-        let mut new = LineagesData::default();
+        let mut new = LineagesData {
+            unique_id_counter: old.unique_id_counter,
+            ..LineagesData::default()
+        };
         new.reserve(old.N.len());
-        new.unique_id_counter = old.unique_id_counter;
-
         new
     }
 
@@ -140,8 +141,8 @@ impl LineagesData {
     }
 
     /// Push a new `child` `Lineage` of `parent` to the collection
-    /// Properly assigning its Parent ID, its own ID, and tracking sequencing
-    /// information if necessary
+    /// Properly assigning its Parent ID and its own ID,
+    /// and registers the mutation with the MutationsData if applicable
     pub fn push_child(
         &mut self,
         mut child: Lineage,
@@ -248,26 +249,25 @@ impl MutationsData {
 /// Should not be edited outside of sequencing functions
 #[derive(Debug, Serialize_tuple)]
 pub struct Mutation {
-    /// ID of the `Mutation` corresponding to the ID of
-    /// the first `Lineage` instance with this mutation
-    pub id: u64,
-    /// ID of the background of the `Mutation` corresponding
-    /// to the ID of the *parent* of the first `Lineage`
-    /// instance with this mutation
-    pub background_id: u64,
-    /// Additive change in fitness as a result of this mutation
-    pub delta_W: f64,
-    /// Additive change in mutation rate as a result of this mutation
-    pub delta_U: f64,
+    /// ID of the `Mutation`  
+    /// Corresponds to the ID of the first `Lineage` instance with this mutation
+    pub(super) id: u64,
+    /// ID of the background of the `Mutation`  
+    /// Corresponds to the ID of the *parent* of the first `Lineage` instance with this mutation
+    pub(super) background_id: u64,
+    /// Multiplicative change in fitness as a result of this mutation
+    pub(super) delta_W: f64,
+    /// Multiplicative change in mutation rate as a result of this mutation
+    pub(super) delta_U: f64,
     /// The first transfer at which this mutation appeared  
     /// This is also the transfer corresponding to the first
     /// entry in the vector of population sizes
-    pub first_transfer: u32,
-    #[serde(skip)]
-    /// Was the mutation just updated in the last round of updating
-    /// sizes?
-    pub just_updated: bool,
+    pub(super) first_transfer: u32,
     /// Vector of population sizes for each transfer tracked starting
     /// from `self.first_transfer`
-    pub N: Vec<f64>,
+    pub(super) N: Vec<f64>,
+    /// Was the mutation just updated in the last round of updating
+    /// sizes?
+    #[serde(skip)]
+    pub(super) just_updated: bool,
 }

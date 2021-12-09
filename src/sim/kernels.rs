@@ -8,7 +8,7 @@ use super::LineagesData;
 
 /// Grow the lineages `delta_t` time forward, using the fitnesses and starting
 /// sizes in `data`, and leaving the resulting grown lineages inside `data`  
-/// Uses formula `N_new = (N_old * (W * delta_t).exp2()).ceil()`
+/// Uses formula `N_new = (N_old * (W * delta_t).exp2())`
 ///
 /// The length of any vector in `data` will *not* be changed
 pub fn grow_lineages_inplace(data: &mut LineagesData, delta_t: f64) {
@@ -53,7 +53,7 @@ pub fn old_N_to_delta_N<'a>(data: &LineagesData, old_N: &'a mut [f64]) -> &'a mu
 pub fn expected_mutation_counts(data: &LineagesData, delta_N: &[f64]) -> Vec<f64> {
     assert_eq!(data.U.len(), delta_N.len());
 
-    data.U.iter().zip(delta_N).map(|(u, n)| u * n).collect()
+    izip!(&data.U, delta_N.iter()).map(|(u, n)| u * n).collect()
 }
 
 /// Get the total population size and arithmetic mean fitness

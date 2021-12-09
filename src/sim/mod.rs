@@ -14,22 +14,21 @@ pub use types::*;
 mod kernels;
 use kernels::*;
 pub use kernels::{marker_1_ratio_and_avg_W, sum_N_and_avg_W};
-mod helpers;
-use helpers::*;
+mod mechanics;
+use mechanics::*;
 mod distr;
 mod sequencing;
 
 /// RNG used for the simulations  
 /// Implements `Rng` trait from `rand`   
-#[allow(non_camel_case_types)]
-type SIM_RNG = Pcg64;
+type SimRng = Pcg64;
 
 /// Instantiate RNG to use for the simulations  
 /// Uses seed if one is given, otherwise seeds from system entropy  
-fn default_sim_rng(cfg: &SimConfig) -> SIM_RNG {
+fn default_sim_rng(cfg: &SimConfig) -> SimRng {
     match cfg.seed {
-        Some(seed) => SIM_RNG::seed_from_u64(seed),
-        None => SIM_RNG::from_entropy(),
+        Some(seed) => SimRng::seed_from_u64(seed),
+        None => SimRng::from_entropy(),
     }
 }
 
@@ -54,7 +53,7 @@ pub struct SimulationHandler {
     /// the `SimulationHandler` doesn't care about them
     mutations: Option<MutationsData>,
     /// RNG to use for all replicates
-    rng: SIM_RNG,
+    rng: SimRng,
 }
 
 impl SimulationHandler {
@@ -82,6 +81,7 @@ impl SimulationHandler {
         self.mutations = self.mutations.as_ref().map(|_| MutationsData::new());
         self.lineages = LineagesData::from_simconfig(&self.cfg, &mut self.mutations);
 
+        // We need the initial sequencing information from the initial lineages
         if let Some(mutations) = &mut self.mutations {
             sequencing::update_sizes(mutations, &self.lineages);
         }

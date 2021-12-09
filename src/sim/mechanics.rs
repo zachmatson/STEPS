@@ -1,5 +1,5 @@
-//! Helper functions for doubling lineages and adding mutants  
-//! Low to mid-level implementation details of the transfer process
+//! Mechanics of the growth, mutation, and bottlenecking processes  
+//! Mid-level details between the high level transfer process and low-level computation kernels
 
 use rand::distributions::{Distribution, Uniform};
 
@@ -49,7 +49,7 @@ pub fn growth_phase_2<R: Rng>(
     let (sum_N, avg_W) = sum_N_and_avg_W(data);
     // Must grow population size to Nmax
     // Where growth is approximately a factor of 2^(avg_W * delta_t)
-    let delta_t = (cfg.max_pop_size as f64 / sum_N).log2() / avg_W;
+    let delta_t = (cfg.max_pop_size / sum_N).log2() / avg_W;
 
     assert!(delta_t >= 0.0);
 
@@ -57,8 +57,10 @@ pub fn growth_phase_2<R: Rng>(
     let old_N = data.N.clone();
     grow_lineages_inplace(data, delta_t);
 
-    // Need new container because length will change from lineages that don't survive
-    let mut bottlenecked_data = LineagesData::successor(&data);
+    // More efficient to make new vectors to work off of, since many lineages
+    // in the middle of the existing vectors won't survive
+    // Cheaper to start over than delete a bunch from the middle
+    let mut bottlenecked_data = LineagesData::successor(data);
     let mut delta_N = Vec::new();
 
     let len = data.N.len();
@@ -74,6 +76,7 @@ pub fn growth_phase_2<R: Rng>(
             let N_after_growth = lineage.N;
             lineage.N = N_bottlenecked as f64;
             bottlenecked_data.push(lineage);
+            // Estimated number of cells in lineage.N that are new
             delta_N.push(lineage.N * (1.0 - old_N[i] / N_after_growth));
         }
     }
@@ -103,8 +106,8 @@ fn add_mutants<R: Rng>(
         return;
     }
 
-    // Cutoffs store the number of expected mutations into the population
-    // that each mutation occurs at
+    // Cutoffs store how far into the population each mutation occurs at,
+    // in units of expected mutations
     let cutoffs_dist = Uniform::new(0.0, expected_mutations);
     let mut cutoffs: Vec<f64> = (0..num_mutations)
         .map(|_| cutoffs_dist.sample(rng))
@@ -118,7 +121,7 @@ fn add_mutants<R: Rng>(
     // Underlying data vector size will increase because mutants are being added
     // But we are only iterating through the lineages that already existed by
     // using the length of expected_mutation_counts, whose elements correspond
-    // to the starting elements of data
+    // to the preexisting elements of data
     let len = expected_mutation_counts.len();
     data.assert_len_ge(len);
     'outer: for i in 0..len {
@@ -242,5 +245,5 @@ fn apply_mutation_rate_mutation<R: Rng>(lineage: &mut Lineage, cfg: &SimConfig, 
 /// Panics if `x` is `NaN` or infinite
 fn next_float(x: f64) -> f64 {
     assert!(x.is_finite());
-    unsafe { std::mem::transmute(std::mem::transmute::<_, u64>(x) + 1) }
+    f64::from_bits(x.to_bits() + 1)
 }

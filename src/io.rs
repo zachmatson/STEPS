@@ -33,23 +33,23 @@ pub struct OutputHandler {
 impl OutputHandler {
     /// Create a new `OutputHandler` from options in an `OutputConfig` and `SimConfig`
     pub fn new(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
-        let raw_outputter = if output_cfg.raw_output_path.is_some() {
-            Some(RawOutputter::initialize(output_cfg, sim_cfg)?)
-        } else {
-            None
-        };
+        let raw_outputter = output_cfg
+            .raw_output_path
+            .as_ref()
+            .map(|_| RawOutputter::new(output_cfg, sim_cfg))
+            .transpose()?;
 
-        let summary_outputter = if output_cfg.summary_output_path.is_some() {
-            Some(SummaryOutputter::initialize(output_cfg, sim_cfg)?)
-        } else {
-            None
-        };
+        let summary_outputter = output_cfg
+            .summary_output_path
+            .as_ref()
+            .map(|_| SummaryOutputter::new(output_cfg, sim_cfg))
+            .transpose()?;
 
-        let sequencing_outputter = if output_cfg.sequencing_output_path.is_some() {
-            Some(SequencingOutputter::initialize(output_cfg, sim_cfg)?)
-        } else {
-            None
-        };
+        let sequencing_outputter = output_cfg
+            .sequencing_output_path
+            .as_ref()
+            .map(|_| SequencingOutputter::new(output_cfg, sim_cfg))
+            .transpose()?;
 
         Ok(Self {
             sampling_frequency: sim_cfg.sampling_frequency,
@@ -179,16 +179,6 @@ struct OwnedLineagesRecord {
     lineages: LineagesData,
 }
 
-impl OwnedLineagesRecord {
-    fn borrowed(&self) -> LineagesRecord {
-        LineagesRecord {
-            r: self.r,
-            t: self.t,
-            lineages: &self.lineages,
-        }
-    }
-}
-
 /// Buffer capacity to use in outputs  
 /// Set at 8 MB
 const BUFFER_CAPACITY: usize = 8 * (1 << 20);
@@ -207,7 +197,7 @@ impl RawOutputter {
     /// Create a new `RawOutputter` from options in an `OutputConfig` and `SimConfig`  
     ///
     /// Allocates internal buffer and obtains file handle
-    fn initialize(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
+    fn new(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
         let buf = create_file_with_header(
             output_cfg.raw_output_path.as_ref().unwrap(),
             sim_cfg,
@@ -238,7 +228,7 @@ impl RawOutputter {
 /// Type which outputs data for the `Summary` `OutputMode`,
 /// including owning the file handle for the output
 struct SummaryOutputter {
-    /// Buffered file writer to write data into
+    /// Buffered csv file writer to write data into
     wtr: csv::Writer<File>,
     /// Whether marker ratios should be outputted
     needs_ratio: bool,
@@ -248,8 +238,8 @@ impl SummaryOutputter {
     /// Create a new `SummaryOutputter` from options in an `OutputConfig` and `SimConfig`  
     ///
     /// Allocates internal buffer and obtains file handle
-    fn initialize(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
-        let mut wtr = csv_writer_with_metadata(
+    fn new(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
+        let mut wtr = create_csv_writer_with_header(
             output_cfg.summary_output_path.as_ref().unwrap(),
             sim_cfg,
             OutputMode::Summary,
@@ -277,10 +267,10 @@ impl SummaryOutputter {
     ) -> Result<(), Box<dyn Error>> {
         #![allow(non_snake_case)]
         if self.needs_ratio {
-            let (marker_1_ratio, avg_W) = sim::marker_1_ratio_and_avg_W(&lineages);
+            let (marker_1_ratio, avg_W) = sim::marker_1_ratio_and_avg_W(lineages);
             self.wtr.serialize((r, t, avg_W, marker_1_ratio))?;
         } else {
-            let avg_W = sim::sum_N_and_avg_W(&lineages).1;
+            let avg_W = sim::sum_N_and_avg_W(lineages).1;
             self.wtr.serialize((r, t, avg_W))?;
         }
 
@@ -299,7 +289,7 @@ impl SequencingOutputter {
     /// Create a new `SequencingOutputter` from options in an `OutputConfig` and `SimConfig`  
     ///
     /// Allocates internal buffer and obtains file handle
-    fn initialize(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
+    fn new(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
         let buf = create_file_with_header(
             output_cfg.sequencing_output_path.as_ref().unwrap(),
             sim_cfg,
@@ -375,7 +365,7 @@ fn create_file_with_header<P: AsRef<Path>>(
 
 /// Create a file to output simulation results and return a `csv::Writer` pointed to it
 /// while outputting `Metadata` and `SimConfig` options into header at the top of the file
-fn csv_writer_with_metadata<P: AsRef<Path>>(
+fn create_csv_writer_with_header<P: AsRef<Path>>(
     path: P,
     sim_cfg: &SimConfig,
     output_mode: OutputMode,
@@ -397,7 +387,6 @@ fn csv_writer_with_metadata<P: AsRef<Path>>(
 pub enum MetadataError {
     IncompatibleVersion { version: String },
     MissingHeaders,
-    WrongOutputMode,
 }
 
 impl std::fmt::Display for MetadataError {
@@ -411,9 +400,6 @@ impl std::fmt::Display for MetadataError {
             MetadataError::MissingHeaders => {
                 write!(f, "Cannot find headers in input file to reproduce with")
             }
-            MetadataError::WrongOutputMode => {
-                write!(f, "The input file was produced with the wrong output mode")
-            }
         }
     }
 }
@@ -425,16 +411,26 @@ impl Error for MetadataError {}
 /// Will fail if previous output is from a different version, in the future this  
 /// may change (i.e. with SemVer)
 pub fn extract_sim_config<P: AsRef<Path>>(path: P) -> Result<SimConfig, Box<dyn Error>> {
-    Ok(extract_headers(path)?.1)
+    Ok(extract_headers(path)?.sim_cfg)
+}
+
+/// Parts of the file after extracting headers
+struct ExtractedHeaders {
+    /// Metadata extracted from the file
+    #[allow(dead_code)]
+    metadata: Metadata,
+    /// Simulation configuration extracted from the file
+    sim_cfg: SimConfig,
+    /// Remainder of file, in lines reader from which the BufReader or File can be extracted
+    #[allow(dead_code)]
+    remainder: Lines<BufReader<File>>,
 }
 
 /// Get the `Metadata` and `SimConfig` encoded in a previous output file back out
 ///
 /// Will fail if previous output is from a different version, in the future this  
 /// may change (i.e. with SemVer)
-fn extract_headers<P: AsRef<Path>>(
-    path: P,
-) -> Result<(Metadata, SimConfig, Lines<BufReader<File>>), Box<dyn Error>> {
+fn extract_headers<P: AsRef<Path>>(path: P) -> Result<ExtractedHeaders, Box<dyn Error>> {
     let file = File::open(path)?;
     // BufReader is required for `lines` iterator
     let reader = BufReader::with_capacity(HEADER_BUFFER_CAPACITY, file);
@@ -447,7 +443,7 @@ fn extract_headers<P: AsRef<Path>>(
         None => return Err(MetadataError::MissingHeaders.into()),
     };
 
-    if &metadata.version != env!("CARGO_PKG_VERSION") {
+    if metadata.version != get_current_version_string() {
         return Err(MetadataError::IncompatibleVersion {
             version: (&metadata.version).to_owned(),
         }
@@ -462,38 +458,9 @@ fn extract_headers<P: AsRef<Path>>(
     // Because not everything in SimConfig can be serialized
     sim_cfg.finish_initialization();
 
-    Ok((metadata, sim_cfg, lines))
-}
-
-struct RawResultsReader {
-    lines: Lines<BufReader<File>>,
-}
-
-impl RawResultsReader {
-    fn new<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
-        let (metadata, _, lines) = extract_headers(path)?;
-
-        match metadata.output_mode {
-            OutputMode::Raw => (),
-            _ => return Err(MetadataError::WrongOutputMode.into()),
-        }
-
-        Ok(Self { lines })
-    }
-
-    fn deserialize_line(
-        line: Result<String, std::io::Error>,
-    ) -> Result<OwnedLineagesRecord, Box<dyn Error>> {
-        Ok(serde_json::from_str(&line?)?)
-    }
-}
-
-impl Iterator for RawResultsReader {
-    type Item = Result<(u32, u32, LineagesData), Box<dyn Error>>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let line = self.lines.next()?;
-        let item = Self::deserialize_line(line).map(|record| (record.r, record.t, record.lineages));
-        Some(item)
-    }
+    Ok(ExtractedHeaders {
+        metadata,
+        sim_cfg,
+        remainder: lines,
+    })
 }

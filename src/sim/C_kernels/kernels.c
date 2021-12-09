@@ -4,8 +4,16 @@
     #include "sleef.h"
 #endif
 
+// See build.rs for how this gets used
+// Basically, we need this to be in C because Rust does not have a stable way
+// to use FFI with SIMD types, which we need to use the SLEEF exp2 function
+
+// Rust will add its own libm when linking
+// We might not be able to get math headers on some targets (e.g. WASM)
 double exp2(double);
 
+/// Grow the lineage sizes in N according to the fitnesses in W and timestep delta_t
+/// Grows according to the formula new_N = old_N * 2^(W * delta_t)
 void grow_lineages_inplace_c(size_t len, double *N, const double *W, const double delta_t) {
     #ifdef KERNELS_USE_AVX2
         const size_t VEC_LEN = 4;

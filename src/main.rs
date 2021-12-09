@@ -8,7 +8,6 @@ fn main() {
 
     match cfg.subcommand {
         Simulate(x) => cli::run_simulations(&x),
-        Format(_) => todo!("Create formatting mode"),
         Reproduce(x) => cli::reproduce_simulations(&x),
     }
 }

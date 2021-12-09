@@ -9,11 +9,13 @@ use crate::{cfg::*, io::*, sim::*};
 
 /// Run the `Simulate` subcommand with command line display
 pub fn run_simulations(cfg: &SimulationsCLIConfig) {
-    run_simulations_outer(&cfg.output_cfg, &cfg.sim_cfg);
+    run_simulations_private(&cfg.output_cfg, &cfg.sim_cfg);
 }
 
 /// Run the simulations with command line display and display error results if applicable
-fn run_simulations_outer(output_cfg: &OutputConfig, sim_cfg: &SimConfig) {
+///
+/// Exists as a wrapped function to be reused by run_simulations and reproduce_simulations
+fn run_simulations_private(output_cfg: &OutputConfig, sim_cfg: &SimConfig) {
     if let Err(e) = run_simulations_inner(output_cfg, sim_cfg) {
         eprintln!("Error: Failed to properly output results.");
         eprintln!("Details:\n{:#?}", e);
@@ -31,12 +33,12 @@ fn run_simulations_inner(
     let transfer_bar = styled_bar(sim_cfg.transfers as u64, "Transfer:");
     // ProgressBars are Arc under the hood, clone is Arc clone
     // Need to do this so bars don't interfere with panic messages
-    let replicate_bar_hook = replicate_bar.clone();
-    let transfer_bar_hook = transfer_bar.clone();
+    let hook_replicate_bar = replicate_bar.clone();
+    let hook_transfer_bar = transfer_bar.clone();
     let hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
-        replicate_bar_hook.abandon();
-        transfer_bar_hook.abandon();
+        hook_replicate_bar.abandon();
+        hook_transfer_bar.abandon();
         hook(info);
     }));
     // To pick how often to update the transfers bar
@@ -44,30 +46,32 @@ fn run_simulations_inner(
     const TARGET_UPDATE_INTERVAL: time::Duration = time::Duration::from_millis(500);
 
     // Objects which manage the underlying simulations and the outputting of results
-    let track_mutations = output_cfg.sequencing_output_path.is_some();
-    let mut population_handler = SimulationHandler::new(sim_cfg.to_owned(), track_mutations);
-    let mut output_handler = OutputHandler::new(&output_cfg, &sim_cfg)?;
+    let track_mutations = output_cfg.is_sequencing_enabled();
+    let mut simulation_handler = SimulationHandler::new(sim_cfg.to_owned(), track_mutations);
+    let mut output_handler = OutputHandler::new(output_cfg, sim_cfg)?;
 
     for r in 1..=sim_cfg.replicates {
-        population_handler.start_replicate();
+        simulation_handler.start_replicate();
         // All other lineages will be handled after transferring
         // Must handle the output for the initial lineages before any transfers
-        output_handler.handle_lineages_output(r, 0, population_handler.lineages())?;
+        output_handler.handle_lineages_output(r, 0, simulation_handler.lineages())?;
 
         // 1 index because t is day *1* after the first transfer
         for t in 1..=sim_cfg.transfers {
-            population_handler.transfer();
-            output_handler.handle_lineages_output(r, t, population_handler.lineages())?;
+            simulation_handler.transfer();
+            output_handler.handle_lineages_output(r, t, simulation_handler.lineages())?;
             if track_mutations {
                 // Pruned mutations, no longer being used for sequencing, can be output then
                 // cleared so the population_handler no longer has to keep them in memory
-                output_handler.output_pruned_mutations(population_handler.mutations().unwrap())?;
-                population_handler.clear_pruned_mutations();
+                output_handler.output_pruned_mutations(simulation_handler.mutations().unwrap())?;
+                simulation_handler.clear_pruned_mutations();
             }
 
             // Update progress bar only periodically to reduce time spent redrawing it
             if last_update.elapsed() >= TARGET_UPDATE_INTERVAL {
-                if replicate_bar.position() <= r as u64 {
+                if replicate_bar.position() < r as u64 - 1 {
+                    // This weird trickery with removing the transfer bar first is required to make
+                    // the display right
                     transfer_bar.finish_and_clear();
                     replicate_bar.set_position(r as u64 - 1);
                     transfer_bar.reset();
@@ -80,7 +84,7 @@ fn run_simulations_inner(
         // Only *pruned* mutations have been output up until this point
         // Many mutations will not have been pruned by the end of replicate
         if track_mutations {
-            output_handler.finish_replicate_mutations(population_handler.mutations().unwrap())?;
+            output_handler.finish_replicate_mutations(simulation_handler.mutations().unwrap())?;
         }
     }
 
@@ -101,7 +105,7 @@ pub fn reproduce_simulations(cfg: &ReproduceConfig) {
                 );
             }
 
-            run_simulations_outer(&cfg.output_cfg, &sim_cfg);
+            run_simulations_private(&cfg.output_cfg, &sim_cfg);
         }
         Err(e) => {
             eprintln!("Error: Failed to read simulation options for reproduction");

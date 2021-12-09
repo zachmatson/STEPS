@@ -32,7 +32,6 @@ impl Config {
         // Additional initialization where needed
         match &mut cfg.subcommand {
             Subcommand::Simulate(sim_cfg) => sim_cfg.finish_initialization(),
-            Subcommand::Format(_) => (),
             Subcommand::Reproduce(_) => (),
         };
 
@@ -40,18 +39,19 @@ impl Config {
     }
 }
 
+/// Subcommand definitions
 #[derive(StructOpt)]
 #[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub enum Subcommand {
     /// Run simulations
     Simulate(SimulationsCLIConfig),
-    /// Convert the simulation output format  
-    Format(FormatConfig),
     /// Reproduce results from a previous simulation run  
     Reproduce(ReproduceConfig),
 }
 
-/// Command line inputs required to run the simulations from the command line and produce an output
+/// Inputs required to run the simulations from command line and produce an output
+///
+/// Should call finish_initialization after building from StructOpt
 #[derive(StructOpt)]
 #[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub struct SimulationsCLIConfig {
@@ -60,38 +60,18 @@ pub struct SimulationsCLIConfig {
 
     #[structopt(flatten)]
     pub sim_cfg: SimConfig,
-
-    #[structopt(long = "Nmax", default_value = "5E8")]
-    /// Maximum population size reached before transfer
-    input_max_pop_size: f64,
 }
 
 impl SimulationsCLIConfig {
-    /// Finish the initialization of the SimConfig struct with fields that cannot be handled by StructOpt/Clap
+    /// Finish the initialization work that cannot be handled by StructOpt/Clap
     fn finish_initialization(&mut self) {
-        // Might have rounding issues if the input gets this large
-        // and population size should never be this large
-        // so handle with a panic
-        // In the future this might need to be replaced with something more robust,
-        // but for now it is best to prevent any subtle errors
-        if self.input_max_pop_size >= (1u64 << 53u64) as f64 {
-            clap::Error::with_description(
-                "Max pop size exceeds maximum 2^53-1. Input may be rounded incorrectly with this population size.",
-                clap::ErrorKind::InvalidValue
-            ).exit();
-        }
-        // Input max pop size is skipped by StructOpt because we want it as a u64
-        // but input as an f64 to allow scientific notation
-        self.sim_cfg.max_pop_size = self.input_max_pop_size.round() as u64;
         self.sim_cfg.finish_initialization();
     }
 }
 
-#[derive(StructOpt)]
-pub struct FormatConfig {/* TODO: Format options */}
-
 /// Command line inputs required to reproduce results of previous simulation and output them  
 #[derive(StructOpt)]
+#[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub struct ReproduceConfig {
     /// Path of the input file, which came from a previous run  
     /// and contains the information needed to reproduce the results
@@ -105,102 +85,111 @@ pub struct ReproduceConfig {
 #[derive(StructOpt)]
 #[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub struct OutputConfig {
-    #[structopt(short = "o", long = "summary-output")]
     /// Path to output the summarized simulation results (as CSV),
     /// which contains the fitness and marker ratio (if applicable) over time
+    #[structopt(short = "o", long = "summary-output")]
     pub summary_output_path: Option<PathBuf>,
 
-    #[structopt(short = "j", long = "raw-output")]
     /// Path to output the full raw simulation results (as ndjson),
     /// which includes data for all mutations at each sampled interval
+    #[structopt(short = "j", long = "raw-output")]
     pub raw_output_path: Option<PathBuf>,
 
-    #[structopt(short, long = "sequencing-output")]
-    /// Path to output information about all mutations that occur (as CSV),
+    /// Path to output information about all mutations that occur (as ndjson),
     /// which includes change in fitness and IDs for all mutations over time
+    #[structopt(short, long = "sequencing-output")]
     pub sequencing_output_path: Option<PathBuf>,
+}
+
+impl OutputConfig {
+    /// Should sequencing information be output?
+    pub fn is_sequencing_enabled(&self) -> bool {
+        self.sequencing_output_path.is_some()
+    }
 }
 
 /// Options for ReLLTEE simulations
 #[derive(StructOpt, Serialize, Deserialize, Clone)]
 #[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub struct SimConfig {
-    #[structopt(short = "f", long, default_value = "1")]
     /// The rate at which populations should be sampled
+    #[structopt(short = "f", long, default_value = "1")]
     pub sampling_frequency: u32,
 
-    #[structopt(short, long, default_value = "1")]
     /// Number of replicates to perform
+    #[structopt(short, long, default_value = "1")]
     pub replicates: u32,
 
+    /// How many transfers to run the experiment for in each replicate
     #[structopt(short, long, default_value = "1000")]
-    /// How many transfers to run the experiment for
     pub transfers: u32,
 
-    #[structopt(short, long, default_value = "2")]
     /// Number of neutral markers to include in the experiment
+    #[structopt(short, long, default_value = "2")]
     pub markers: u16,
 
-    #[structopt(short = "D", long, default_value = "100")]
     /// The dilution factor
+    #[structopt(short = "D", long, default_value = "100")]
     pub dilution_factor: f64,
 
-    #[structopt(long = "Ub", default_value = "0.0")]
     /// Beneficial mutation rate
+    #[structopt(long = "Ub", default_value = "0.0")]
     pub beneficial_mutation_rate: f64,
 
-    #[structopt(long = "Un", default_value = "0.0")]
     /// Neutral mutation rate
+    #[structopt(long = "Un", default_value = "0.0")]
     pub neutral_mutation_rate: f64,
 
-    #[structopt(long = "Ud", default_value = "0.0")]
     /// Deleterious mutation rate
+    #[structopt(long = "Ud", default_value = "0.0")]
     pub deleterious_mutation_rate: f64,
 
-    #[structopt(long = "Um", default_value = "0.0")]
     /// The mutation rate of the mutation rate
+    #[structopt(long = "Um", default_value = "0.0")]
     pub mutation_rate_mutation_rate: f64,
 
-    #[structopt(long = "Sb", default_value = "0.011")]
     /// Initial mean beneficial mutation size
+    #[structopt(long = "Sb", default_value = "0.015873")]
     pub initial_beneficial_mutation_size: f64,
 
+    /// Deleterious mutation size as multiple of beneficial mutation size
     #[structopt(long = "Sd", default_value = "0.0")]
-    /// Factor describing the deleterious mutation rate size
     pub deleterious_mutation_size_factor: f64,
 
+    /// Mutation rate mutation size as multiple of beneficial mutation size
     #[structopt(long = "Sm", default_value = "0.0")]
-    /// Factor describing mutation rate mutation size
     pub mutation_rate_mutation_size_factor: f64,
 
-    #[structopt(short = "g", default_value = "1.0")]
     /// Diminishing returns epistasis strength
+    #[structopt(short = "g", default_value = "1.0")]
     pub diminishing_returns_epistasis_strength: f64,
 
-    #[structopt(long)]
     /// Seed for the RNG
+    #[structopt(long)]
     pub seed: Option<u64>,
 
-    // Must be set manually
-    // Because it will be input as f64
-    #[structopt(skip)]
     /// Maximum population size reached before transfer
-    pub max_pop_size: u64,
+    #[structopt(long = "Nmax", default_value = "5E8")]
+    pub max_pop_size: f64,
 
+    //
     // Must be calculated after other fields are known
-    #[structopt(skip)]
-    #[serde(skip_deserializing)]
+    //
     /// Total mutation rate
-    pub total_mutation_rate: f64,
     #[structopt(skip)]
     #[serde(skip)]
+    pub total_mutation_rate: f64,
     /// Reciprocal of dilution factor
+    #[structopt(skip)]
+    #[serde(skip)]
     pub dilution_coefficient: f64,
 
+    //
     // Private fields
+    //
+    /// Distribution from which to pick mutation types
     #[structopt(skip)]
     #[serde(skip)]
-    /// Distribution from which to pick mutation types
     mutation_type_index_distribution: Option<WeightedIndex<f64>>,
 }
 
@@ -238,9 +227,8 @@ impl SimConfig {
         }
     }
 
-    /// Randomly pick a mutation type weighted by the mutation rates
-    /// selected  
-    /// Will return None if all mutation rates are 0
+    /// Randomly pick a mutation type weighted by the mutation rates selected  
+    /// Will return None iff all mutation rates are 0
     pub fn sample_mutation_type<R: Rng>(&self, rng: &mut R) -> Option<MutationType> {
         self.mutation_type_index_distribution
             .as_ref()
