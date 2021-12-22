@@ -2,7 +2,7 @@
 1. Install Rust and Cargo using [rustup](https://www.rust-lang.org/tools/install)
 2. Navigate to the root directory of the project
 3. Compile as described below
-4. Run `./target/release/relltee help` or `./target/debug/relltee help` for usage instructions
+4. Run `./target/release/steps help` or `./target/debug/steps help` for usage instructions
 
 
 ### Compilation Options

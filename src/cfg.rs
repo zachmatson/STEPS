@@ -16,8 +16,9 @@ use structopt::{clap, StructOpt};
 
 use crate::sim::MutationType;
 
-/// Configuration options for ReLLTEE command line app  
+/// Configuration options for STEPS command line app  
 #[derive(StructOpt)]
+#[structopt(about = "Serially Transferred Evolving Population Simulator")]
 pub struct Config {
     #[structopt(subcommand)]
     pub subcommand: Subcommand,
@@ -41,7 +42,7 @@ impl Config {
 
 /// Subcommand definitions
 #[derive(StructOpt)]
-#[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
+#[structopt(about = "Serially Transferred Evolving Population Simulator", setting = clap::AppSettings::DeriveDisplayOrder)]
 pub enum Subcommand {
     /// Run simulations
     Simulate(SimulationsCLIConfig),
@@ -49,9 +50,7 @@ pub enum Subcommand {
     Reproduce(ReproduceConfig),
 }
 
-/// Inputs required to run the simulations from command line and produce an output
-///
-/// Should call finish_initialization after building from StructOpt
+/// Run the STEPS simulation
 #[derive(StructOpt)]
 #[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub struct SimulationsCLIConfig {
@@ -69,7 +68,7 @@ impl SimulationsCLIConfig {
     }
 }
 
-/// Command line inputs required to reproduce results of previous simulation and output them  
+/// Reproduce results of a previous run of the STEPS simulation
 #[derive(StructOpt)]
 #[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub struct ReproduceConfig {
@@ -108,7 +107,7 @@ impl OutputConfig {
     }
 }
 
-/// Options for ReLLTEE simulations
+/// Options for STEPS simulations
 #[derive(StructOpt, Serialize, Deserialize, Clone)]
 #[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub struct SimConfig {

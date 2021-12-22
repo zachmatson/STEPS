@@ -133,7 +133,7 @@ enum OutputMode {
     Sequencing,
 }
 
-/// Get the current version of ReLLTEE as defined in Cargo.toml
+/// Get the current version of STEPS as defined in Cargo.toml
 fn get_current_version_string() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
@@ -155,10 +155,10 @@ impl Metadata {
     /// code and the desired `OutputMode`
     fn new(output_mode: OutputMode) -> Self {
         Self {
-            name: "ReLLTEE".to_string(),
+            name: "STEPS".to_string(),
             version: get_current_version_string(),
             description:
-                "ReLLTEE simulation of bacterial evolution written by Devin Lake and Zachary Matson"
+                "STEPS simulation of bacterial evolution written by Devin Lake and Zachary Matson"
                     .to_string(),
             output_mode,
         }

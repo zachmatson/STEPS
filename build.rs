@@ -30,5 +30,5 @@ fn main() {
         builder.compiler("clang");
     }
 
-    builder.compile("librellteekernels.a");
+    builder.compile("libstepskernels.a");
 }
