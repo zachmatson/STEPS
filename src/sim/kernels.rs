@@ -1,6 +1,5 @@
 //! Performance sensitive and optimized computational kernels for the simulations  
-//! Transform or summarize the data in a `LineagesData`  
-//! Lower-level implementation details of the transfer process  
+//! Includes lower-level implementation details of the transfer process  
 
 use itertools::izip;
 
@@ -56,47 +55,59 @@ pub fn expected_mutation_counts(data: &LineagesData, delta_N: &[f64]) -> Vec<f64
     izip!(&data.U, delta_N.iter()).map(|(u, n)| u * n).collect()
 }
 
-/// Get the total population size and arithmetic mean fitness
-/// of all of the lineages in `data`
-///
-/// Return format is `(sum_N, avg_W)`
-pub fn sum_N_and_avg_W(data: &LineagesData) -> (f64, f64) {
-    assert_eq!(data.N.len(), data.W.len());
+#[cfg(test)]
+mod tests {
+    use approx::assert_relative_eq;
 
-    let mut sum_N = 0.0;
-    let mut weighted_sum_W = 0.0;
+    use super::*;
 
-    for (n, w) in izip!(&data.N, &data.W) {
-        sum_N += n;
-        weighted_sum_W += n * w;
-    }
+    #[test]
+    fn test_grow_lineages_inplace() {
+        let mut data = LineagesData::default();
+        data.N = vec![1.0, 2.0, 3.0, 4.0, 1e6, 2e3, 3e4];
+        data.W = vec![1.1, 1.2, 1.4, 1.3, 1.5, 2.0, 0.9];
 
-    (sum_N, weighted_sum_W / sum_N)
-}
+        grow_lineages_inplace(&mut data, 1.5);
 
-/// Get the ratio of marker 1 individuals to individuals with other markers,
-/// and arithmetic mean fitness of all of the lineages in `data`
-///
-/// Return format is `(marker_1_ratio, avg_W)`
-pub fn marker_1_ratio_and_avg_W(data: &LineagesData) -> (f64, f64) {
-    assert_eq!(data.N.len(), data.W.len());
-    assert_eq!(data.N.len(), data.secondary.len());
-
-    let mut sum_N = 0.0;
-    let mut sum_N_marker_1 = 0.0;
-    let mut weighted_sum_W = 0.0;
-
-    for (n, w, secondary) in izip!(&data.N, &data.W, &data.secondary) {
-        sum_N += n;
-        weighted_sum_W += n * w;
-
-        if secondary.marker == 1 {
-            sum_N_marker_1 += n;
+        let expected = vec![
+            3.138336391587003,
+            6.964404506368992,
+            12.861281550435514,
+            15.454981262797531,
+            4.756828460010884e6,
+            16000.0,
+            76473.63763915573,
+        ];
+        for (a, b) in izip!(expected, data.N) {
+            assert_relative_eq!(a, b);
         }
     }
 
-    (
-        sum_N_marker_1 / (sum_N - sum_N_marker_1),
-        weighted_sum_W / sum_N,
-    )
+    #[test]
+    fn test_old_N_to_delta_N() {
+        let mut new_data = LineagesData::default();
+        new_data.N = vec![1.0, 2.0, 3.0, 4.0, 1e6, 2e3, 3e4];
+        let mut old_N = vec![0.0, 1.0, 1.0, 2.0, 5e5, 500.0, 1e4];
+
+        old_N_to_delta_N(&mut new_data, &mut old_N);
+
+        let expected = vec![1.0, 1.0, 2.0, 2.0, 5e5, 1_500.0, 2e4];
+        for (a, b) in izip!(expected, old_N) {
+            assert_relative_eq!(a, b);
+        }
+    }
+
+    #[test]
+    fn test_expected_mutation_counts() {
+        let mut data = LineagesData::default();
+        let delta_N = vec![1.0, 2.0, 3.0, 4.0, 1e6, 2e3, 3e4];
+        data.U = vec![1e-6, 1e-8, 1e-4, 1e-5, 2.0, 0.5, 1e-2];
+
+        let result = expected_mutation_counts(&data, &delta_N);
+
+        let expected = vec![1e-6, 2e-8, 3e-4, 4e-5, 2e6, 1e3, 3e2];
+        for (a, b) in izip!(expected, result) {
+            assert_relative_eq!(a, b);
+        }
+    }
 }

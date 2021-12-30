@@ -55,7 +55,7 @@ pub enum Subcommand {
 #[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub struct SimulationsCLIConfig {
     #[structopt(flatten)]
-    pub output_cfg: OutputConfig,
+    pub output_cfg: CLIOutputConfig,
 
     #[structopt(flatten)]
     pub sim_cfg: SimConfig,
@@ -77,13 +77,13 @@ pub struct ReproduceConfig {
     pub input_path: PathBuf,
 
     #[structopt(flatten)]
-    pub output_cfg: OutputConfig,
+    pub output_cfg: CLIOutputConfig,
 }
 
 /// Command line inputs needed to output results
 #[derive(StructOpt)]
 #[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
-pub struct OutputConfig {
+pub struct CLIOutputConfig {
     /// Path to output the summarized simulation results (as CSV),
     /// which contains the fitness and marker ratio (if applicable) over time
     #[structopt(short = "o", long = "summary-output")]
@@ -98,13 +98,42 @@ pub struct OutputConfig {
     /// which includes change in fitness and IDs for all mutations over time
     #[structopt(short, long = "sequencing-output")]
     pub sequencing_output_path: Option<PathBuf>,
+
+    #[structopt(flatten)]
+    pub summary_cfg: SummaryOutputConfig,
 }
 
-impl OutputConfig {
+impl CLIOutputConfig {
     /// Should sequencing information be output?
     pub fn is_sequencing_enabled(&self) -> bool {
         self.sequencing_output_path.is_some()
     }
+}
+
+/// Options for summary output statistics
+#[derive(Clone, StructOpt)]
+pub struct SummaryOutputConfig {
+    /// Output the ratio of marker 1 to other markers
+    #[structopt(long)]
+    pub marker_1_ratio: bool,
+    /// Output weighted standard deviation of lineage fitnessees
+    #[structopt(long)]
+    pub stdev_W: bool,
+    /// Output maximum lineage fitness
+    #[structopt(long)]
+    pub max_W: bool,
+    /// Output the standard deviation of the number of mutations accumulated since the ancestor
+    #[structopt(long)]
+    pub stdev_accumulated_muts: bool,
+    /// Output the maximum number of mutations accumulated since the ancestor
+    #[structopt(long)]
+    pub max_accumulated_muts: bool,
+    /// Output the number of genotypes present in the population
+    #[structopt(long)]
+    pub genotype_count: bool,
+    /// Output the Shannon diversity of genotypes in the population
+    #[structopt(long)]
+    pub shannon_diversity: bool,
 }
 
 /// Options for STEPS simulations

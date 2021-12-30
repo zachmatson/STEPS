@@ -6,5 +6,5 @@
 
 pub mod cfg;
 pub mod cli;
-mod io;
+pub mod io;
 pub mod sim;

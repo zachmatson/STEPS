@@ -13,9 +13,10 @@ mod types;
 pub use types::*;
 mod kernels;
 use kernels::*;
-pub use kernels::{marker_1_ratio_and_avg_W, sum_N_and_avg_W};
 mod mechanics;
 use mechanics::*;
+pub mod summarize;
+use summarize::*;
 mod distr;
 mod sequencing;
 

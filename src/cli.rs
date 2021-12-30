@@ -15,7 +15,7 @@ pub fn run_simulations(cfg: &SimulationsCLIConfig) {
 /// Run the simulations with command line display and display error results if applicable
 ///
 /// Exists as a wrapped function to be reused by run_simulations and reproduce_simulations
-fn run_simulations_private(output_cfg: &OutputConfig, sim_cfg: &SimConfig) {
+fn run_simulations_private(output_cfg: &CLIOutputConfig, sim_cfg: &SimConfig) {
     if let Err(e) = run_simulations_inner(output_cfg, sim_cfg) {
         eprintln!("Error: Failed to properly output results.");
         eprintln!("Details:\n{:#?}", e);
@@ -26,7 +26,7 @@ fn run_simulations_private(output_cfg: &OutputConfig, sim_cfg: &SimConfig) {
 ///
 /// To display the error results to the user use `run_simulations_outer`
 fn run_simulations_inner(
-    output_cfg: &OutputConfig,
+    output_cfg: &CLIOutputConfig,
     sim_cfg: &SimConfig,
 ) -> Result<(), Box<dyn Error>> {
     let replicate_bar = styled_bar(sim_cfg.replicates as u64, "Replicate:");

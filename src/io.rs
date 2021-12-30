@@ -3,18 +3,18 @@
 
 use std::error::Error;
 use std::fs::File;
-use std::io::{BufRead, BufReader, BufWriter, Lines, Write};
+use std::io::{self, BufRead, BufReader, BufWriter, Lines, Write};
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 use serde_tuple::*;
 
 use crate::{
-    cfg::{OutputConfig, SimConfig},
-    sim::{self, LineagesData, Mutation, MutationsData},
+    cfg::{CLIOutputConfig, SimConfig, SummaryOutputConfig},
+    sim::{summarize, LineagesData, Mutation, MutationsData},
 };
 
-/// Type which handles the details of outputting simulation results
+/// Type which handles the details of outputting simulation results from files
 pub struct OutputHandler {
     /// Frequency at which to output results
     ///
@@ -23,33 +23,40 @@ pub struct OutputHandler {
     sampling_frequency: u32,
 
     /// Outputter for the raw output mode, if applicable
-    raw_outputter: Option<RawOutputter>,
+    raw_outputter: Option<RawOutputter<BufWriter<File>>>,
     /// Outputter for the summary output mode, if applicable
-    summary_outputter: Option<SummaryOutputter>,
+    summary_outputter: Option<SummaryOutputter<BufWriter<File>>>,
     /// Outputter for the sequencing output mode, if applicable
-    sequencing_outputter: Option<SequencingOutputter>,
+    sequencing_outputter: Option<SequencingOutputter<BufWriter<File>>>,
 }
 
 impl OutputHandler {
     /// Create a new `OutputHandler` from options in an `OutputConfig` and `SimConfig`
-    pub fn new(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
-        let raw_outputter = output_cfg
-            .raw_output_path
-            .as_ref()
-            .map(|_| RawOutputter::new(output_cfg, sim_cfg))
-            .transpose()?;
+    pub fn new(output_cfg: &CLIOutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
+        let raw_outputter = if let Some(path) = &output_cfg.raw_output_path {
+            Some(RawOutputter::new(create_buffered_file(path)?, sim_cfg)?)
+        } else {
+            None
+        };
 
-        let summary_outputter = output_cfg
-            .summary_output_path
-            .as_ref()
-            .map(|_| SummaryOutputter::new(output_cfg, sim_cfg))
-            .transpose()?;
+        let summary_outputter = if let Some(path) = &output_cfg.summary_output_path {
+            Some(SummaryOutputter::new(
+                create_buffered_file(path)?,
+                output_cfg.summary_cfg.clone(),
+                sim_cfg,
+            )?)
+        } else {
+            None
+        };
 
-        let sequencing_outputter = output_cfg
-            .sequencing_output_path
-            .as_ref()
-            .map(|_| SequencingOutputter::new(output_cfg, sim_cfg))
-            .transpose()?;
+        let sequencing_outputter = if let Some(path) = &output_cfg.sequencing_output_path {
+            Some(SequencingOutputter::new(
+                create_buffered_file(path)?,
+                sim_cfg,
+            )?)
+        } else {
+            None
+        };
 
         Ok(Self {
             sampling_frequency: sim_cfg.sampling_frequency,
@@ -123,7 +130,7 @@ impl OutputHandler {
 }
 
 /// Type of output to produce
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Copy, Clone)]
 enum OutputMode {
     /// Full lineage data for each lineage, as ndjson
     Raw,
@@ -188,121 +195,164 @@ const HEADER_BUFFER_CAPACITY: usize = 2 * (1 << 10);
 
 /// Type which outputs data for the `Raw` `OutputMode`,
 /// including owning the file handle for the output
-struct RawOutputter {
+pub struct RawOutputter<W: Write> {
     /// Buffered file writer to write data into
-    buf: BufWriter<File>,
+    writer: W,
 }
 
-impl RawOutputter {
+impl<W: Write> RawOutputter<W> {
     /// Create a new `RawOutputter` from options in an `OutputConfig` and `SimConfig`  
     ///
     /// Allocates internal buffer and obtains file handle
-    fn new(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
-        let buf = create_file_with_header(
-            output_cfg.raw_output_path.as_ref().unwrap(),
-            sim_cfg,
-            OutputMode::Raw,
-            "",
-            BUFFER_CAPACITY,
-        )?;
-
-        Ok(Self { buf })
+    pub fn new(mut writer: W, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
+        initialize_output_with_header(&mut writer, sim_cfg, OutputMode::Raw, "")?;
+        Ok(Self { writer })
     }
 
     /// Output the raw data in `Lineages`
-    fn record_lineages(
+    pub fn record_lineages(
         &mut self,
         r: u32,
         t: u32,
         lineages: &LineagesData,
     ) -> Result<(), Box<dyn Error>> {
         let record = LineagesRecord { r, t, lineages };
-        serde_json::to_writer(&mut self.buf, &record)?;
+        serde_json::to_writer(&mut self.writer, &record)?;
         // Separate from next record to be written
-        writeln!(&mut self.buf)?;
+        writeln!(&mut self.writer)?;
 
         Ok(())
+    }
+
+    pub fn into_inner(self) -> W {
+        self.writer
     }
 }
 
 /// Type which outputs data for the `Summary` `OutputMode`,
 /// including owning the file handle for the output
-struct SummaryOutputter {
+pub struct SummaryOutputter<W: Write> {
     /// Buffered csv file writer to write data into
-    wtr: csv::Writer<File>,
-    /// Whether marker ratios should be outputted
-    needs_ratio: bool,
+    writer: csv::Writer<W>,
+    /// What summary stats to output
+    cfg: SummaryOutputConfig,
 }
 
-impl SummaryOutputter {
+/// Create helper methods to get rid of repetitive typing of operations on stats in the SummaryOutputter methods
+///
+/// Using this as a single macro with functions rather than separate macros ensures the order of the stats is consistent,
+/// which we need it to be
+macro_rules! create_summary_stats_helpers {
+    ($($stat:ident),+) => {
+        /// Push labels for enabled stats to the end of headers in proper order
+        fn push_enabled_stat_headers(cfg: &SummaryOutputConfig, headers: &mut Vec<&str>) {
+            $(
+                if cfg.$stat {
+                    headers.push(stringify!($stat));
+                }
+            )+
+        }
+
+        /// Write the CSV fields for enabled stats in proper order
+        fn write_enabled_stat_fields(&mut self, data: &LineagesData) -> Result<(), Box<dyn Error>> {
+            $(
+                if self.cfg.$stat {
+                    self.writer.write_field(format!("{}", summarize::$stat(data)))?;
+                }
+            )+
+
+            Ok(())
+        }
+    }
+}
+
+impl<W: Write> SummaryOutputter<W> {
+    create_summary_stats_helpers! {
+        marker_1_ratio,
+        stdev_W,
+        max_W,
+        stdev_accumulated_muts,
+        max_accumulated_muts,
+        genotype_count,
+        shannon_diversity
+    }
+
     /// Create a new `SummaryOutputter` from options in an `OutputConfig` and `SimConfig`  
     ///
     /// Allocates internal buffer and obtains file handle
-    fn new(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
-        let mut wtr = create_csv_writer_with_header(
-            output_cfg.summary_output_path.as_ref().unwrap(),
-            sim_cfg,
-            OutputMode::Summary,
-        )?;
+    pub fn new(
+        mut writer: W,
+        summary_cfg: SummaryOutputConfig,
+        sim_cfg: &SimConfig,
+    ) -> Result<Self, Box<dyn Error>> {
+        initialize_output_with_header(&mut writer, sim_cfg, OutputMode::Summary, "# ")?;
 
-        // Ratio output only makes sense for two marker scenario
-        let needs_ratio = sim_cfg.markers == 2;
+        // TODO: Decide what to do about buffering situation
+        // Wrap writer in csv::Writer
+        let mut writer = csv::WriterBuilder::new()
+            .buffer_capacity(BUFFER_CAPACITY)
+            .from_writer(writer);
 
-        // Header must be done manually
-        if needs_ratio {
-            wtr.write_record(&["replicate", "transfer", "mean_fitness", "marker_ratio"])?;
-        } else {
-            wtr.write_record(&["replicate", "transfer", "mean_fitness"])?;
-        }
+        // Header must be done manually for how we handle the output
+        let mut header = vec!["replicate", "transfer", "mean_fitness"];
+        Self::push_enabled_stat_headers(&summary_cfg, &mut header);
+        writer.write_record(header)?;
 
-        Ok(Self { wtr, needs_ratio })
+        Ok(Self {
+            writer,
+            cfg: summary_cfg,
+        })
     }
 
     /// Output summary data for `Lineages`
-    fn record_lineages(
+    pub fn record_lineages(
         &mut self,
         r: u32,
         t: u32,
         lineages: &LineagesData,
     ) -> Result<(), Box<dyn Error>> {
         #![allow(non_snake_case)]
-        if self.needs_ratio {
-            let (marker_1_ratio, avg_W) = sim::marker_1_ratio_and_avg_W(lineages);
-            self.wtr.serialize((r, t, avg_W, marker_1_ratio))?;
-        } else {
-            let avg_W = sim::sum_N_and_avg_W(lineages).1;
-            self.wtr.serialize((r, t, avg_W))?;
-        }
+
+        let avg_W = summarize::sum_N_and_avg_W(lineages).1;
+        self.writer.write_field(r.to_string())?;
+        self.writer.write_field(t.to_string())?;
+        self.writer.write_field(avg_W.to_string())?;
+
+        self.write_enabled_stat_fields(lineages)?;
+
+        let empty_record: [&[u8]; 0] = [];
+        self.writer.write_record(empty_record)?;
 
         Ok(())
+    }
+
+    pub fn into_inner(self) -> Result<W, csv::IntoInnerError<csv::Writer<W>>> {
+        self.writer.into_inner()
     }
 }
 
 /// Type which outputs data for the `Sequencing` `OutputMode`,
 /// including owning the file handle for the output
-struct SequencingOutputter {
+pub struct SequencingOutputter<W: Write> {
     /// Buffered file writer to write data into
-    buf: BufWriter<File>,
+    writer: W,
 }
 
-impl SequencingOutputter {
+impl<W: Write> SequencingOutputter<W> {
     /// Create a new `SequencingOutputter` from options in an `OutputConfig` and `SimConfig`  
     ///
     /// Allocates internal buffer and obtains file handle
-    fn new(output_cfg: &OutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
-        let buf = create_file_with_header(
-            output_cfg.sequencing_output_path.as_ref().unwrap(),
-            sim_cfg,
-            OutputMode::Sequencing,
-            "",
-            BUFFER_CAPACITY,
-        )?;
+    pub fn new(mut writer: W, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
+        initialize_output_with_header(&mut writer, sim_cfg, OutputMode::Sequencing, "")?;
 
-        Ok(Self { buf })
+        Ok(Self { writer })
     }
 
     /// Record mutations in a `MutationsData` which have been pruned
-    fn record_pruned_mutations(&mut self, mutations: &MutationsData) -> Result<(), Box<dyn Error>> {
+    pub fn record_pruned_mutations(
+        &mut self,
+        mutations: &MutationsData,
+    ) -> Result<(), Box<dyn Error>> {
         for mutation in mutations.pruned_muts.iter() {
             self.record_mutation(mutation)?;
         }
@@ -311,7 +361,10 @@ impl SequencingOutputter {
     }
 
     /// Record mutations in a `MutationsData` which are still being tracked and have not been pruned
-    fn record_active_mutations(&mut self, mutations: &MutationsData) -> Result<(), Box<dyn Error>> {
+    pub fn record_active_mutations(
+        &mut self,
+        mutations: &MutationsData,
+    ) -> Result<(), Box<dyn Error>> {
         for mutation in mutations.muts.values() {
             self.record_mutation(mutation)?;
         }
@@ -321,65 +374,55 @@ impl SequencingOutputter {
 
     /// Record an individual `Mutation`
     fn record_mutation(&mut self, mutation: &Mutation) -> Result<(), Box<dyn Error>> {
-        serde_json::to_writer(&mut self.buf, mutation)?;
-        writeln!(&mut self.buf)?;
+        serde_json::to_writer(&mut self.writer, mutation)?;
+        writeln!(&mut self.writer)?;
         Ok(())
     }
 
     /// Deliminate the end of a replicate
     ///
     /// Currently, this writes an extra newline character to the output
-    fn deliminate_replicate_end(&mut self) -> Result<(), Box<dyn Error>> {
-        writeln!(&mut self.buf)?;
+    pub fn deliminate_replicate_end(&mut self) -> Result<(), Box<dyn Error>> {
+        writeln!(&mut self.writer)?;
         Ok(())
     }
+
+    pub fn into_inner(self) -> W {
+        self.writer
+    }
+}
+
+/// Create a buffered `File` to use
+fn create_buffered_file<P: AsRef<Path>>(path: P) -> io::Result<BufWriter<File>> {
+    Ok(BufWriter::with_capacity(
+        BUFFER_CAPACITY,
+        File::create(path)?,
+    ))
 }
 
 /// Create a file to output simulation results and a variably sized buffered writer for it  
 /// while outputting `Metadata` and `SimConfig` options into header at the top of the file
 ///
 /// Allow an optional prefix for lines of the header (e.g. for comments)
-fn create_file_with_header<P: AsRef<Path>>(
-    path: P,
+#[must_use]
+fn initialize_output_with_header<W: Write>(
+    writer: &mut W,
     sim_cfg: &SimConfig,
     output_mode: OutputMode,
     header_prefix: &'static str,
-    buffer_capacity: usize,
-) -> Result<BufWriter<File>, Box<dyn Error>> {
-    let file = File::create(path)?;
-    let mut buf = BufWriter::with_capacity(buffer_capacity, file);
-
+) -> Result<(), Box<dyn Error>> {
     // Write the metadata to the file with optional comment character
-    write!(&mut buf, "{}", header_prefix)?;
+    write!(writer, "{}", header_prefix)?;
     let metadata = Metadata::new(output_mode);
-    serde_json::to_writer(&mut buf, &metadata)?;
-    writeln!(&mut buf)?;
+    serde_json::to_writer(writer.by_ref(), &metadata)?;
+    writeln!(writer)?;
 
     // Write the simulation configuration to the file with optional comment character
-    write!(&mut buf, "{}", header_prefix)?;
-    serde_json::to_writer(&mut buf, sim_cfg)?;
-    writeln!(&mut buf)?;
+    write!(writer, "{}", header_prefix)?;
+    serde_json::to_writer(writer.by_ref(), sim_cfg)?;
+    writeln!(writer)?;
 
-    Ok(buf)
-}
-
-/// Create a file to output simulation results and return a `csv::Writer` pointed to it
-/// while outputting `Metadata` and `SimConfig` options into header at the top of the file
-fn create_csv_writer_with_header<P: AsRef<Path>>(
-    path: P,
-    sim_cfg: &SimConfig,
-    output_mode: OutputMode,
-) -> Result<csv::Writer<File>, Box<dyn Error>> {
-    let buf = create_file_with_header(path, sim_cfg, output_mode, "# ", HEADER_BUFFER_CAPACITY)?;
-
-    // Release the buffer contents and get file handle back to give to CSV writer
-    // Because the csv::Writer already buffers
-    let file = buf.into_inner()?;
-    let wtr = csv::WriterBuilder::new()
-        .buffer_capacity(BUFFER_CAPACITY)
-        .from_writer(file);
-
-    Ok(wtr)
+    Ok(())
 }
 
 /// An error originating from processing a previous output file for reproduction of results  

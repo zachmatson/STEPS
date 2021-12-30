@@ -28,3 +28,6 @@ sleef-shim = { git = "https://github.com/zachmatson/sleef-shim-rs", branch = "ma
 
 [target.'cfg(all(target_arch = "x86_64", target_feature = "avx2"))'.build-dependencies]
 sleef-shim = { git = "https://github.com/zachmatson/sleef-shim-rs", branch = "main", features = ["build-sleef"] }
+
+[dev-dependencies]
+approx = "0.5.0"

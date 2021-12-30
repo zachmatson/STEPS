@@ -47,7 +47,7 @@ pub struct Lineage {
 ///
 /// Used for data that is not accessed in vectorized computational kernels,
 /// and therefore can be efficiently stored in individual structs
-#[derive(Copy, Clone, Default, Debug, Serialize_tuple, Deserialize_tuple)]
+#[derive(Copy, Clone, Debug, Default, Serialize_tuple, Deserialize_tuple)]
 pub struct SecondaryLineageData {
     /// Reciprocal of the mean of the beneficial mutation size
     pub lambda: f64,
@@ -60,6 +60,8 @@ pub struct SecondaryLineageData {
     pub parent_id: u64,
     /// Lineage identifier for the initial neutral marker mutation
     pub marker: u16,
+    /// Number of accumulated mutations relative to the ancestor mutation
+    pub accumulated_muts: u32,
 }
 
 impl LineagesData {
@@ -83,6 +85,7 @@ impl LineagesData {
                 id: 0,
                 parent_id: 0,
                 marker: 0,
+                accumulated_muts: 0,
             },
         };
 
@@ -92,7 +95,7 @@ impl LineagesData {
 
         // 1 index the markers beacuse "0" ID is reserved for the immediate ancestor of the neutral marker mutations
         for m in 1..=cfg.markers {
-            // ID and parent ID will be assigned by push_child so it doesn't matter what we use for them here
+            // ID, parent ID, and accumulated muts will be assigned by push_child so it doesn't matter what we use for them here
             let marker_mutant = Lineage {
                 N,
                 secondary: SecondaryLineageData {
@@ -157,6 +160,8 @@ impl LineagesData {
         // so must increment *before* using the ID
         self.unique_id_counter += 1;
         child.secondary.id = self.unique_id_counter;
+        // Child has one more mutation than its parent
+        child.secondary.accumulated_muts = parent.secondary.accumulated_muts + 1;
 
         self.push(child);
 
