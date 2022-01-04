@@ -1,7 +1,7 @@
 //! Mechanics of the growth, mutation, and bottlenecking processes  
 //! Mid-level details between the high level transfer process and low-level computation kernels
 
-use rand::distributions::{Distribution, Uniform, Open01};
+use rand::distributions::{Distribution, Uniform};
 
 use super::*;
 
@@ -235,9 +235,7 @@ fn apply_deleterious_mutation<R: Rng>(lineage: &mut Lineage, cfg: &SimConfig, rn
 /// Applies a mutation rate mutation to `lineage` in-place
 #[allow(unused_variables)]
 fn apply_mutation_rate_mutation<R: Rng>(lineage: &mut Lineage, cfg: &SimConfig, rng: &mut R) {
-    let size:f64 = thread_rng().sample(Open01);
-    lineage.W *= size / (1.0 + size);
-    lineage.secondary.lambda /= 1.0 + cfg.diminishing_returns_epistasis_strength * size;
+    mutation_rate_todo()
 }
 
 /// Get next float for finite floats
