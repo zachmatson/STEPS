@@ -27,7 +27,7 @@ fn main() {
 
     let target = env::var("CARGO_CFG_TARGET_ARCH");
     if let Ok("wasm32") = &target.as_deref() {
-        builder.compiler("clang");
+        builder.compiler("clang").define("WASM32", None);
     }
 
     builder.compile("libstepskernels.a");

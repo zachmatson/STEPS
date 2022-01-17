@@ -1,4 +1,13 @@
-#include <stddef.h>
+// Probably won't have headers for libc in WASM
+#ifdef WASM32
+    typedef unsigned long size_t;
+    // Rust will give us this
+    double exp2(double);
+#else
+    #include <stddef.h>
+    #include <math.h>
+#endif
+
 #ifdef KERNELS_USE_AVX2
     #include <immintrin.h>
     #include "sleef.h"
@@ -7,10 +16,6 @@
 // See build.rs for how this gets used
 // Basically, we need this to be in C because Rust does not have a stable way
 // to use FFI with SIMD types, which we need to use the SLEEF exp2 function
-
-// Rust will add its own libm when linking
-// We might not be able to get math headers on some targets (e.g. WASM)
-double exp2(double);
 
 /// Grow the lineage sizes in N according to the fitnesses in W and timestep delta_t
 /// Grows according to the formula new_N = old_N * 2^(W * delta_t)
