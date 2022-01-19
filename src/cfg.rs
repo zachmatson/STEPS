@@ -84,6 +84,10 @@ pub struct ReproduceConfig {
 #[derive(StructOpt)]
 #[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub struct CLIOutputConfig {
+    /// The rate at which populations should be sampled
+    #[structopt(short = "f", long, default_value = "1")]
+    pub sampling_frequency: u32,
+
     /// Path to output the summarized simulation results (as CSV),
     /// which contains the fitness and marker ratio (if applicable) over time
     #[structopt(short = "o", long = "summary-output")]
@@ -140,10 +144,6 @@ pub struct SummaryOutputConfig {
 #[derive(StructOpt, Serialize, Deserialize, Clone)]
 #[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub struct SimConfig {
-    /// The rate at which populations should be sampled
-    #[structopt(short = "f", long, default_value = "1")]
-    pub sampling_frequency: u32,
-
     /// Number of replicates to perform
     #[structopt(short, long, default_value = "1")]
     pub replicates: u32,

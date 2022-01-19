@@ -59,7 +59,7 @@ impl OutputHandler {
         };
 
         Ok(Self {
-            sampling_frequency: sim_cfg.sampling_frequency,
+            sampling_frequency: output_cfg.sampling_frequency,
             raw_outputter,
             summary_outputter,
             sequencing_outputter,
