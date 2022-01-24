@@ -404,7 +404,6 @@ fn create_buffered_file<P: AsRef<Path>>(path: P) -> io::Result<BufWriter<File>> 
 /// while outputting `Metadata` and `SimConfig` options into header at the top of the file
 ///
 /// Allow an optional prefix for lines of the header (e.g. for comments)
-#[must_use]
 fn initialize_output_with_header<W: Write>(
     writer: &mut W,
     sim_cfg: &SimConfig,

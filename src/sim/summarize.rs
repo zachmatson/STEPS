@@ -41,7 +41,7 @@ pub fn marker_1_ratio(data: &LineagesData) -> f64 {
 /// Weighted population standard deviation  
 /// Computations performed after conversion to f64
 #[inline]
-fn stdev<'a, E, W, IE, IW>(elements: impl Fn() -> IE, weights: impl Fn() -> IW) -> f64
+fn stdev<E, W, IE, IW>(elements: impl Fn() -> IE, weights: impl Fn() -> IW) -> f64
 where
     E: Copy,
     W: Copy,
