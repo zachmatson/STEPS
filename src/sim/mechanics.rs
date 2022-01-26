@@ -1,6 +1,8 @@
 //! Mechanics of the growth, mutation, and bottlenecking processes  
 //! Mid-level details between the high level transfer process and low-level computation kernels
 
+#![allow(clippy::needless_range_loop)]
+
 use rand::distributions::{Distribution, Uniform};
 
 use super::*;

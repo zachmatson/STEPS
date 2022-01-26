@@ -103,6 +103,10 @@ pub struct CLIOutputConfig {
     #[structopt(short, long = "sequencing-output")]
     pub sequencing_output_path: Option<PathBuf>,
 
+    /// Path to output summary information about mutation frequencies (as CSV)
+    #[structopt(long = "mutation-summary-output")]
+    pub mutation_summary_output_path: Option<PathBuf>,
+
     #[structopt(flatten)]
     pub summary_cfg: SummaryOutputConfig,
 }
@@ -111,6 +115,11 @@ impl CLIOutputConfig {
     /// Should sequencing information be output?
     pub fn is_sequencing_enabled(&self) -> bool {
         self.sequencing_output_path.is_some()
+    }
+
+    /// Should mutations be tracked?
+    pub fn should_track_mutations(&self) -> bool {
+        self.is_sequencing_enabled() || self.mutation_summary_output_path.is_some()
     }
 }
 

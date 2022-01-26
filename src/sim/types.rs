@@ -1,9 +1,9 @@
-//! Types used for storing simulation data
-
-use serde::{Deserialize, Serialize};
-use serde_tuple::*;
+//! Types used for storing simulation data;
 
 use hashbrown::HashMap;
+use serde::{Deserialize, Serialize};
+use serde_tuple::*;
+use std::iter::Chain;
 
 use super::*;
 
@@ -248,6 +248,30 @@ impl MutationsData {
 
         self.muts.insert(child.secondary.id, mutation);
     }
+
+    pub fn iter_all(&self) -> MutationsDataIterAll {
+        MutationsDataIterAll::new(self)
+    }
+}
+
+/// Iterator over all mutations (including pruned) in a `MutationsData`
+pub struct MutationsDataIterAll<'a> {
+    inner: Chain<hashbrown::hash_map::Values<'a, u64, Mutation>, std::slice::Iter<'a, Mutation>>,
+}
+
+impl<'a> MutationsDataIterAll<'a> {
+    fn new(mutations: &'a MutationsData) -> Self {
+        let inner = mutations.muts.values().chain(mutations.pruned_muts.iter());
+        Self { inner }
+    }
+}
+
+impl<'a> Iterator for MutationsDataIterAll<'a> {
+    type Item = &'a Mutation;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next()
+    }
 }
 
 /// Data for one Mutation being tracked  
@@ -275,4 +299,18 @@ pub struct Mutation {
     /// sizes?
     #[serde(skip)]
     pub(super) just_updated: bool,
+}
+
+impl Mutation {
+    pub fn id(&self) -> u64 {
+        self.id
+    }
+
+    pub fn first_transfer(&self) -> u32 {
+        self.first_transfer
+    }
+
+    pub fn N(&self) -> &Vec<f64> {
+        &self.N
+    }
 }

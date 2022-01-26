@@ -46,21 +46,32 @@ fn run_simulations_inner(
     const TARGET_UPDATE_INTERVAL: time::Duration = time::Duration::from_millis(500);
 
     // Objects which manage the underlying simulations and the outputting of results
-    let track_mutations = output_cfg.is_sequencing_enabled();
-    let mut simulation_handler = SimulationHandler::new(sim_cfg.to_owned(), track_mutations);
+    let sequencing_enabled = output_cfg.is_sequencing_enabled();
+    let mut simulation_handler =
+        SimulationHandler::new(sim_cfg.to_owned(), output_cfg.should_track_mutations());
     let mut output_handler = OutputHandler::new(output_cfg, sim_cfg)?;
 
     for r in 1..=sim_cfg.replicates {
         simulation_handler.start_replicate();
         // All other lineages will be handled after transferring
         // Must handle the output for the initial lineages before any transfers
-        output_handler.handle_lineages_output(r, 0, simulation_handler.lineages())?;
+        output_handler.handle_output_for_transfer(
+            r,
+            0,
+            simulation_handler.lineages(),
+            simulation_handler.mutations(),
+        )?;
 
         // 1 index because t is day *1* after the first transfer
         for t in 1..=sim_cfg.transfers {
             simulation_handler.transfer();
-            output_handler.handle_lineages_output(r, t, simulation_handler.lineages())?;
-            if track_mutations {
+            output_handler.handle_output_for_transfer(
+                r,
+                t,
+                simulation_handler.lineages(),
+                simulation_handler.mutations(),
+            )?;
+            if sequencing_enabled {
                 // Pruned mutations, no longer being used for sequencing, can be output then
                 // cleared so the population_handler no longer has to keep them in memory
                 output_handler.output_pruned_mutations(simulation_handler.mutations().unwrap())?;
@@ -83,7 +94,7 @@ fn run_simulations_inner(
 
         // Only *pruned* mutations have been output up until this point
         // Many mutations will not have been pruned by the end of replicate
-        if track_mutations {
+        if sequencing_enabled {
             output_handler.finish_replicate_mutations(simulation_handler.mutations().unwrap())?;
         }
     }

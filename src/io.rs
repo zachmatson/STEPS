@@ -28,6 +28,8 @@ pub struct OutputHandler {
     summary_outputter: Option<SummaryOutputter<BufWriter<File>>>,
     /// Outputter for the sequencing output mode, if applicable
     sequencing_outputter: Option<SequencingOutputter<BufWriter<File>>>,
+    /// Outputter for the mutation summary output mode, if applicable
+    mutation_summary_outputter: Option<MutationSummaryOutputter<BufWriter<File>>>,
 }
 
 impl OutputHandler {
@@ -58,21 +60,33 @@ impl OutputHandler {
             None
         };
 
+        let mutation_summary_outputter =
+            if let Some(path) = &output_cfg.mutation_summary_output_path {
+                Some(MutationSummaryOutputter::new(
+                    create_buffered_file(path)?,
+                    sim_cfg,
+                )?)
+            } else {
+                None
+            };
+
         Ok(Self {
             sampling_frequency: output_cfg.sampling_frequency,
             raw_outputter,
             summary_outputter,
             sequencing_outputter,
+            mutation_summary_outputter,
         })
     }
 
     /// Output information from `lineages` as necessary
     #[inline(always)]
-    pub fn handle_lineages_output(
+    pub fn handle_output_for_transfer(
         &mut self,
         r: u32,
         t: u32,
         lineages: &LineagesData,
+        mutations: Option<&MutationsData>,
     ) -> Result<(), Box<dyn Error>> {
         // Only output if at the sampling frequency
         if t % self.sampling_frequency == 0 {
@@ -82,6 +96,11 @@ impl OutputHandler {
 
             if let Some(summary_outputter) = &mut self.summary_outputter {
                 summary_outputter.record_lineages(r, t, lineages)?;
+            }
+
+            if let Some(mutation_summary_outputter) = &mut self.mutation_summary_outputter {
+                let mutations = mutations.ok_or("Missing mutations data")?;
+                mutation_summary_outputter.record_mutations(r, t, mutations)?;
             }
         }
 
@@ -138,6 +157,8 @@ enum OutputMode {
     Summary,
     /// Information about each mutation that occurs, as ndjson
     Sequencing,
+    /// Summary information about mutations, as CSV
+    MutationSummary,
 }
 
 /// Get the current version of STEPS as defined in Cargo.toml
@@ -205,7 +226,7 @@ impl<W: Write> RawOutputter<W> {
     ///
     /// Allocates internal buffer and obtains file handle
     pub fn new(mut writer: W, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
-        initialize_output_with_header(&mut writer, sim_cfg, OutputMode::Raw, "")?;
+        initialize_output(&mut writer, sim_cfg, OutputMode::Raw, "")?;
         Ok(Self { writer })
     }
 
@@ -281,17 +302,11 @@ impl<W: Write> SummaryOutputter<W> {
     ///
     /// Allocates internal buffer and obtains file handle
     pub fn new(
-        mut writer: W,
+        writer: W,
         summary_cfg: SummaryOutputConfig,
         sim_cfg: &SimConfig,
     ) -> Result<Self, Box<dyn Error>> {
-        initialize_output_with_header(&mut writer, sim_cfg, OutputMode::Summary, "# ")?;
-
-        // TODO: Decide what to do about buffering situation
-        // Wrap writer in csv::Writer
-        let mut writer = csv::WriterBuilder::new()
-            .buffer_capacity(BUFFER_CAPACITY)
-            .from_writer(writer);
+        let mut writer = initialize_output_as_csv(writer, sim_cfg, OutputMode::Summary)?;
 
         // Header must be done manually for how we handle the output
         let mut header = vec!["replicate", "transfer", "mean_fitness"];
@@ -320,8 +335,7 @@ impl<W: Write> SummaryOutputter<W> {
 
         self.write_enabled_stat_fields(lineages)?;
 
-        let empty_record: [&[u8]; 0] = [];
-        self.writer.write_record(empty_record)?;
+        self.writer.write_record(EMPTY_CSV_RECORD)?;
 
         Ok(())
     }
@@ -343,7 +357,7 @@ impl<W: Write> SequencingOutputter<W> {
     ///
     /// Allocates internal buffer and obtains file handle
     pub fn new(mut writer: W, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
-        initialize_output_with_header(&mut writer, sim_cfg, OutputMode::Sequencing, "")?;
+        initialize_output(&mut writer, sim_cfg, OutputMode::Sequencing, "")?;
 
         Ok(Self { writer })
     }
@@ -392,6 +406,45 @@ impl<W: Write> SequencingOutputter<W> {
     }
 }
 
+pub struct MutationSummaryOutputter<W: Write> {
+    /// Buffered csv file writer to write data into
+    writer: csv::Writer<W>,
+}
+
+impl<W: Write> MutationSummaryOutputter<W> {
+    pub fn new(writer: W, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
+        let mut writer = initialize_output_as_csv(writer, sim_cfg, OutputMode::MutationSummary)?;
+
+        // Header must be done manually for how we handle the output
+        let header = vec!["replicate", "transfer", "ID", "N"];
+        writer.write_record(header)?;
+
+        Ok(Self { writer })
+    }
+
+    pub fn record_mutations(
+        &mut self,
+        r: u32,
+        t: u32,
+        mutations: &MutationsData,
+    ) -> Result<(), Box<dyn Error>> {
+        for mutation in mutations.iter_all() {
+            #[allow(non_snake_case)]
+            let N = match mutation.N().get((t - mutation.first_transfer()) as usize) {
+                Some(n) => n,
+                None => continue,
+            };
+            self.writer.write_field(r.to_string())?;
+            self.writer.write_field(t.to_string())?;
+            self.writer.write_field(mutation.id().to_string())?;
+            self.writer.write_field(N.to_string())?;
+            self.writer.write_record(EMPTY_CSV_RECORD)?;
+        }
+
+        Ok(())
+    }
+}
+
 /// Create a buffered `File` to use
 fn create_buffered_file<P: AsRef<Path>>(path: P) -> io::Result<BufWriter<File>> {
     Ok(BufWriter::with_capacity(
@@ -404,7 +457,7 @@ fn create_buffered_file<P: AsRef<Path>>(path: P) -> io::Result<BufWriter<File>> 
 /// while outputting `Metadata` and `SimConfig` options into header at the top of the file
 ///
 /// Allow an optional prefix for lines of the header (e.g. for comments)
-fn initialize_output_with_header<W: Write>(
+fn initialize_output<W: Write>(
     writer: &mut W,
     sim_cfg: &SimConfig,
     output_mode: OutputMode,
@@ -423,6 +476,21 @@ fn initialize_output_with_header<W: Write>(
 
     Ok(())
 }
+
+fn initialize_output_as_csv<W: Write>(
+    mut writer: W,
+    sim_cfg: &SimConfig,
+    output_mode: OutputMode,
+) -> Result<csv::Writer<W>, Box<dyn Error>> {
+    initialize_output(&mut writer, sim_cfg, output_mode, "# ")?;
+
+    // TODO: Decide what to do about buffering situation
+    Ok(csv::WriterBuilder::new()
+        .buffer_capacity(BUFFER_CAPACITY)
+        .from_writer(writer))
+}
+
+const EMPTY_CSV_RECORD: [&[u8]; 0] = [];
 
 /// An error originating from processing a previous output file for reproduction of results  
 #[derive(Debug)]
