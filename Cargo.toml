@@ -1,3 +1,4 @@
+cargo-features = ["edition2021]
 [package]
 name = "steps"
 version = "1.0.0"
