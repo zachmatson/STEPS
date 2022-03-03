@@ -112,14 +112,9 @@ pub struct CLIOutputConfig {
 }
 
 impl CLIOutputConfig {
-    /// Should sequencing information be output?
-    pub fn is_sequencing_enabled(&self) -> bool {
-        self.sequencing_output_path.is_some()
-    }
-
     /// Should mutations be tracked?
     pub fn should_track_mutations(&self) -> bool {
-        self.is_sequencing_enabled() || self.mutation_summary_output_path.is_some()
+        self.sequencing_output_path.is_some() || self.mutation_summary_output_path.is_some()
     }
 }
 

@@ -86,7 +86,6 @@ impl OutputHandler {
         r: u32,
         t: u32,
         lineages: &LineagesData,
-        mutations: Option<&MutationsData>,
     ) -> Result<(), Box<dyn Error>> {
         // Only output if at the sampling frequency
         if t % self.sampling_frequency == 0 {
@@ -96,11 +95,6 @@ impl OutputHandler {
 
             if let Some(summary_outputter) = &mut self.summary_outputter {
                 summary_outputter.record_lineages(r, t, lineages)?;
-            }
-
-            if let Some(mutation_summary_outputter) = &mut self.mutation_summary_outputter {
-                let mutations = mutations.ok_or("Missing mutations data")?;
-                mutation_summary_outputter.record_mutations(r, t, mutations)?;
             }
         }
 
@@ -114,12 +108,16 @@ impl OutputHandler {
     /// repeatedly without clearing the pruned mutations in between calls
     pub fn output_pruned_mutations(
         &mut self,
+        r: u32,
         mutations_data: &MutationsData,
     ) -> Result<(), Box<dyn Error>> {
-        self.sequencing_outputter
-            .as_mut()
-            .unwrap()
-            .record_pruned_mutations(mutations_data)?;
+        if let Some(sequencing_outputter) = self.sequencing_outputter.as_mut() {
+            sequencing_outputter.record_pruned_mutations(mutations_data)?;
+        }
+        if let Some(mutation_summary_outputter) = self.mutation_summary_outputter.as_mut() {
+            mutation_summary_outputter.record_pruned_mutations(r, mutations_data)?;
+        }
+
         Ok(())
     }
 
@@ -138,12 +136,19 @@ impl OutputHandler {
     /// mutations are cleared.
     pub fn finish_replicate_mutations(
         &mut self,
+        r: u32,
         mutations_data: &MutationsData,
     ) -> Result<(), Box<dyn Error>> {
-        self.output_pruned_mutations(mutations_data)?;
-        let sequencing_outputter = self.sequencing_outputter.as_mut().unwrap();
-        sequencing_outputter.record_active_mutations(mutations_data)?;
-        sequencing_outputter.deliminate_replicate_end()?;
+        self.output_pruned_mutations(r, mutations_data)?;
+
+        if let Some(sequencing_outputter) = self.sequencing_outputter.as_mut() {
+            sequencing_outputter.record_active_mutations(mutations_data)?;
+            sequencing_outputter.deliminate_replicate_end()?;
+        }
+        if let Some(mutation_summary_outputter) = self.mutation_summary_outputter.as_mut() {
+            mutation_summary_outputter.record_active_mutations(r, mutations_data)?;
+        }
+
         Ok(())
     }
 }
@@ -215,7 +220,6 @@ const BUFFER_CAPACITY: usize = 8 * (1 << 20);
 const HEADER_BUFFER_CAPACITY: usize = 2 * (1 << 10);
 
 /// Type which outputs data for the `Raw` `OutputMode`,
-/// including owning the file handle for the output
 pub struct RawOutputter<W: Write> {
     /// Buffered file writer to write data into
     writer: W,
@@ -224,7 +228,7 @@ pub struct RawOutputter<W: Write> {
 impl<W: Write> RawOutputter<W> {
     /// Create a new `RawOutputter` from options in an `OutputConfig` and `SimConfig`  
     ///
-    /// Allocates internal buffer and obtains file handle
+    /// Writes header data to the underlying `writer`
     pub fn new(mut writer: W, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
         initialize_output(&mut writer, sim_cfg, OutputMode::Raw, "")?;
         Ok(Self { writer })
@@ -251,7 +255,6 @@ impl<W: Write> RawOutputter<W> {
 }
 
 /// Type which outputs data for the `Summary` `OutputMode`,
-/// including owning the file handle for the output
 pub struct SummaryOutputter<W: Write> {
     /// Buffered csv file writer to write data into
     writer: csv::Writer<W>,
@@ -300,7 +303,7 @@ impl<W: Write> SummaryOutputter<W> {
 
     /// Create a new `SummaryOutputter` from options in an `OutputConfig` and `SimConfig`  
     ///
-    /// Allocates internal buffer and obtains file handle
+    /// Writes header data to the underlying `writer`
     pub fn new(
         writer: W,
         summary_cfg: SummaryOutputConfig,
@@ -346,7 +349,9 @@ impl<W: Write> SummaryOutputter<W> {
 }
 
 /// Type which outputs data for the `Sequencing` `OutputMode`,
-/// including owning the file handle for the output
+///
+/// Mutations can be recorded with `record_pruned_mutations` and `record_active_mutations`,
+/// replicates must be ended with `deliminate_replicate_end`
 pub struct SequencingOutputter<W: Write> {
     /// Buffered file writer to write data into
     writer: W,
@@ -355,7 +360,7 @@ pub struct SequencingOutputter<W: Write> {
 impl<W: Write> SequencingOutputter<W> {
     /// Create a new `SequencingOutputter` from options in an `OutputConfig` and `SimConfig`  
     ///
-    /// Allocates internal buffer and obtains file handle
+    /// Writes header data to the underlying `writer`
     pub fn new(mut writer: W, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
         initialize_output(&mut writer, sim_cfg, OutputMode::Sequencing, "")?;
 
@@ -406,12 +411,16 @@ impl<W: Write> SequencingOutputter<W> {
     }
 }
 
+/// Type which outputs data for the `MutationSummary` `OutputMode`
 pub struct MutationSummaryOutputter<W: Write> {
     /// Buffered csv file writer to write data into
     writer: csv::Writer<W>,
 }
 
 impl<W: Write> MutationSummaryOutputter<W> {
+    /// Create a new `MutationSummaryOutputter` from options in an `OutputConfig` and `SimConfig`  
+    ///
+    /// Writes header data to the underlying `writer`
     pub fn new(writer: W, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
         let mut writer = initialize_output_as_csv(writer, sim_cfg, OutputMode::MutationSummary)?;
 
@@ -422,26 +431,44 @@ impl<W: Write> MutationSummaryOutputter<W> {
         Ok(Self { writer })
     }
 
-    pub fn record_mutations(
+    /// Record mutations in a `MutationsData` which have been pruned
+    pub fn record_pruned_mutations(
         &mut self,
         r: u32,
-        t: u32,
         mutations: &MutationsData,
     ) -> Result<(), Box<dyn Error>> {
-        for mutation in mutations.iter_all() {
-            #[allow(non_snake_case)]
-            let N = match mutation.N().get((t - mutation.first_transfer()) as usize) {
-                Some(n) => n,
-                None => continue,
-            };
-            self.writer.write_field(r.to_string())?;
-            self.writer.write_field(t.to_string())?;
-            self.writer.write_field(mutation.id().to_string())?;
-            self.writer.write_field(N.to_string())?;
-            self.writer.write_record(EMPTY_CSV_RECORD)?;
+        for mutation in mutations.pruned_muts.iter() {
+            self.record_mutation(r, mutation)?;
         }
 
         Ok(())
+    }
+
+    /// Record mutations in a `MutationsData` which are still being tracked and have not been pruned
+    pub fn record_active_mutations(
+        &mut self,
+        r: u32,
+        mutations: &MutationsData,
+    ) -> Result<(), Box<dyn Error>> {
+        for mutation in mutations.muts.values() {
+            self.record_mutation(r, mutation)?;
+        }
+
+        Ok(())
+    }
+
+    /// Record an individual `Mutation`
+    fn record_mutation(&mut self, r: u32, mutation: &Mutation) -> Result<(), Box<dyn Error>> {
+        for (i, n) in mutation.N().iter().enumerate() {
+            self.writer
+                .serialize((r, mutation.first_transfer() + i as u32, mutation.id(), *n))?;
+        }
+
+        Ok(())
+    }
+
+    pub fn into_inner(self) -> Result<W, csv::IntoInnerError<csv::Writer<W>>> {
+        self.writer.into_inner()
     }
 }
 

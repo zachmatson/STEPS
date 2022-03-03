@@ -250,29 +250,12 @@ impl MutationsData {
     }
 
     pub fn iter_all(&self) -> MutationsDataIterAll {
-        MutationsDataIterAll::new(self)
+        self.muts.values().chain(self.pruned_muts.iter())
     }
 }
 
-/// Iterator over all mutations (including pruned) in a `MutationsData`
-pub struct MutationsDataIterAll<'a> {
-    inner: Chain<hashbrown::hash_map::Values<'a, u64, Mutation>, std::slice::Iter<'a, Mutation>>,
-}
-
-impl<'a> MutationsDataIterAll<'a> {
-    fn new(mutations: &'a MutationsData) -> Self {
-        let inner = mutations.muts.values().chain(mutations.pruned_muts.iter());
-        Self { inner }
-    }
-}
-
-impl<'a> Iterator for MutationsDataIterAll<'a> {
-    type Item = &'a Mutation;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next()
-    }
-}
+pub type MutationsDataIterAll<'a> =
+    Chain<hashbrown::hash_map::Values<'a, u64, Mutation>, std::slice::Iter<'a, Mutation>>;
 
 /// Data for one Mutation being tracked  
 /// Should not be edited outside of sequencing functions
