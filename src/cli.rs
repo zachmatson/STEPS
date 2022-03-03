@@ -4,6 +4,7 @@
 use std::{error::Error, time};
 
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+use itertools::{izip, Itertools};
 
 use crate::{cfg::*, io::*, sim::*};
 
@@ -29,21 +30,15 @@ fn run_simulations_inner(
     output_cfg: &CLIOutputConfig,
     sim_cfg: &SimConfig,
 ) -> Result<(), Box<dyn Error>> {
-    let replicate_bar = styled_bar(sim_cfg.replicates as u64, "Replicate:");
-    let transfer_bar = styled_bar(sim_cfg.transfers as u64, "Transfer:");
-    // ProgressBars are Arc under the hood, clone is Arc clone
-    // Need to do this so bars don't interfere with panic messages
-    let hook_replicate_bar = replicate_bar.clone();
-    let hook_transfer_bar = transfer_bar.clone();
-    let hook = std::panic::take_hook();
-    std::panic::set_hook(Box::new(move |info| {
-        hook_replicate_bar.abandon();
-        hook_transfer_bar.abandon();
-        hook(info);
-    }));
-    // To pick how often to update the transfers bar
-    let mut last_update = time::Instant::now();
+    // Create the progress bars
     const TARGET_UPDATE_INTERVAL: time::Duration = time::Duration::from_millis(500);
+    let mut bar_handler = ProgressBarHandler::new(
+        TARGET_UPDATE_INTERVAL,
+        [
+            styled_bar(sim_cfg.replicates as u64, "Replicate:"),
+            styled_bar(sim_cfg.transfers as u64, "Transfer:"),
+        ],
+    );
 
     // Objects which manage the underlying simulations and the outputting of results
     let tracking_mutations = output_cfg.should_track_mutations();
@@ -69,18 +64,7 @@ fn run_simulations_inner(
                 simulation_handler.clear_pruned_mutations();
             }
 
-            // Update progress bar only periodically to reduce time spent redrawing it
-            if last_update.elapsed() >= TARGET_UPDATE_INTERVAL {
-                if replicate_bar.position() < r as u64 - 1 {
-                    // This weird trickery with removing the transfer bar first is required to make
-                    // the display right
-                    transfer_bar.finish_and_clear();
-                    replicate_bar.set_position(r as u64 - 1);
-                    transfer_bar.reset();
-                }
-                transfer_bar.set_position(t as u64);
-                last_update = time::Instant::now();
-            }
+            bar_handler.maybe_set_positions([r as u64 - 1, t as u64]);
         }
 
         // Only *pruned* mutations have been output up until this point
@@ -91,8 +75,6 @@ fn run_simulations_inner(
         }
     }
 
-    transfer_bar.finish_and_clear();
-    replicate_bar.finish_and_clear();
     Ok(())
 }
 
@@ -124,4 +106,74 @@ fn styled_bar(len: u64, prefix: &str) -> ProgressBar {
     bar.set_prefix(prefix);
 
     bar
+}
+
+/// Handler for multiple `indicatif::ProgressBar`s
+struct ProgressBarHandler<const N: usize> {
+    bars: [ProgressBar; N],
+    update_interval: time::Duration,
+    last_update: time::Instant,
+}
+
+impl<const N: usize> ProgressBarHandler<N> {
+    /// Create new `ProgressBarHandler` taking ownership of underlying progress bars
+    pub fn new(update_interval: time::Duration, bars: [ProgressBar; N]) -> Self {
+        // ProgressBars are Arc under the hood, clone is Arc clone
+        // Need to do this so bars don't interfere with panic messages
+        let handles = bars.clone();
+        let old_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            for handle in &handles {
+                handle.abandon();
+            }
+
+            old_hook(info);
+        }));
+
+        let mut result = Self {
+            bars,
+            update_interval,
+            last_update: time::Instant::now(),
+        };
+        // Make sure bars start cleared out
+        result.set_positions([0; N]);
+        result
+    }
+
+    /// Set positions of the handled bars
+    pub fn set_positions(&mut self, positions: [u64; N]) {
+        if let Some((first_updatable, _)) = izip!(positions, &mut self.bars)
+            .find_position(|(position, bar)| *position != bar.position())
+        {
+            // Clear all bars that come after this
+            for bar in self.bars.iter_mut().skip(first_updatable + 1).rev() {
+                bar.finish_and_clear();
+            }
+            // Set position of this bar
+            self.bars[first_updatable].set_position(positions[first_updatable]);
+            // Reset/set positions for remaining bars
+            for (position, bar) in izip!(positions, &self.bars).skip(first_updatable + 1) {
+                bar.reset();
+                bar.set_position(position);
+            }
+        }
+
+        self.last_update = time::Instant::now();
+    }
+
+    /// Set positions of the handled bars only if enough time has elapsed
+    pub fn maybe_set_positions(&mut self, positions: [u64; N]) {
+        if self.last_update.elapsed() >= self.update_interval {
+            self.set_positions(positions);
+        }
+    }
+}
+
+impl<const N: usize> Drop for ProgressBarHandler<N> {
+    fn drop(&mut self) {
+        // Clear all of the progress bars
+        for bar in &self.bars {
+            bar.finish_and_clear();
+        }
+    }
 }
