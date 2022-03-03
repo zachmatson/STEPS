@@ -4,6 +4,8 @@
 //!
 //! [Find this project on GitHub](https://github.com/zachmatson/DevinsSimulations)
 
+#![warn(missing_docs)]
+
 pub mod cfg;
 pub mod cli;
 pub mod io;

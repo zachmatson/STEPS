@@ -249,6 +249,8 @@ impl<W: Write> RawOutputter<W> {
         Ok(())
     }
 
+    /// Consume the outputter and get back the underlying `writer`
+    /// Will not necessarily flush the writer
     pub fn into_inner(self) -> W {
         self.writer
     }
@@ -343,6 +345,8 @@ impl<W: Write> SummaryOutputter<W> {
         Ok(())
     }
 
+    /// Consume the outputter and get back the underlying `writer`
+    /// Will not necessarily flush the writer
     pub fn into_inner(self) -> Result<W, csv::IntoInnerError<csv::Writer<W>>> {
         self.writer.into_inner()
     }
@@ -406,6 +410,8 @@ impl<W: Write> SequencingOutputter<W> {
         Ok(())
     }
 
+    /// Consume the outputter and get back the underlying `writer`
+    /// Will not necessarily flush the writer
     pub fn into_inner(self) -> W {
         self.writer
     }
@@ -467,6 +473,8 @@ impl<W: Write> MutationSummaryOutputter<W> {
         Ok(())
     }
 
+    /// Consume the outputter and get back the underlying `writer`
+    /// Will not necessarily flush the writer
     pub fn into_inner(self) -> Result<W, csv::IntoInnerError<csv::Writer<W>>> {
         self.writer.into_inner()
     }
@@ -522,7 +530,12 @@ const EMPTY_CSV_RECORD: [&[u8]; 0] = [];
 /// An error originating from processing a previous output file for reproduction of results  
 #[derive(Debug)]
 pub enum MetadataError {
-    IncompatibleVersion { version: String },
+    /// Attempted to load metadata from an incompatible simulation version
+    IncompatibleVersion {
+        /// Version number for the incompatible found version
+        version: String,
+    },
+    /// Attempted to load metadata from a file which is missing STEPS output headers
     MissingHeaders,
 }
 

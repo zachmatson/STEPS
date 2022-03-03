@@ -3,7 +3,6 @@
 use hashbrown::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_tuple::*;
-use std::iter::Chain;
 
 use super::*;
 
@@ -221,20 +220,28 @@ pub enum MutationType {
 /// times each mutation occurred at
 #[derive(Debug, Default)]
 pub struct MutationsData {
+    /// Mutations which are being actively tracked, keyed by their IDs
     pub muts: HashMap<u64, Mutation>,
+    /// Mutations which have been pruned, in arbitrary order
     pub pruned_muts: Vec<Mutation>,
-    pub on_transfer: u32,
+    /// Transfer the simulations are currently on
+    on_transfer: u32,
 }
 
 impl MutationsData {
+    /// Create a new empty `MutationsData` instance
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Increment the transfer the mutation data is being called for
+    ///
+    /// Must be called every time transfer changes to get correct results
     pub fn increment_transfer(&mut self) {
         self.on_transfer += 1;
     }
 
+    /// Register a new `child` `Lineage` by calculating the `Mutation` from its `parent`
     pub fn register(&mut self, child: Lineage, parent: Lineage) {
         let mutation = Mutation {
             id: child.secondary.id,
@@ -248,14 +255,7 @@ impl MutationsData {
 
         self.muts.insert(child.secondary.id, mutation);
     }
-
-    pub fn iter_all(&self) -> MutationsDataIterAll {
-        self.muts.values().chain(self.pruned_muts.iter())
-    }
 }
-
-pub type MutationsDataIterAll<'a> =
-    Chain<hashbrown::hash_map::Values<'a, u64, Mutation>, std::slice::Iter<'a, Mutation>>;
 
 /// Data for one Mutation being tracked  
 /// Should not be edited outside of sequencing functions
@@ -285,14 +285,21 @@ pub struct Mutation {
 }
 
 impl Mutation {
+    /// ID of the `Mutation`  
+    /// Corresponds to the ID of the first `Lineage` instance with this mutation
     pub fn id(&self) -> u64 {
         self.id
     }
 
+    /// The first transfer at which this mutation appeared  
+    /// This is also the transfer corresponding to the first
+    /// entry in the vector of population sizes
     pub fn first_transfer(&self) -> u32 {
         self.first_transfer
     }
 
+    /// Vector of population sizes for each transfer tracked starting
+    /// from `self.first_transfer()`
     pub fn N(&self) -> &Vec<f64> {
         &self.N
     }

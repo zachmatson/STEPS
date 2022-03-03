@@ -20,6 +20,7 @@ use crate::sim::MutationType;
 #[derive(StructOpt)]
 #[structopt(about = "Serially Transferred Evolving Population Simulator")]
 pub struct Config {
+    /// Subcommands of STEPS
     #[structopt(subcommand)]
     pub subcommand: Subcommand,
 }
@@ -54,9 +55,11 @@ pub enum Subcommand {
 #[derive(StructOpt)]
 #[structopt(setting = clap::AppSettings::DeriveDisplayOrder)]
 pub struct SimulationsCLIConfig {
+    /// Output options for the CLI
     #[structopt(flatten)]
     pub output_cfg: CLIOutputConfig,
 
+    /// Simulation options
     #[structopt(flatten)]
     pub sim_cfg: SimConfig,
 }
@@ -76,6 +79,7 @@ pub struct ReproduceConfig {
     /// and contains the information needed to reproduce the results
     pub input_path: PathBuf,
 
+    /// Output options for the CLI
     #[structopt(flatten)]
     pub output_cfg: CLIOutputConfig,
 }
@@ -107,6 +111,7 @@ pub struct CLIOutputConfig {
     #[structopt(long = "mutation-summary-output")]
     pub mutation_summary_output_path: Option<PathBuf>,
 
+    /// Options for the summary output
     #[structopt(flatten)]
     pub summary_cfg: SummaryOutputConfig,
 }
