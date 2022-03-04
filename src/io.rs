@@ -1,13 +1,14 @@
 //! Types to handle the output of simulation data and retrieval of encoded
 //! metadata and configuration settings
 
-use std::error::Error;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, BufWriter, Lines, Write};
 use std::path::Path;
 
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_tuple::*;
+use thiserror::Error;
 
 use crate::{
     cfg::{CLIOutputConfig, SimConfig, SummaryOutputConfig},
@@ -34,7 +35,7 @@ pub struct OutputHandler {
 
 impl OutputHandler {
     /// Create a new `OutputHandler` from options in an `OutputConfig` and `SimConfig`
-    pub fn new(output_cfg: &CLIOutputConfig, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
+    pub fn new(output_cfg: &CLIOutputConfig, sim_cfg: &SimConfig) -> Result<Self> {
         let raw_outputter = if let Some(path) = &output_cfg.raw_output_path {
             Some(RawOutputter::new(create_buffered_file(path)?, sim_cfg)?)
         } else {
@@ -86,7 +87,7 @@ impl OutputHandler {
         r: u32,
         t: u32,
         lineages: &LineagesData,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<()> {
         // Only output if at the sampling frequency
         if t % self.sampling_frequency == 0 {
             if let Some(raw_outputter) = &mut self.raw_outputter {
@@ -110,7 +111,7 @@ impl OutputHandler {
         &mut self,
         r: u32,
         mutations_data: &MutationsData,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<()> {
         if let Some(sequencing_outputter) = self.sequencing_outputter.as_mut() {
             sequencing_outputter.record_pruned_mutations(mutations_data)?;
         }
@@ -138,7 +139,7 @@ impl OutputHandler {
         &mut self,
         r: u32,
         mutations_data: &MutationsData,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<()> {
         self.output_pruned_mutations(r, mutations_data)?;
 
         if let Some(sequencing_outputter) = self.sequencing_outputter.as_mut() {
@@ -229,18 +230,13 @@ impl<W: Write> RawOutputter<W> {
     /// Create a new `RawOutputter` from options in an `OutputConfig` and `SimConfig`  
     ///
     /// Writes header data to the underlying `writer`
-    pub fn new(mut writer: W, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
+    pub fn new(mut writer: W, sim_cfg: &SimConfig) -> Result<Self> {
         initialize_output(&mut writer, sim_cfg, OutputMode::Raw, "")?;
         Ok(Self { writer })
     }
 
     /// Output the raw data in `Lineages`
-    pub fn record_lineages(
-        &mut self,
-        r: u32,
-        t: u32,
-        lineages: &LineagesData,
-    ) -> Result<(), Box<dyn Error>> {
+    pub fn record_lineages(&mut self, r: u32, t: u32, lineages: &LineagesData) -> Result<()> {
         let record = LineagesRecord { r, t, lineages };
         serde_json::to_writer(&mut self.writer, &record)?;
         // Separate from next record to be written
@@ -280,7 +276,7 @@ macro_rules! create_summary_stats_helpers {
         }
 
         /// Write the CSV fields for enabled stats in proper order
-        fn write_enabled_stat_fields(&mut self, data: &LineagesData) -> Result<(), Box<dyn Error>> {
+        fn write_enabled_stat_fields(&mut self, data: &LineagesData) -> Result<()> {
             $(
                 if self.cfg.$stat {
                     self.writer.write_field(format!("{}", summarize::$stat(data)))?;
@@ -306,11 +302,7 @@ impl<W: Write> SummaryOutputter<W> {
     /// Create a new `SummaryOutputter` from options in an `OutputConfig` and `SimConfig`  
     ///
     /// Writes header data to the underlying `writer`
-    pub fn new(
-        writer: W,
-        summary_cfg: SummaryOutputConfig,
-        sim_cfg: &SimConfig,
-    ) -> Result<Self, Box<dyn Error>> {
+    pub fn new(writer: W, summary_cfg: SummaryOutputConfig, sim_cfg: &SimConfig) -> Result<Self> {
         let mut writer = initialize_output_as_csv(writer, sim_cfg, OutputMode::Summary)?;
 
         // Header must be done manually for how we handle the output
@@ -325,12 +317,7 @@ impl<W: Write> SummaryOutputter<W> {
     }
 
     /// Output summary data for `Lineages`
-    pub fn record_lineages(
-        &mut self,
-        r: u32,
-        t: u32,
-        lineages: &LineagesData,
-    ) -> Result<(), Box<dyn Error>> {
+    pub fn record_lineages(&mut self, r: u32, t: u32, lineages: &LineagesData) -> Result<()> {
         #![allow(non_snake_case)]
 
         let avg_W = summarize::sum_N_and_avg_W(lineages).1;
@@ -365,17 +352,14 @@ impl<W: Write> SequencingOutputter<W> {
     /// Create a new `SequencingOutputter` from options in an `OutputConfig` and `SimConfig`  
     ///
     /// Writes header data to the underlying `writer`
-    pub fn new(mut writer: W, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
+    pub fn new(mut writer: W, sim_cfg: &SimConfig) -> Result<Self> {
         initialize_output(&mut writer, sim_cfg, OutputMode::Sequencing, "")?;
 
         Ok(Self { writer })
     }
 
     /// Record mutations in a `MutationsData` which have been pruned
-    pub fn record_pruned_mutations(
-        &mut self,
-        mutations: &MutationsData,
-    ) -> Result<(), Box<dyn Error>> {
+    pub fn record_pruned_mutations(&mut self, mutations: &MutationsData) -> Result<()> {
         for mutation in mutations.pruned_muts.iter() {
             self.record_mutation(mutation)?;
         }
@@ -384,10 +368,7 @@ impl<W: Write> SequencingOutputter<W> {
     }
 
     /// Record mutations in a `MutationsData` which are still being tracked and have not been pruned
-    pub fn record_active_mutations(
-        &mut self,
-        mutations: &MutationsData,
-    ) -> Result<(), Box<dyn Error>> {
+    pub fn record_active_mutations(&mut self, mutations: &MutationsData) -> Result<()> {
         for mutation in mutations.muts.values() {
             self.record_mutation(mutation)?;
         }
@@ -396,7 +377,7 @@ impl<W: Write> SequencingOutputter<W> {
     }
 
     /// Record an individual `Mutation`
-    fn record_mutation(&mut self, mutation: &Mutation) -> Result<(), Box<dyn Error>> {
+    fn record_mutation(&mut self, mutation: &Mutation) -> Result<()> {
         serde_json::to_writer(&mut self.writer, mutation)?;
         writeln!(&mut self.writer)?;
         Ok(())
@@ -405,7 +386,7 @@ impl<W: Write> SequencingOutputter<W> {
     /// Deliminate the end of a replicate
     ///
     /// Currently, this writes an extra newline character to the output
-    pub fn deliminate_replicate_end(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn deliminate_replicate_end(&mut self) -> Result<()> {
         writeln!(&mut self.writer)?;
         Ok(())
     }
@@ -427,7 +408,7 @@ impl<W: Write> MutationSummaryOutputter<W> {
     /// Create a new `MutationSummaryOutputter` from options in an `OutputConfig` and `SimConfig`  
     ///
     /// Writes header data to the underlying `writer`
-    pub fn new(writer: W, sim_cfg: &SimConfig) -> Result<Self, Box<dyn Error>> {
+    pub fn new(writer: W, sim_cfg: &SimConfig) -> Result<Self> {
         let mut writer = initialize_output_as_csv(writer, sim_cfg, OutputMode::MutationSummary)?;
 
         // Header must be done manually for how we handle the output
@@ -438,11 +419,7 @@ impl<W: Write> MutationSummaryOutputter<W> {
     }
 
     /// Record mutations in a `MutationsData` which have been pruned
-    pub fn record_pruned_mutations(
-        &mut self,
-        r: u32,
-        mutations: &MutationsData,
-    ) -> Result<(), Box<dyn Error>> {
+    pub fn record_pruned_mutations(&mut self, r: u32, mutations: &MutationsData) -> Result<()> {
         for mutation in mutations.pruned_muts.iter() {
             self.record_mutation(r, mutation)?;
         }
@@ -451,11 +428,7 @@ impl<W: Write> MutationSummaryOutputter<W> {
     }
 
     /// Record mutations in a `MutationsData` which are still being tracked and have not been pruned
-    pub fn record_active_mutations(
-        &mut self,
-        r: u32,
-        mutations: &MutationsData,
-    ) -> Result<(), Box<dyn Error>> {
+    pub fn record_active_mutations(&mut self, r: u32, mutations: &MutationsData) -> Result<()> {
         for mutation in mutations.muts.values() {
             self.record_mutation(r, mutation)?;
         }
@@ -464,7 +437,7 @@ impl<W: Write> MutationSummaryOutputter<W> {
     }
 
     /// Record an individual `Mutation`
-    fn record_mutation(&mut self, r: u32, mutation: &Mutation) -> Result<(), Box<dyn Error>> {
+    fn record_mutation(&mut self, r: u32, mutation: &Mutation) -> Result<()> {
         for (i, n) in mutation.N().iter().enumerate() {
             self.writer
                 .serialize((r, mutation.first_transfer() + i as u32, mutation.id(), *n))?;
@@ -497,7 +470,7 @@ fn initialize_output<W: Write>(
     sim_cfg: &SimConfig,
     output_mode: OutputMode,
     header_prefix: &'static str,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<()> {
     // Write the metadata to the file with optional comment character
     write!(writer, "{}", header_prefix)?;
     let metadata = Metadata::new(output_mode);
@@ -516,7 +489,7 @@ fn initialize_output_as_csv<W: Write>(
     mut writer: W,
     sim_cfg: &SimConfig,
     output_mode: OutputMode,
-) -> Result<csv::Writer<W>, Box<dyn Error>> {
+) -> Result<csv::Writer<W>> {
     initialize_output(&mut writer, sim_cfg, output_mode, "# ")?;
 
     // TODO: Decide what to do about buffering situation
@@ -528,39 +501,24 @@ fn initialize_output_as_csv<W: Write>(
 const EMPTY_CSV_RECORD: [&[u8]; 0] = [];
 
 /// An error originating from processing a previous output file for reproduction of results  
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum MetadataError {
     /// Attempted to load metadata from an incompatible simulation version
+    #[error("Input file is from an incompatible simulation version: {version}")]
     IncompatibleVersion {
         /// Version number for the incompatible found version
         version: String,
     },
     /// Attempted to load metadata from a file which is missing STEPS output headers
+    #[error("Input file is missing the necessary headers to extract simulation options from")]
     MissingHeaders,
 }
-
-impl std::fmt::Display for MetadataError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            MetadataError::IncompatibleVersion { version } => write!(
-                f,
-                "Previous results from incompatible simulation version {}",
-                &version
-            ),
-            MetadataError::MissingHeaders => {
-                write!(f, "Cannot find headers in input file to reproduce with")
-            }
-        }
-    }
-}
-
-impl Error for MetadataError {}
 
 /// Get the `SimConfig` encoded in a previous output file back out
 ///
 /// Will fail if previous output is from a different version, in the future this  
 /// may change (i.e. with SemVer)
-pub fn extract_sim_config<P: AsRef<Path>>(path: P) -> Result<SimConfig, Box<dyn Error>> {
+pub fn extract_sim_config<P: AsRef<Path>>(path: P) -> Result<SimConfig> {
     Ok(extract_headers(path)?.sim_cfg)
 }
 
@@ -580,7 +538,7 @@ struct ExtractedHeaders {
 ///
 /// Will fail if previous output is from a different version, in the future this  
 /// may change (i.e. with SemVer)
-fn extract_headers<P: AsRef<Path>>(path: P) -> Result<ExtractedHeaders, Box<dyn Error>> {
+fn extract_headers<P: AsRef<Path>>(path: P) -> Result<ExtractedHeaders> {
     let file = File::open(path)?;
     // BufReader is required for `lines` iterator
     let reader = BufReader::with_capacity(HEADER_BUFFER_CAPACITY, file);

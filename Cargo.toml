@@ -23,6 +23,8 @@ rand = "0.7"
 rand_pcg = "0.2"
 rand_distr = "0.2"
 cty = "0.2.1"
+anyhow = "1.0"
+thiserror = "1.0"
 
 [build-dependencies]
 cc = "1.0"

@@ -1,8 +1,9 @@
 //! Functions to run the simulations and output results with command line display
 //! after configuration options are retrieved and processed
 
-use std::{error::Error, time};
+use std::time;
 
+use anyhow::Result;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use itertools::{izip, Itertools};
 
@@ -13,12 +14,35 @@ pub fn run_simulations(cfg: &SimulationsCLIConfig) {
     run_simulations_private(&cfg.output_cfg, &cfg.sim_cfg);
 }
 
+/// Reproduce simulation results by extracting settings and handing off to the normal
+/// `Simulate` subcommand
+pub fn reproduce_simulations(cfg: &ReproduceConfig) {
+    match extract_sim_config(&cfg.input_path) {
+        Ok(sim_cfg) => {
+            if sim_cfg.seed.is_none() {
+                eprintln!(
+                    "Note: The simulations were previously run without a seed. \
+                       Simulations will be run with the same settings but results will not be identical."
+                );
+            }
+
+            run_simulations_private(&cfg.output_cfg, &sim_cfg);
+        }
+        Err(e) => {
+            eprintln!("Error: Failed to read simulation options for reproduction");
+            eprintln!("{:#}", e);
+            eprintln!("Details:\n{:#?}", e);
+        }
+    }
+}
+
 /// Run the simulations with command line display and display error results if applicable
 ///
 /// Exists as a wrapped function to be reused by run_simulations and reproduce_simulations
 fn run_simulations_private(output_cfg: &CLIOutputConfig, sim_cfg: &SimConfig) {
     if let Err(e) = run_simulations_inner(output_cfg, sim_cfg) {
         eprintln!("Error: Failed to properly output results.");
+        eprintln!("{:#}", e);
         eprintln!("Details:\n{:#?}", e);
     }
 }
@@ -26,10 +50,7 @@ fn run_simulations_private(output_cfg: &CLIOutputConfig, sim_cfg: &SimConfig) {
 /// Run the simulations with command line display and pass error results up
 ///
 /// To display the error results to the user use `run_simulations_outer`
-fn run_simulations_inner(
-    output_cfg: &CLIOutputConfig,
-    sim_cfg: &SimConfig,
-) -> Result<(), Box<dyn Error>> {
+fn run_simulations_inner(output_cfg: &CLIOutputConfig, sim_cfg: &SimConfig) -> Result<()> {
     // Create the progress bars
     const TARGET_UPDATE_INTERVAL: time::Duration = time::Duration::from_millis(500);
     let mut bar_handler = ProgressBarHandler::new(
@@ -76,27 +97,6 @@ fn run_simulations_inner(
     }
 
     Ok(())
-}
-
-/// Reproduce simulation results by extracting settings and handing off to the normal
-/// `Simulate` subcommand
-pub fn reproduce_simulations(cfg: &ReproduceConfig) {
-    match extract_sim_config(&cfg.input_path) {
-        Ok(sim_cfg) => {
-            if sim_cfg.seed.is_none() {
-                eprintln!(
-                    "Note: The simulations were previously run without a seed. \
-                       Simulations will be run with the same settings but results will not be identical."
-                );
-            }
-
-            run_simulations_private(&cfg.output_cfg, &sim_cfg);
-        }
-        Err(e) => {
-            eprintln!("Error: Failed to read simulation options for reproduction");
-            eprintln!("Details:\n{:#?}", e);
-        }
-    }
 }
 
 /// Get `ProgressBar` with style options and a custom prefix set to use for displaying progress
