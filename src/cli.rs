@@ -142,8 +142,8 @@ impl<const N: usize> ProgressBarHandler<N> {
 
     /// Set positions of the handled bars
     pub fn set_positions(&mut self, positions: [u64; N]) {
-        if let Some((first_updatable, _)) =
-            izip!(positions, self.bars).find_position(|(position, bar)| *position != bar.position())
+        if let Some((first_updatable, _)) = izip!(positions, &self.bars)
+            .find_position(|(position, bar)| *position != bar.position())
         {
             // Clear all bars that come after this
             for bar in self.bars.iter_mut().skip(first_updatable + 1).rev() {
