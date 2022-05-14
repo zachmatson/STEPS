@@ -1,0 +1,19 @@
+.infoPillContainer:hover .hover\:bg-gray-700 {
+    @apply bg-gray-700 !important
+}
+
+.infoPillContainer:hover .hover\:bg-green-700 {
+    @apply bg-green-700 !important
+}
+
+.infoPillContainer:hover .hover\:bg-blue-700 {
+    @apply bg-blue-700 !important
+}
+
+.infoPillContainer:hover .hover\:bg-gray-600 {
+    @apply bg-gray-600 !important
+}
+
+.infoPillContainer:hover .hover\:text-white {
+    @apply text-white !important
+}

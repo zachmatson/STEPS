@@ -4,8 +4,75 @@ import { Collapsible } from "./utils/Collapsible";
 import { InfoBox } from "./utils/InfoBox";
 import * as icons from "./utils/Icons";
 import { ChartTest } from "./utils/ChartTest";
+import { PageLayout } from "./PageLayout";
+import { Button } from "./utils/Button";
 
 export const App = () => (
+  <PageLayout
+    bodyLeft={<Form />}
+    bodyRight={<Placeholder />}
+    footer={<Footer />}
+  />
+);
+
+const Form = () => (
+  <div className="h-full overflow-y-auto">
+    <Collapsible title="Simulation Parameters" defaultExpanded>
+      <div className="pb-2 pl-0.5">Some content</div>
+      <input type="text" className="w-full max-w-sm" />
+    </Collapsible>
+    <Collapsible title="Advanced Simulation Parameters">
+      <div>Some more content</div>
+      <button type="button" className="button button-blue">
+        Here's a Button
+      </button>{" "}
+      <button
+        type="button"
+        className="button button-gray"
+        onClick={() => alert("HI")}
+      >
+        And Another
+      </button>
+    </Collapsible>
+    <Collapsible title="Data Collection">
+      <InfoBox>
+        CSV export and desired statistics must be enabled <i>before</i> running
+        simulations
+      </InfoBox>
+      <ChartTest />
+    </Collapsible>
+  </div>
+);
+
+const Placeholder = () => (
+  <div className="h-full flex justify-center items-center text-gray-500 select-none cursor-default">
+    Run Simulations to See Data
+  </div>
+);
+
+const Footer = () => (
+  <div className="flex justify-between flex-wrap gap-2 p-2 lg:py-4 border-gray-300 border-t-2">
+    <div className="flex items-center gap-1">
+      <Button color="green" infoText="Settings Changed">
+        Restart
+      </Button>
+      <Button color="gray">Pause</Button>
+    </div>
+    <div className="flex items-center flex-wrap gap-4">
+      <button disabled>
+        <icons.Download className="h-10" />
+      </button>
+      <button>
+        <icons.LinkSeed className="h-10" />
+      </button>
+      <button>
+        <icons.LinkNoSeed className="h-10" />
+      </button>
+    </div>
+  </div>
+);
+
+export const AppOld = () => (
   <div className="flex justify-center h-full">
     <div className="flex flex-col justify-start items-center h-full w-full max-w-full 2xl:max-w-[1536px]">
       <header className="w-full py-3 lg:py-6 flex justify-center items-center border-gray-300 border-b-2 lg:border-0 text-3xl select-none cursor-default">
