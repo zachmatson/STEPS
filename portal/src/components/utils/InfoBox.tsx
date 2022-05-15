@@ -1,6 +1,6 @@
 import React from "react";
 
-import * as icons from "./Icons";
+import * as icons from "../icons/Icons";
 
 export type InfoBoxProps = {
   children: React.ReactNode;

@@ -1,6 +1,6 @@
 import React from "react";
 
-import * as icons from "../Icons";
+import * as icons from "../../icons/Icons";
 
 import "./Button.css";
 
@@ -8,9 +8,10 @@ export type ButtonProps = {
   children: string;
   color: "green" | "gray" | "blue";
   infoText?: string;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
 };
 
-export const Button = ({ children, color, infoText }: ButtonProps) => {
+export const Button = ({ children, color, infoText, onClick }: ButtonProps) => {
   let colorClass: string;
   switch (color) {
     case "gray":
@@ -29,7 +30,7 @@ export const Button = ({ children, color, infoText }: ButtonProps) => {
     ${colorClass}`;
 
   return infoText ? (
-    <button type="button" className="infoPillContainer">
+    <button type="button" className="infoPillContainer" onClick={onClick}>
       <span className="flex items-center">
         <span className={`${classes}`}>{children}</span>
         <span className="rounded-r flex items-center pl-2 pr-3 text-black bg-gray-300 hover:bg-gray-600 hover:text-white">
@@ -39,7 +40,7 @@ export const Button = ({ children, color, infoText }: ButtonProps) => {
       </span>
     </button>
   ) : (
-    <button type="button" className={classes}>
+    <button type="button" className={classes} onClick={onClick}>
       {children}
     </button>
   );

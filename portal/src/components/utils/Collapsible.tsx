@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 
-import * as icons from "./Icons";
+import * as icons from "../icons/Icons";
 
 export type CollapsibleProps = {
   title: string;

@@ -6,7 +6,7 @@ const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin");
 const EslintWebpackPlugin = require("eslint-webpack-plugin");
 
 module.exports = (env, argv) => {
-  const appPath = path.resolve(__dirname, "site");
+  const appPath = path.resolve(__dirname, "src");
   const outputPath = path.resolve(__dirname, "dist");
 
   const isProduction = argv.mode == "production";

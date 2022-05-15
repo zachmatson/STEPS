@@ -12,7 +12,17 @@ module.exports = {
       jsx: true,
     },
   },
-  rules: {},
+  rules: {
+    "@typescript-eslint/ban-types": [
+      "error",
+      {
+        extendDefaults: true,
+        types: {
+          "{}": false,
+        },
+      },
+    ],
+  },
   settings: {
     react: {
       version: "detect",
