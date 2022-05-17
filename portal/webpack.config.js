@@ -56,8 +56,9 @@ module.exports = (env, argv) => {
         template: path.join(appPath, "index.html"),
       }),
       new WasmPackPlugin({
-        crateDirectory: path.resolve(__dirname, "relltee_adapter"),
-        outDir: path.resolve(__dirname, "relltee_adapter/pkg"),
+        crateDirectory: path.resolve(__dirname, "steps_adapter"),
+        outDir: path.resolve(__dirname, "steps_adapter/pkg"),
+        forceMode: "production",
       }),
       new EslintWebpackPlugin(),
       new ForkTsCheckerWebpackPlugin(),

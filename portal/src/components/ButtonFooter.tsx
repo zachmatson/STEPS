@@ -1,11 +1,12 @@
+import React from "react";
+
 import { Button } from "./utils/Button";
 import * as icons from "./icons/Icons";
-import React from "react";
-import { SimStatus } from "../simulations/simulations";
+import { SimStatus } from "../config/config";
 
 export type ButtonFooterProps = {
   status: SimStatus;
-  dirtyConfig: boolean;
+  configIsDirty: boolean;
   startOrRestartSim: () => void;
   pauseSim: () => void;
   resumeSim: () => void;
@@ -13,7 +14,7 @@ export type ButtonFooterProps = {
 
 export const ButtonFooter = ({
   status,
-  dirtyConfig,
+  configIsDirty,
   startOrRestartSim,
   pauseSim,
   resumeSim,
@@ -27,7 +28,7 @@ export const ButtonFooter = ({
       <div className="flex items-center gap-1">
         <Button
           color="green"
-          infoText={dirtyConfig ? "Settings Changed" : undefined}
+          infoText={configIsDirty ? "Settings Changed" : undefined}
           onClick={startOrRestartSim}
         >
           {running || paused ? "Restart" : "Run"}

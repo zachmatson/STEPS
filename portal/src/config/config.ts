@@ -1,0 +1,112 @@
+import { z } from "zod";
+import fp from "lodash/fp";
+
+import { zNumber, zInt, zU64, zString, zBoolean } from "../utils/zodUtils";
+
+export type SimStatus = "notStarted" | "running" | "paused" | "finished";
+
+export const simParamsSchema = z.object({
+  replicates: zInt,
+  transfers: zInt,
+  maxPopSize: zNumber,
+  dilutionFactor: zNumber,
+  markers: zInt,
+  beneficialMutationRate: zNumber,
+  neutralMutationRate: zNumber,
+  deleteriousMutationRate: zNumber,
+  mutationRateMutationRate: zNumber,
+  initialBeneficialMutationSize: zNumber,
+  deleteriousMutationSizeFactor: zNumber,
+  mutationRateMutationSizeFactor: zNumber,
+  diminishingReturnsEpistasisStrength: zNumber,
+  seed: zU64,
+});
+
+export type SimParams = z.infer<typeof simParamsSchema>;
+
+export const simParamsStringySchema = z.object({
+  replicates: zString,
+  transfers: zString,
+  maxPopSize: zString,
+  dilutionFactor: zString,
+  markers: zString,
+  beneficialMutationRate: zString,
+  neutralMutationRate: zString,
+  deleteriousMutationRate: zString,
+  mutationRateMutationRate: zString,
+  initialBeneficialMutationSize: zString,
+  deleteriousMutationSizeFactor: zString,
+  mutationRateMutationSizeFactor: zString,
+  diminishingReturnsEpistasisStrength: zString,
+  seed: zString.default(""),
+});
+
+export type SimParamsStringy = z.infer<typeof simParamsStringySchema>;
+
+export const defaultSimParams: SimParamsStringy = {
+  replicates: "4",
+  transfers: "800",
+  maxPopSize: "5e8",
+  dilutionFactor: "100",
+  markers: "2",
+  beneficialMutationRate: "1.7e-6",
+  deleteriousMutationRate: "0",
+  mutationRateMutationRate: "0",
+  neutralMutationRate: "0",
+  initialBeneficialMutationSize: "0.01587",
+  deleteriousMutationSizeFactor: "0",
+  mutationRateMutationSizeFactor: "0",
+  diminishingReturnsEpistasisStrength: "6.0217",
+  seed: "",
+};
+
+export const dataCollectionConfigSchema = z.object({
+  prepareCSV: zBoolean,
+  trackedStatistics: z.object({
+    avgW: zBoolean,
+    marker1Ratio: zBoolean,
+    stdevW: zBoolean,
+    maxW: zBoolean,
+    stdevAccumulatedMuts: zBoolean,
+    maxAccumulatedMuts: zBoolean,
+    genotypeCount: zBoolean,
+    shannonDiversity: zBoolean,
+  }),
+});
+
+export type DataCollectionConfig = z.infer<typeof dataCollectionConfigSchema>;
+
+export const defaultDataCollectionConfig: DataCollectionConfig = {
+  prepareCSV: false,
+  trackedStatistics: {
+    avgW: true,
+    marker1Ratio: false,
+    stdevW: false,
+    maxW: false,
+    stdevAccumulatedMuts: false,
+    maxAccumulatedMuts: false,
+    genotypeCount: false,
+    shannonDiversity: false,
+  },
+};
+
+export const portalRunConfigSchema = z.object({
+  simParams: simParamsSchema,
+  dataConfig: dataCollectionConfigSchema,
+});
+
+export type PortalRunConfig = z.infer<typeof portalRunConfigSchema>;
+
+export const portalRunConfigStringySchema = z.object({
+  simParams: simParamsStringySchema,
+  dataConfig: dataCollectionConfigSchema,
+});
+
+export type PortalRunConfigStringy = z.infer<
+  typeof portalRunConfigStringySchema
+>;
+
+export const defaultPortalRunConfig: PortalRunConfigStringy = {
+  simParams: defaultSimParams,
+  dataConfig: defaultDataCollectionConfig,
+};
