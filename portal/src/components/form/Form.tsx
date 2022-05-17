@@ -12,8 +12,8 @@ import { Collapsible } from "../utils/Collapsible";
 import { InfoBox } from "../utils/InfoBox";
 import { advSimParamFormFields, simParamsFormFields } from "./formFields";
 import {
+  portalRunConfigSchema,
   PortalRunConfigStringy,
-  portalRunConfigStringySchema,
 } from "../../config/config";
 import { LabelledInputGroup } from "./LabelledInputGroup";
 
@@ -38,7 +38,7 @@ export const Form = React.forwardRef(
       formState: { errors },
     } = useForm<PortalRunConfigStringy>({
       defaultValues: props.defaultValues,
-      resolver: zodResolver(portalRunConfigStringySchema),
+      resolver: zodResolver(portalRunConfigSchema),
     });
 
     const handledOnSubmit = useCallback(handleSubmit(props.onSubmit), [

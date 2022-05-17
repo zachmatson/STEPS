@@ -91,6 +91,7 @@ export class App extends React.Component<{}, AppState> {
   };
 
   render() {
+    console.log(this.state.activeConfig);
     const form = (
       <Form
         ref={this.formRef}

@@ -1,25 +1,32 @@
 import { z } from "zod";
-import fp from "lodash/fp";
 
-import { zNumber, zInt, zU64, zString, zBoolean } from "../utils/zodUtils";
+import {
+  zPosNumber,
+  zPosInt,
+  zString,
+  zBoolean,
+  zSeed,
+  zNonNegNumber,
+  zGe1Number,
+} from "../utils/zodUtils";
 
 export type SimStatus = "notStarted" | "running" | "paused" | "finished";
 
 export const simParamsSchema = z.object({
-  replicates: zInt,
-  transfers: zInt,
-  maxPopSize: zNumber,
-  dilutionFactor: zNumber,
-  markers: zInt,
-  beneficialMutationRate: zNumber,
-  neutralMutationRate: zNumber,
-  deleteriousMutationRate: zNumber,
-  mutationRateMutationRate: zNumber,
-  initialBeneficialMutationSize: zNumber,
-  deleteriousMutationSizeFactor: zNumber,
-  mutationRateMutationSizeFactor: zNumber,
-  diminishingReturnsEpistasisStrength: zNumber,
-  seed: zU64,
+  replicates: zPosInt,
+  transfers: zPosInt,
+  maxPopSize: zPosNumber,
+  dilutionFactor: zGe1Number,
+  markers: zPosInt,
+  beneficialMutationRate: zNonNegNumber,
+  neutralMutationRate: zNonNegNumber,
+  deleteriousMutationRate: zNonNegNumber,
+  mutationRateMutationRate: zNonNegNumber,
+  initialBeneficialMutationSize: zPosNumber,
+  deleteriousMutationSizeFactor: zPosNumber,
+  mutationRateMutationSizeFactor: zPosNumber,
+  diminishingReturnsEpistasisStrength: zNonNegNumber,
+  seed: zSeed,
 });
 
 export type SimParams = z.infer<typeof simParamsSchema>;
@@ -54,8 +61,8 @@ export const defaultSimParams: SimParamsStringy = {
   mutationRateMutationRate: "0",
   neutralMutationRate: "0",
   initialBeneficialMutationSize: "0.01587",
-  deleteriousMutationSizeFactor: "0",
-  mutationRateMutationSizeFactor: "0",
+  deleteriousMutationSizeFactor: "1",
+  mutationRateMutationSizeFactor: "1",
   diminishingReturnsEpistasisStrength: "6.0217",
   seed: "",
 };
