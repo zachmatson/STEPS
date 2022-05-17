@@ -2,16 +2,10 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 
 import * as icons from "../icons/Icons";
 
-export type CollapsibleProps = {
-  title: string;
-  defaultExpanded?: boolean;
-  scrollIntoView?: boolean;
-  children?: React.ReactNode;
-};
-
 export const Collapsible = ({
   defaultExpanded = false,
   scrollIntoView = true,
+  problem = false,
   ...props
 }: CollapsibleProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -23,11 +17,12 @@ export const Collapsible = ({
       containerRef.current?.scrollIntoView();
     }
   }, [isOpen]);
+  const onFocus = useCallback(() => setIsOpen(true), []);
 
   const Icon = isOpen ? icons.ChevronDown : icons.ChevronRight;
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} onFocusCapture={onFocus}>
       <div
         onClick={onClick}
         className={`h-12 p-2 flex flex-row justify-start items-center select-none cursor-pointer text-md\
@@ -35,6 +30,7 @@ export const Collapsible = ({
       >
         <Icon className="h-5 pr-1" />
         {props.title}
+        {problem && <icons.Warning className="h-5 pr-1 ml-auto text-red-600" />}
       </div>
       {/* TODO: Compare performance to conditional rendering */}
       <div
@@ -45,4 +41,12 @@ export const Collapsible = ({
       </div>
     </div>
   );
+};
+
+export type CollapsibleProps = {
+  title: string;
+  defaultExpanded?: boolean;
+  scrollIntoView?: boolean;
+  problem?: boolean;
+  children?: React.ReactNode;
 };

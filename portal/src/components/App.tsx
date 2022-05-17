@@ -1,17 +1,15 @@
 import React from "react";
 
-import fp from "lodash/fp";
-
 import { PageLayout } from "./PageLayout";
 import { Form, FormHandle } from "./form/Form";
 import { ButtonFooter } from "./ButtonFooter";
 import { NoResultsPlaceholder } from "./results/NoResultsPlaceholder";
 import {
+  decodeConfigFromURL,
   defaultPortalRunConfig,
   PortalRunConfig,
   portalRunConfigSchema,
   PortalRunConfigStringy,
-  portalRunConfigStringySchema,
   SimStatus,
 } from "../config/config";
 
@@ -26,18 +24,11 @@ export class App extends React.Component<{}, AppState> {
   constructor(props: {}) {
     super(props);
 
+    // Load from URL
     let activeConfigStringy: PortalRunConfigStringy = defaultPortalRunConfig;
-    const url = new URL(window.location.href);
-    if (url.searchParams.has("runConfig")) {
-      try {
-        const suppliedConfig = JSON.parse(
-          atob(url.searchParams.get("runConfig")!)
-        );
-        activeConfigStringy =
-          portalRunConfigStringySchema.parse(suppliedConfig);
-      } catch (e) {
-        console.log("An invalid configuration was provided in the URL");
-      }
+    const suppliedConfig = decodeConfigFromURL();
+    if (suppliedConfig.success) {
+      activeConfigStringy = suppliedConfig.data;
     }
 
     this.state = {
@@ -48,6 +39,7 @@ export class App extends React.Component<{}, AppState> {
   }
 
   formRef = React.createRef<FormHandle>();
+  formKey = 0;
 
   startOrRestartSim = () => {
     this.formRef.current?.submit();
@@ -72,9 +64,14 @@ export class App extends React.Component<{}, AppState> {
   };
 
   onValidatedFormSubmit = () => {
-    // The data argument to this function would give us the transformed data,
-    // this gives us the raw data we want
-    const data = fp.cloneDeep(this.formRef.current?.getValues());
+    // Reset form, React-Hook-Form behaves weirdly after submission
+    // We want a successful submission to act like a new form with new defaults
+    this.formKey += 1;
+
+    // Use getValue instead because we want the stringy data here
+    // This submit handler gets a data argument too but it is the wrong type,
+    // TypeScript doesn't seem to understand that either
+    const data = this.formRef.current?.getValues();
     if (!data) return;
 
     this.setState(
@@ -91,33 +88,28 @@ export class App extends React.Component<{}, AppState> {
   };
 
   render() {
-    console.log(this.state.activeConfig);
-    const form = (
-      <Form
-        ref={this.formRef}
-        defaultValues={this.state.activeConfigStringy}
-        onSubmit={this.onValidatedFormSubmit}
-        onDirtinessChange={this.setConfigIsDirty}
-      />
-    );
-    const results = <NoResultsPlaceholder />;
-    const footer = (
-      <ButtonFooter
-        status={this.state.status}
-        configIsDirty={this.state.configIsDirty}
-        startOrRestartSim={this.startOrRestartSim}
-        pauseSim={this.pauseSim}
-        resumeSim={this.resumeSim}
-      />
-    );
-
     return (
       <PageLayout
-        {...{
-          form,
-          results,
-          footer,
-        }}
+        form={
+          <Form
+            key={`form-${this.formKey}`}
+            ref={this.formRef}
+            defaultValues={this.state.activeConfigStringy}
+            onSubmit={this.onValidatedFormSubmit}
+            onDirtinessChange={this.setConfigIsDirty}
+          />
+        }
+        results={<NoResultsPlaceholder />}
+        footer={
+          <ButtonFooter
+            status={this.state.status}
+            config={this.state.activeConfig}
+            configIsDirty={this.state.configIsDirty}
+            startOrRestartSim={this.startOrRestartSim}
+            pauseSim={this.pauseSim}
+            resumeSim={this.resumeSim}
+          />
+        }
       />
     );
   }

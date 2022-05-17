@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useImperativeHandle } from "react";
 
 import {
+  FieldErrors,
   useForm,
   UseFormGetValues,
   UseFormHandleSubmit,
@@ -10,7 +11,11 @@ import fp from "lodash/fp";
 
 import { Collapsible } from "../utils/Collapsible";
 import { InfoBox } from "../utils/InfoBox";
-import { advSimParamFormFields, simParamsFormFields } from "./formFields";
+import {
+  advSimParamFormFields,
+  FormFieldSet,
+  simParamsFormFields,
+} from "./formFields";
 import {
   portalRunConfigSchema,
   PortalRunConfigStringy,
@@ -33,9 +38,8 @@ export const Form = React.forwardRef(
     const {
       register,
       handleSubmit,
-      watch,
       getValues,
-      formState: { errors },
+      formState: { errors, isDirty },
     } = useForm<PortalRunConfigStringy>({
       defaultValues: props.defaultValues,
       resolver: zodResolver(portalRunConfigSchema),
@@ -46,8 +50,6 @@ export const Form = React.forwardRef(
       props.onSubmit,
     ]);
 
-    // Built in dirtiness checking had issues when defaultValues changed
-    const isDirty = !fp.isEqual(props.defaultValues)(watch());
     useEffect(() => {
       props.onDirtinessChange(isDirty);
     }, [isDirty]);
@@ -61,14 +63,21 @@ export const Form = React.forwardRef(
       <form onSubmit={handledOnSubmit}>
         {/* Hidden submit to make submit on enter work */}
         <input type="submit" className="invisible absolute" />
-        <Collapsible title="Simulation Parameters" defaultExpanded>
+        <Collapsible
+          title="Simulation Parameters"
+          problem={sectionHasErrors(errors, simParamsFormFields)}
+          defaultExpanded
+        >
           <LabelledInputGroup
             register={register}
             errors={errors}
             fields={simParamsFormFields}
           />
         </Collapsible>
-        <Collapsible title="Advanced Simulation Parameters">
+        <Collapsible
+          title="Advanced Simulation Parameters"
+          problem={sectionHasErrors(errors, advSimParamFormFields)}
+        >
           <LabelledInputGroup
             register={register}
             errors={errors}
@@ -86,3 +95,11 @@ export const Form = React.forwardRef(
     );
   }
 );
+
+const sectionHasErrors = (
+  errors: FieldErrors<PortalRunConfigStringy>,
+  fields: FormFieldSet
+): boolean =>
+  fields
+    .map(({ configPath }) => !!fp.get(configPath)(errors))
+    .some(fp.identity);

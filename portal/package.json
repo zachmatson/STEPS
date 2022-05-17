@@ -10,8 +10,9 @@
   "dependencies": {
     "@hookform/resolvers": "^2.8.9",
     "chart.js": "^3.7.1",
+    "clipboard": "^2.0.11",
+    "js-base64": "^3.7.2",
     "lodash": "^4.17.21",
-    "qs": "^6.10.3",
     "react": "^18",
     "react-dom": "^18",
     "react-hook-form": "^7.31.1",

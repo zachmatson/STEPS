@@ -75,6 +75,9 @@ export const zBoolean = z.boolean({
   invalid_type_error: shouldBeBooleanErrorMessage,
 });
 
-export const zString = z.string({
-  required_error: requiredErrorMessage,
-});
+export const zString = z.preprocess(
+  String,
+  z.string({
+    required_error: requiredErrorMessage,
+  })
+);
