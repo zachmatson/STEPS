@@ -81,11 +81,31 @@ export const dataCollectionConfigSchema = z.object({
     genotypeCount: zBoolean,
     shannonDiversity: zBoolean,
   }),
+  dataResolution: zPosInt.optional(),
 });
 
 export type DataCollectionConfig = z.infer<typeof dataCollectionConfigSchema>;
 
-export const defaultDataCollectionConfig: DataCollectionConfig = {
+export const dataCollectionConfigStringySchema = z.object({
+  prepareCSV: zBoolean,
+  trackedStatistics: z.object({
+    avgW: zBoolean,
+    marker1Ratio: zBoolean,
+    stdevW: zBoolean,
+    maxW: zBoolean,
+    stdevAccumulatedMuts: zBoolean,
+    maxAccumulatedMuts: zBoolean,
+    genotypeCount: zBoolean,
+    shannonDiversity: zBoolean,
+  }),
+  dataResolution: zString.default(""),
+});
+
+export type DataCollectionConfigStringy = z.infer<
+  typeof dataCollectionConfigStringySchema
+>;
+
+export const defaultDataCollectionConfig: DataCollectionConfigStringy = {
   prepareCSV: false,
   trackedStatistics: {
     avgW: true,
@@ -97,6 +117,7 @@ export const defaultDataCollectionConfig: DataCollectionConfig = {
     genotypeCount: false,
     shannonDiversity: false,
   },
+  dataResolution: "",
 };
 
 export const portalRunConfigSchema = z.object({
@@ -108,7 +129,7 @@ export type PortalRunConfig = z.infer<typeof portalRunConfigSchema>;
 
 export const portalRunConfigStringySchema = z.object({
   simParams: simParamsStringySchema,
-  dataConfig: dataCollectionConfigSchema,
+  dataConfig: dataCollectionConfigStringySchema,
 });
 
 export type PortalRunConfigStringy = z.infer<

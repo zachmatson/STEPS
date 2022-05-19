@@ -105,6 +105,7 @@ export const Form = React.forwardRef(
                    checked:before:h-3 checked:before:w-3 checked:before:rounded-sm checked:before:bg-blue-600"
                 }
               />
+              {/*<TextInputField label="" />*/}
               <span className="select-none">Enable Download</span>
             </label>
           </div>
