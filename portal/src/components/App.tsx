@@ -1,5 +1,7 @@
 import React from "react";
 
+import fp from "lodash/fp";
+
 import { PageLayout } from "./PageLayout";
 import { Form, FormHandle } from "./form/Form";
 import { ButtonFooter } from "./ButtonFooter";
@@ -24,6 +26,7 @@ export class App extends React.Component<{}, AppState> {
   constructor(props: {}) {
     super(props);
 
+    // TODO: Error checking and reporting
     // Load from URL
     let activeConfigStringy: PortalRunConfigStringy = defaultPortalRunConfig;
     const suppliedConfig = decodeConfigFromURL();
@@ -39,7 +42,6 @@ export class App extends React.Component<{}, AppState> {
   }
 
   formRef = React.createRef<FormHandle>();
-  formKey = 0;
 
   startOrRestartSim = () => {
     this.formRef.current?.submit();
@@ -64,14 +66,11 @@ export class App extends React.Component<{}, AppState> {
   };
 
   onValidatedFormSubmit = () => {
-    // Reset form, React-Hook-Form behaves weirdly after submission
-    // We want a successful submission to act like a new form with new defaults
-    this.formKey += 1;
-
     // Use getValue instead because we want the stringy data here
     // This submit handler gets a data argument too but it is the wrong type,
-    // TypeScript doesn't seem to understand that either
-    const data = this.formRef.current?.getValues();
+    // and React-Hook-Form's typing doesn't understand the concept of input vs
+    // output types in zod
+    const data = fp.cloneDeep(this.formRef.current?.getValues());
     if (!data) return;
 
     this.setState(
@@ -82,7 +81,13 @@ export class App extends React.Component<{}, AppState> {
         configIsDirty: false,
       },
       () => {
-        setTimeout(() => this.setState({ status: "finished" }), 1300);
+        /* TODO */ setTimeout(
+          () => this.setState({ status: "finished" }),
+          1300
+        );
+        this.formRef.current?.reset(data, {
+          keepValues: true,
+        });
       }
     );
   };
@@ -92,7 +97,6 @@ export class App extends React.Component<{}, AppState> {
       <PageLayout
         form={
           <Form
-            key={`form-${this.formKey}`}
             ref={this.formRef}
             defaultValues={this.state.activeConfigStringy}
             onSubmit={this.onValidatedFormSubmit}

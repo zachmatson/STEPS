@@ -11,7 +11,7 @@ export type LabelledInputProps = {
   configPath: FieldPath<PortalRunConfigStringy>;
 };
 
-export const LabelledInput = React.memo((props: LabelledInputProps) => {
+export const TextInputField = React.memo((props: LabelledInputProps) => {
   return (
     <div className="mb-3.5">
       <div className="pb-1.5 pl-0.5">{props.label}</div>

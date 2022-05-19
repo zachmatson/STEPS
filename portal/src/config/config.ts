@@ -122,9 +122,10 @@ export const defaultPortalRunConfig: PortalRunConfigStringy = {
 
 export const encodeConfigInURL = (
   config: PortalRunConfig | PortalRunConfigStringy,
-  seed: boolean
+  seed: boolean,
+  baseHref = window.location.href
 ): string => {
-  const url = new URL(window.location.href);
+  const url = new URL(baseHref);
   const stringyConfig = portalRunConfigStringySchema.parse(config);
   if (!seed) {
     stringyConfig.simParams.seed = "";
@@ -137,14 +138,15 @@ export const encodeConfigInURL = (
   return url.toString();
 };
 
-export const decodeConfigFromURL =
-  (): SafeParseResult<PortalRunConfigStringy> => {
-    const url = new URL(window.location.href);
-    const encodedConfig = url.searchParams.get("runConfig");
-    if (!encodedConfig) return { success: false };
-    const decoded = safeJSONParse(Base64.decode(encodedConfig));
-    if (!decoded.success) return decoded;
-    const checked = portalRunConfigStringySchema.safeParse(decoded.data);
-    if (!checked.success) return checked;
-    return { success: true, data: checked.data };
-  };
+export const decodeConfigFromURL = (
+  href = window.location.href
+): SafeParseResult<PortalRunConfigStringy> => {
+  const url = new URL(href);
+  const encodedConfig = url.searchParams.get("runConfig");
+  if (!encodedConfig) return { success: false };
+  const decoded = safeJSONParse(Base64.decode(encodedConfig));
+  if (!decoded.success) return decoded;
+  const checked = portalRunConfigStringySchema.safeParse(decoded.data);
+  if (!checked.success) return checked;
+  return { success: true, data: checked.data };
+};

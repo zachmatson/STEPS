@@ -5,6 +5,7 @@ import {
   useForm,
   UseFormGetValues,
   UseFormHandleSubmit,
+  UseFormReset,
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import fp from "lodash/fp";
@@ -20,7 +21,8 @@ import {
   portalRunConfigSchema,
   PortalRunConfigStringy,
 } from "../../config/config";
-import { LabelledInputGroup } from "./LabelledInputGroup";
+import { TextInputGroup } from "./TextInputGroup";
+import { useMatchRefsToVals } from "../../utils/useMatchRefsToVals";
 
 export type FormProps = {
   defaultValues: PortalRunConfigStringy;
@@ -30,6 +32,7 @@ export type FormProps = {
 
 export type FormHandle = {
   getValues: UseFormGetValues<PortalRunConfigStringy>;
+  reset: UseFormReset<PortalRunConfigStringy>;
   submit: ReturnType<UseFormHandleSubmit<PortalRunConfigStringy>>;
 };
 
@@ -39,11 +42,13 @@ export const Form = React.forwardRef(
       register,
       handleSubmit,
       getValues,
-      formState: { errors, isDirty },
+      reset,
+      formState: { errors: errorsRaw, isDirty },
     } = useForm<PortalRunConfigStringy>({
       defaultValues: props.defaultValues,
       resolver: zodResolver(portalRunConfigSchema),
     });
+    const errors = useMatchRefsToVals(errorsRaw);
 
     const handledOnSubmit = useCallback(handleSubmit(props.onSubmit), [
       handleSubmit,
@@ -56,6 +61,7 @@ export const Form = React.forwardRef(
 
     useImperativeHandle(ref, () => ({
       getValues,
+      reset,
       submit: handledOnSubmit,
     }));
 
@@ -68,7 +74,7 @@ export const Form = React.forwardRef(
           problem={sectionHasErrors(errors, simParamsFormFields)}
           defaultExpanded
         >
-          <LabelledInputGroup
+          <TextInputGroup
             register={register}
             errors={errors}
             fields={simParamsFormFields}
@@ -78,7 +84,7 @@ export const Form = React.forwardRef(
           title="Advanced Simulation Parameters"
           problem={sectionHasErrors(errors, advSimParamFormFields)}
         >
-          <LabelledInputGroup
+          <TextInputGroup
             register={register}
             errors={errors}
             fields={advSimParamFormFields}
@@ -89,7 +95,19 @@ export const Form = React.forwardRef(
             CSV export and desired statistics must be enabled <i>before</i>{" "}
             running simulations
           </InfoBox>
-          Some more content here
+          <div className="pb-3.5 pl-0.5">
+            <label className="cursor-pointer flex items-center">
+              <input
+                type="checkbox"
+                className={
+                  "appearance-none w-5 h-5 border-gray-300 border-2 rounded mr-2 cursor-pointer bg-gray-50 \
+                   flex justify-center items-center \
+                   checked:before:h-3 checked:before:w-3 checked:before:rounded-sm checked:before:bg-blue-600"
+                }
+              />
+              <span className="select-none">Enable Download</span>
+            </label>
+          </div>
         </Collapsible>
       </form>
     );

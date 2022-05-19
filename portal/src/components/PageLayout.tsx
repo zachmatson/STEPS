@@ -12,7 +12,7 @@ export const PageLayout = (props: PageLayoutProps) => (
       <Header />
     </header>
     <main className="h-full flex-1 overflow-y-auto scroll flex flex-col lg:flex-row">
-      <div className="lg:w-1/3 pb-2 lg:pb-0 px-0 overflow-y-auto">
+      <div className="lg:w-1/3 pb-2 lg:pb-0 px-0 lg:overflow-y-auto">
         {props.form}
       </div>
       <div className="lg:w-2/3 px-0">{props.results}</div>

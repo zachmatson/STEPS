@@ -34,7 +34,6 @@ export const ButtonFooter = ({
   const copyNoSeedRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (config && copySeedRef.current && copyNoSeedRef.current) {
-      console.log("FIRED UP");
       new ClipboardJS(copySeedRef.current, {
         text: () => encodeConfigInURL(config, true),
       });

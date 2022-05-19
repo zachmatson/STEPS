@@ -3,7 +3,7 @@ import React from "react";
 import fp from "lodash/fp";
 
 import { FormFieldSet } from "./formFields";
-import { LabelledInput } from "./LabelledInput";
+import { TextInputField } from "./TextInputField";
 import { FieldError, FieldErrors, UseFormRegister } from "react-hook-form";
 import { PortalRunConfigStringy } from "../../config/config";
 
@@ -13,14 +13,14 @@ export type LabelledInputGroupProps = {
   errors: FieldErrors<PortalRunConfigStringy>;
 };
 
-export const LabelledInputGroup = React.memo(
+export const TextInputGroup = React.memo(
   ({ fields, register, errors }: LabelledInputGroupProps) => (
     <>
       {fields.map(({ label, placeholder, configPath }) => {
         const error: FieldError | undefined = fp.get(configPath)(errors);
 
         return (
-          <LabelledInput
+          <TextInputField
             {...{
               label,
               placeholder,

@@ -17,21 +17,21 @@ export const Collapsible = ({
       containerRef.current?.scrollIntoView();
     }
   }, [isOpen]);
-  const onFocus = useCallback(() => setIsOpen(true), []);
 
   const Icon = isOpen ? icons.ChevronDown : icons.ChevronRight;
 
   return (
-    <div ref={containerRef} onFocusCapture={onFocus}>
-      <div
+    <div ref={containerRef}>
+      <button
         onClick={onClick}
-        className={`h-12 p-2 flex flex-row justify-start items-center select-none cursor-pointer text-md\
+        type="button"
+        className={`w-full h-12 p-2 flex flex-row justify-start items-center select-none cursor-pointer text-md\
                     ${isOpen ? "bg-gray-300" : ""}`}
       >
         <Icon className="h-5 pr-1" />
         {props.title}
         {problem && <icons.Warning className="h-5 pr-1 ml-auto text-red-600" />}
-      </div>
+      </button>
       {/* TODO: Compare performance to conditional rendering */}
       <div
         className={`px-7 pt-4 mb-1 ${isOpen ? "" : "hidden"}`}
