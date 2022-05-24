@@ -73,6 +73,9 @@ export class App extends React.Component<{}, AppState> {
     const data = fp.cloneDeep(this.formRef.current?.getValues());
     if (!data) return;
 
+    // TODO
+    console.log(JSON.stringify(data));
+
     this.setState(
       {
         status: "running",

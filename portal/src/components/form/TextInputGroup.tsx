@@ -1,11 +1,10 @@
 import React from "react";
 
-import fp from "lodash/fp";
-
 import { FormFieldSet } from "./formFields";
 import { TextInputField } from "./TextInputField";
-import { FieldError, FieldErrors, UseFormRegister } from "react-hook-form";
+import { FieldErrors, UseFormRegister } from "react-hook-form";
 import { PortalRunConfigStringy } from "../../config/config";
+import { extractError } from "./extractError";
 
 export type LabelledInputGroupProps = {
   register: UseFormRegister<PortalRunConfigStringy>;
@@ -17,16 +16,14 @@ export const TextInputGroup = React.memo(
   ({ fields, register, errors }: LabelledInputGroupProps) => (
     <>
       {fields.map(({ label, placeholder, configPath }) => {
-        const error: FieldError | undefined = fp.get(configPath)(errors);
-
         return (
           <TextInputField
             {...{
               label,
               placeholder,
-              error,
               register,
               configPath,
+              error: extractError(errors, configPath),
             }}
             key={configPath}
           />

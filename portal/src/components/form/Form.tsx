@@ -10,8 +10,8 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import fp from "lodash/fp";
 
-import { Collapsible } from "../utils/Collapsible";
-import { InfoBox } from "../utils/InfoBox";
+import { Collapsible } from "../general/Collapsible";
+import { InfoBox } from "../general/InfoBox";
 import {
   advSimParamFormFields,
   FormFieldSet,
@@ -23,6 +23,7 @@ import {
 } from "../../config/config";
 import { TextInputGroup } from "./TextInputGroup";
 import { useMatchRefsToVals } from "../../utils/useMatchRefsToVals";
+import { DataCollectionGroup } from "./DataCollectionGroup";
 
 export type FormProps = {
   defaultValues: PortalRunConfigStringy;
@@ -95,20 +96,7 @@ export const Form = React.forwardRef(
             CSV export and desired statistics must be enabled <i>before</i>{" "}
             running simulations
           </InfoBox>
-          <div className="pb-3.5 pl-0.5">
-            <label className="cursor-pointer flex items-center">
-              <input
-                type="checkbox"
-                className={
-                  "appearance-none w-5 h-5 border-gray-300 border-2 rounded mr-2 cursor-pointer bg-gray-50 \
-                   flex justify-center items-center \
-                   checked:before:h-3 checked:before:w-3 checked:before:rounded-sm checked:before:bg-blue-600"
-                }
-              />
-              {/*<TextInputField label="" />*/}
-              <span className="select-none">Enable Download</span>
-            </label>
-          </div>
+          <DataCollectionGroup register={register} errors={errors} />
         </Collapsible>
       </form>
     );

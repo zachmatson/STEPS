@@ -2,6 +2,7 @@ import { FieldPath } from "react-hook-form";
 
 import { PortalRunConfig } from "../../config/config";
 
+// TODO: Tooltips
 export type FormFieldSet = {
   label: string;
   configPath: FieldPath<PortalRunConfig>;
@@ -52,5 +53,45 @@ export const advSimParamFormFields: FormFieldSet = [
   {
     label: "Diminishing Returns Epistasis Strength",
     configPath: "simParams.diminishingReturnsEpistasisStrength",
+  },
+];
+
+export const enableCSVFormField: FormFieldSet[0] = {
+  label: "CSV Download",
+  configPath: "dataConfig.prepareCSV",
+};
+
+export const trackedStatisticsFormFields: FormFieldSet = [
+  {
+    label: "Fitness Mean",
+    configPath: "dataConfig.trackedStatistics.avgW",
+  },
+  {
+    label: "Fitness Stdev",
+    configPath: "dataConfig.trackedStatistics.stdevW",
+  },
+  {
+    label: "Fitness Max",
+    configPath: "dataConfig.trackedStatistics.maxW",
+  },
+  {
+    label: "Marker 1 Ratio",
+    configPath: "dataConfig.trackedStatistics.marker1Ratio",
+  },
+  {
+    label: "Accumulated Mutations Stdev",
+    configPath: "dataConfig.trackedStatistics.stdevAccumulatedMuts",
+  },
+  {
+    label: "Accumulated Mutations Max",
+    configPath: "dataConfig.trackedStatistics.maxAccumulatedMuts",
+  },
+  {
+    label: "Genotype Count",
+    configPath: "dataConfig.trackedStatistics.genotypeCount",
+  },
+  {
+    label: "Shannon Diversity",
+    configPath: "dataConfig.trackedStatistics.shannonDiversity",
   },
 ];

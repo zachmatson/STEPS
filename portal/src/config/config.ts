@@ -15,19 +15,19 @@ import { safeJSONParse, SafeParseResult } from "../utils/safeJSONParse";
 export type SimStatus = "notStarted" | "running" | "paused" | "finished";
 
 export const simParamsSchema = z.object({
-  replicates: zPosInt,
-  transfers: zPosInt,
-  maxPopSize: zPosNumber,
-  dilutionFactor: zGe1Number,
-  markers: zPosInt,
-  beneficialMutationRate: zNonNegNumber,
-  neutralMutationRate: zNonNegNumber,
-  deleteriousMutationRate: zNonNegNumber,
-  mutationRateMutationRate: zNonNegNumber,
-  initialBeneficialMutationSize: zPosNumber,
-  deleteriousMutationSizeFactor: zPosNumber,
-  mutationRateMutationSizeFactor: zPosNumber,
-  diminishingReturnsEpistasisStrength: zNonNegNumber,
+  replicates: zPosInt(),
+  transfers: zPosInt(),
+  maxPopSize: zPosNumber(),
+  dilutionFactor: zGe1Number(),
+  markers: zPosInt(),
+  beneficialMutationRate: zNonNegNumber(),
+  neutralMutationRate: zNonNegNumber(),
+  deleteriousMutationRate: zNonNegNumber(),
+  mutationRateMutationRate: zNonNegNumber(),
+  initialBeneficialMutationSize: zPosNumber(),
+  deleteriousMutationSizeFactor: zPosNumber(),
+  mutationRateMutationSizeFactor: zPosNumber(),
+  diminishingReturnsEpistasisStrength: zNonNegNumber(),
   seed: zSeed,
 });
 
@@ -81,7 +81,7 @@ export const dataCollectionConfigSchema = z.object({
     genotypeCount: zBoolean,
     shannonDiversity: zBoolean,
   }),
-  dataResolution: zPosInt.optional(),
+  dataResolution: zPosInt({ optional: true }),
 });
 
 export type DataCollectionConfig = z.infer<typeof dataCollectionConfigSchema>;
@@ -109,9 +109,9 @@ export const defaultDataCollectionConfig: DataCollectionConfigStringy = {
   prepareCSV: false,
   trackedStatistics: {
     avgW: true,
-    marker1Ratio: false,
     stdevW: false,
     maxW: false,
+    marker1Ratio: false,
     stdevAccumulatedMuts: false,
     maxAccumulatedMuts: false,
     genotypeCount: false,

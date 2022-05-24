@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 
-import { Button } from "./utils/Button";
+import { Button } from "./general/Button";
 import * as icons from "./icons/Icons";
 import {
   PortalRunConfig,
@@ -48,7 +48,7 @@ export const ButtonFooter = ({
       <div className="flex items-center gap-1">
         <Button
           color="green"
-          infoText={configIsDirty ? "Settings Changed" : undefined}
+          infoText={configIsDirty && started ? "Settings Changed" : undefined}
           onClick={startOrRestartSim}
         >
           {running || paused ? "Restart" : "Run"}

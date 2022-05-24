@@ -20,21 +20,35 @@ const bigIntParser = (value: unknown): any => {
   return value;
 };
 
-const zNumberFactory = <T extends z.ZodType>(
-  invalidMsg: string,
-  postTransform: (schema: z.ZodNumber, msg: string) => T,
-  preParseTest?: RegExp
-) =>
-  z.preprocess(
-    numParser(preParseTest),
-    postTransform(
+type ZSchemaOptions<T extends z.ZodType> = {
+  optional?: boolean;
+  defaultValue?: z.infer<T> | (() => z.infer<T>);
+};
+
+const zNumberFactory =
+  <T extends z.ZodType>(
+    invalidMsg: string,
+    postTransform: (schema: z.ZodNumber, msg: string) => T,
+    preParseTest?: RegExp
+  ) =>
+  ({ optional = false, defaultValue }: ZSchemaOptions<T> = {}) => {
+    let innerResult = postTransform(
       z.number({
         required_error: requiredErrorMessage,
         invalid_type_error: invalidMsg,
       }),
       invalidMsg
-    )
-  );
+    );
+
+    if (optional) {
+      innerResult = innerResult.optional() as unknown as T;
+    }
+    if (defaultValue) {
+      innerResult = innerResult.default(defaultValue) as unknown as T;
+    }
+
+    return z.preprocess(numParser(preParseTest), innerResult);
+  };
 
 export const zPosNumber = zNumberFactory(
   "Field should be a positive number",
