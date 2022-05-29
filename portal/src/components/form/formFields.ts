@@ -61,6 +61,12 @@ export const enableCSVFormField: FormFieldSet[0] = {
   configPath: "dataConfig.prepareCSV",
 };
 
+export const dataResolutionFormField: FormFieldSet[0] = {
+  label: "Data Resolution",
+  configPath: "dataConfig.dataResolution",
+  placeholder: "Automatic Resolution",
+};
+
 export const trackedStatisticsFormFields: FormFieldSet = [
   {
     label: "Fitness Mean",
@@ -94,4 +100,10 @@ export const trackedStatisticsFormFields: FormFieldSet = [
     label: "Shannon Diversity",
     configPath: "dataConfig.trackedStatistics.shannonDiversity",
   },
+];
+
+export const dataCollectionFormFields: FormFieldSet = [
+  enableCSVFormField,
+  ...trackedStatisticsFormFields,
+  dataResolutionFormField,
 ];

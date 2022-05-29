@@ -25,14 +25,18 @@ module.exports = (env, argv) => {
       extensions: [".ts", ".tsx", ".js", ".json"],
     },
 
+    experiments: {
+      asyncWebAssembly: true,
+    },
+
     module: {
       rules: [
+        { test: /\.wasm$/, type: "webassembly/async", exclude: /node_modules/ },
         {
           test: /\.(ts|js)x?$/,
           loader: "babel-loader",
           exclude: /node_modules/,
         },
-        { test: /\.wasm$/, type: "webassembly/async", exclude: /node_modules/ },
         {
           test: /\.css$/,
           use: ["style-loader", "css-loader", "postcss-loader"],
@@ -60,7 +64,9 @@ module.exports = (env, argv) => {
         outDir: path.resolve(__dirname, "steps_adapter/pkg"),
         forceMode: "production",
       }),
-      new EslintWebpackPlugin(),
+      new EslintWebpackPlugin({
+        exclude: ["node_modules", "steps_adapter"],
+      }),
       new ForkTsCheckerWebpackPlugin(),
     ],
 

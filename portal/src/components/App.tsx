@@ -14,21 +14,29 @@ import {
   PortalRunConfigStringy,
   SimStatus,
 } from "../config/config";
+import { SimWorkerLink } from "../simulations/SimWorkerLink";
 
 type AppState = {
   status: SimStatus;
-  activeConfig?: PortalRunConfig;
-  activeConfigStringy: PortalRunConfigStringy;
+  activeConfigs: {
+    numeric: PortalRunConfig;
+    stringy: PortalRunConfigStringy;
+  };
   configIsDirty: boolean;
 };
 
 export class App extends React.Component<{}, AppState> {
+  formRef = React.createRef<FormHandle>();
+  simWorkerLink: SimWorkerLink | undefined;
+
   constructor(props: {}) {
     super(props);
 
     // TODO: Error checking and reporting
     // Load from URL
-    let activeConfigStringy: PortalRunConfigStringy = defaultPortalRunConfig;
+    let activeConfigStringy: PortalRunConfigStringy = fp.cloneDeep(
+      defaultPortalRunConfig
+    );
     const suppliedConfig = decodeConfigFromURL();
     if (suppliedConfig.success) {
       activeConfigStringy = suppliedConfig.data;
@@ -36,25 +44,28 @@ export class App extends React.Component<{}, AppState> {
 
     this.state = {
       status: "notStarted",
-      activeConfigStringy,
+      activeConfigs: {
+        numeric: portalRunConfigSchema.parse(activeConfigStringy),
+        stringy: activeConfigStringy,
+      },
       configIsDirty: false,
     };
   }
 
-  formRef = React.createRef<FormHandle>();
-
-  startOrRestartSim = () => {
+  triggerFormSubmit = () => {
     this.formRef.current?.submit();
   };
 
   pauseSim = () => {
     if (this.state.status == "running") {
+      this.simWorkerLink?.pause();
       this.setState({ status: "paused" });
     }
   };
 
   resumeSim = () => {
     if (this.state.status == "paused") {
+      this.simWorkerLink?.resume();
       this.setState({ status: "running" });
     }
   };
@@ -65,30 +76,34 @@ export class App extends React.Component<{}, AppState> {
     });
   };
 
-  onValidatedFormSubmit = () => {
+  startOrRestartSim = () => {
     // Use getValue instead because we want the stringy data here
     // This submit handler gets a data argument too but it is the wrong type,
     // and React-Hook-Form's typing doesn't understand the concept of input vs
     // output types in zod
-    const data = fp.cloneDeep(this.formRef.current?.getValues());
-    if (!data) return;
+    const dataStringy = fp.cloneDeep(this.formRef.current?.getValues());
+    if (!dataStringy) return;
+    const data = portalRunConfigSchema.parse(dataStringy);
 
-    // TODO
-    console.log(JSON.stringify(data));
+    // TODO: Clean up the interface here maybe
+    this.simWorkerLink?.terminate();
+    this.simWorkerLink = new SimWorkerLink({
+      onResults: (results) => console.log(results),
+      onFinish: () => this.setState({ status: "finished" }),
+    });
+    this.simWorkerLink.start(data);
 
     this.setState(
       {
         status: "running",
-        activeConfigStringy: data,
-        activeConfig: portalRunConfigSchema.parse(data),
+        activeConfigs: {
+          numeric: data,
+          stringy: dataStringy,
+        },
         configIsDirty: false,
       },
       () => {
-        /* TODO */ setTimeout(
-          () => this.setState({ status: "finished" }),
-          1300
-        );
-        this.formRef.current?.reset(data, {
+        this.formRef.current?.reset(dataStringy, {
           keepValues: true,
         });
       }
@@ -101,8 +116,8 @@ export class App extends React.Component<{}, AppState> {
         form={
           <Form
             ref={this.formRef}
-            defaultValues={this.state.activeConfigStringy}
-            onSubmit={this.onValidatedFormSubmit}
+            defaultValues={this.state.activeConfigs.stringy}
+            onSubmit={this.startOrRestartSim}
             onDirtinessChange={this.setConfigIsDirty}
           />
         }
@@ -110,9 +125,9 @@ export class App extends React.Component<{}, AppState> {
         footer={
           <ButtonFooter
             status={this.state.status}
-            config={this.state.activeConfig}
+            configs={this.state.activeConfigs}
             configIsDirty={this.state.configIsDirty}
-            startOrRestartSim={this.startOrRestartSim}
+            startOrRestartSim={this.triggerFormSubmit}
             pauseSim={this.pauseSim}
             resumeSim={this.resumeSim}
           />

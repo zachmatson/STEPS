@@ -22,7 +22,7 @@ export const PageLayout = (props: PageLayoutProps) => (
 );
 
 const Header = React.memo(() => (
-  <div className="w-full py-3 lg:py-6 flex justify-center items-center border-gray-300 border-b-2 lg:border-0 text-3xl select-none cursor-default">
+  <div className="w-full py-3 lg:py-5 flex justify-center items-center border-gray-300 border-b-2 lg:border-0 text-3xl select-none cursor-default">
     STEPS Portal
   </div>
 ));

@@ -10,7 +10,11 @@ import {
   zGe1Number,
 } from "../utils/zodUtils";
 import { Base64 } from "js-base64";
-import { safeJSONParse, SafeParseResult } from "../utils/safeJSONParse";
+import {
+  safeBase64Decode,
+  safeJSONParse,
+  SafeParseResult,
+} from "../utils/safeParse";
 
 export type SimStatus = "notStarted" | "running" | "paused" | "finished";
 
@@ -81,6 +85,7 @@ export const dataCollectionConfigSchema = z.object({
     genotypeCount: zBoolean,
     shannonDiversity: zBoolean,
   }),
+  // TODO: Typing of optional
   dataResolution: zPosInt({ optional: true }),
 });
 
@@ -143,15 +148,10 @@ export const defaultPortalRunConfig: PortalRunConfigStringy = {
 
 export const encodeConfigInURL = (
   config: PortalRunConfig | PortalRunConfigStringy,
-  seed: boolean,
   baseHref = window.location.href
 ): string => {
   const url = new URL(baseHref);
   const stringyConfig = portalRunConfigStringySchema.parse(config);
-  if (!seed) {
-    stringyConfig.simParams.seed = "";
-  }
-
   url.searchParams.set(
     "runConfig",
     Base64.encode(JSON.stringify(stringyConfig))
@@ -165,9 +165,11 @@ export const decodeConfigFromURL = (
   const url = new URL(href);
   const encodedConfig = url.searchParams.get("runConfig");
   if (!encodedConfig) return { success: false };
-  const decoded = safeJSONParse(Base64.decode(encodedConfig));
+  const decoded = safeBase64Decode(encodedConfig);
   if (!decoded.success) return decoded;
-  const checked = portalRunConfigStringySchema.safeParse(decoded.data);
+  const parsed = safeJSONParse(decoded.data);
+  if (!parsed.success) return parsed;
+  const checked = portalRunConfigStringySchema.safeParse(parsed.data);
   if (!checked.success) return checked;
   return { success: true, data: checked.data };
 };

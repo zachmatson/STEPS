@@ -20,8 +20,8 @@ pub struct JSSimulationHandler {
 
 #[wasm_bindgen]
 impl JSSimulationHandler {
-    pub fn new(cfg_json: &JsValue) -> Self {
-        let mut cfg: SimConfig = cfg_json.into_serde().unwrap();
+    pub fn new(cfg_js: JsValue) -> Self {
+        let mut cfg: SimConfig = serde_wasm_bindgen::from_value(cfg_js).unwrap();
         cfg.finish_initialization();
         let inner = SimulationHandler::new(cfg.clone(), false);
         Self { cfg, inner }

@@ -6,7 +6,11 @@ import { CheckboxField } from "./CheckboxField";
 import { TextInputField } from "./TextInputField";
 import { PortalRunConfigStringy } from "../../config/config";
 import { extractError } from "./extractError";
-import { enableCSVFormField, trackedStatisticsFormFields } from "./formFields";
+import {
+  dataResolutionFormField,
+  enableCSVFormField,
+  trackedStatisticsFormFields,
+} from "./formFields";
 
 export type DataCollectionGroupProps = {
   errors: FieldErrors<PortalRunConfigStringy>;
@@ -28,14 +32,15 @@ export const DataCollectionGroup = (props: DataCollectionGroupProps) => (
         label={label}
         configPath={configPath}
         register={props.register}
+        key={configPath}
       />
     ))}
     <TextInputField
-      label="Data Resolution"
-      placeholder="Automatic Resolution"
+      label={dataResolutionFormField.label}
+      placeholder={dataResolutionFormField.placeholder}
+      configPath={dataResolutionFormField.configPath}
       register={props.register}
-      configPath="dataConfig.dataResolution"
-      error={extractError(props.errors, "dataConfig.dataResolution")}
+      error={extractError(props.errors, dataResolutionFormField.configPath)}
     />
   </>
 );

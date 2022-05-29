@@ -14,6 +14,7 @@ import { Collapsible } from "../general/Collapsible";
 import { InfoBox } from "../general/InfoBox";
 import {
   advSimParamFormFields,
+  dataCollectionFormFields,
   FormFieldSet,
   simParamsFormFields,
 } from "./formFields";
@@ -91,7 +92,10 @@ export const Form = React.forwardRef(
             fields={advSimParamFormFields}
           />
         </Collapsible>
-        <Collapsible title="Data Collection">
+        <Collapsible
+          title="Data Collection"
+          problem={sectionHasErrors(errors, dataCollectionFormFields)}
+        >
           <InfoBox>
             CSV export and desired statistics must be enabled <i>before</i>{" "}
             running simulations

@@ -1,17 +1,23 @@
 import React, { useEffect, useRef } from "react";
 
+import ClipboardJS from "clipboard";
+import fp from "lodash/fp";
+
 import { Button } from "./general/Button";
 import * as icons from "./icons/Icons";
 import {
-  PortalRunConfig,
   SimStatus,
   encodeConfigInURL,
+  PortalRunConfigStringy,
+  PortalRunConfig,
 } from "../config/config";
-import ClipboardJS from "clipboard";
 
 export type ButtonFooterProps = {
   status: SimStatus;
-  config?: PortalRunConfig;
+  configs: {
+    numeric: PortalRunConfig;
+    stringy: PortalRunConfigStringy;
+  };
   configIsDirty: boolean;
   startOrRestartSim: () => void;
   pauseSim: () => void;
@@ -20,7 +26,7 @@ export type ButtonFooterProps = {
 
 export const ButtonFooter = ({
   status,
-  config,
+  configs,
   configIsDirty,
   startOrRestartSim,
   pauseSim,
@@ -33,15 +39,23 @@ export const ButtonFooter = ({
   const copySeedRef = useRef<HTMLButtonElement>(null);
   const copyNoSeedRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (config && copySeedRef.current && copyNoSeedRef.current) {
+    if (copySeedRef.current && copyNoSeedRef.current) {
       new ClipboardJS(copySeedRef.current, {
-        text: () => encodeConfigInURL(config, true),
+        text: () => {
+          const seedConfig = fp.cloneDeep(configs.stringy);
+          seedConfig.simParams.seed = configs.numeric.simParams.seed.toString();
+          return encodeConfigInURL(seedConfig);
+        },
       });
       new ClipboardJS(copyNoSeedRef.current, {
-        text: () => encodeConfigInURL(config, false),
+        text: () => {
+          const seedlessConfig = fp.cloneDeep(configs.stringy);
+          seedlessConfig.simParams.seed = "";
+          return encodeConfigInURL(seedlessConfig);
+        },
       });
     }
-  }, [config, copySeedRef.current, copyNoSeedRef.current]);
+  }, [configs, copySeedRef.current, copyNoSeedRef.current]);
 
   return (
     <div className="flex justify-between flex-wrap gap-4 p-2 lg:py-4 border-gray-300 border-t-2">
