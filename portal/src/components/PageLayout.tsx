@@ -15,7 +15,7 @@ export const PageLayout = (props: PageLayoutProps) => (
       <div className="lg:w-1/3 pb-2 lg:pb-0 px-0 lg:overflow-y-auto">
         {props.form}
       </div>
-      <div className="lg:w-2/3 px-0">{props.results}</div>
+      <div className="lg:w-2/3 lg:overflow-y-auto px-0">{props.results}</div>
     </main>
     <footer className="flex-none">{props.footer}</footer>
   </div>

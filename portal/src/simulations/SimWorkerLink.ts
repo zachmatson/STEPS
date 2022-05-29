@@ -2,7 +2,7 @@ import { SimResultsFragment, SimWorkerHandle } from "./workerInterface";
 import { PortalRunConfig } from "../config/config";
 
 export type SimWorkerLinkConfig = {
-  onResults?: (results: SimResultsFragment) => void;
+  onResults?: (results: SimResultsFragment[]) => void;
   onFinish?: () => void;
 };
 

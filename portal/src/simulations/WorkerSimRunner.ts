@@ -4,6 +4,7 @@ import { JSSimulationHandler } from "../../steps_adapter/pkg";
 
 import { DataCollectionConfig, PortalRunConfig } from "../config/config";
 import { SimResultsFragment, SimWorkerCtx } from "./workerInterface";
+import { transfersToGenerations } from "./transfersToGenerations";
 
 // TODO: DRY
 type StatNameMap = {
@@ -65,7 +66,7 @@ export class WorkerSimRunner {
 
   #paused = false;
 
-  #buffer: SimResultsFragment | null = null;
+  #buffer: SimResultsFragment[] = [];
   #lastPostTime = Date.now();
   readonly #minimumPostInterval = 100;
 
@@ -130,23 +131,29 @@ export class WorkerSimRunner {
 
   async #record() {
     // Results fragments should be from single replicate only
-    if (this.#buffer && this.#buffer.replicate != this.#replicate) {
+    if (
+      this.#buffer.length == 0 ||
+      fp.last(this.#buffer)!.replicate != this.#replicate
+    ) {
       await this.#flushAndReceiveData({ force: true });
-    }
-
-    if (!this.#buffer) {
-      this.#buffer = {
+      this.#buffer.push({
         replicate: this.#replicate,
-        transfer: [],
-        ...Object.fromEntries(this.#enabledStats.map((stat) => [stat, []])),
-      };
+        points: [],
+      });
     }
 
-    this.#buffer.transfer.push(this.#transfer);
-    for (const stat of this.#enabledStats) {
-      const result = this.#handler[`check_${statNameMap[stat]}`]();
-      this.#buffer[stat]!.push(result);
-    }
+    fp.last(this.#buffer)!.points.push({
+      generation: transfersToGenerations(
+        this.#transfer,
+        this.#config.simParams
+      ),
+      ...Object.fromEntries(
+        this.#enabledStats.map((stat) => [
+          stat,
+          this.#handler[`check_${statNameMap[stat]}`](),
+        ])
+      ),
+    });
 
     await this.#flushAndReceiveData({ force: false });
   }
@@ -164,7 +171,7 @@ export class WorkerSimRunner {
     ) {
       this.#ctx.postMessage({ type: "results", results: this.#buffer });
       this.#lastPostTime = now;
-      this.#buffer = null;
+      this.#buffer = [];
 
       // Allow us to receive a potential message to pause
       await yieldToEventLoop();

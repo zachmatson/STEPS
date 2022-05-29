@@ -1,10 +1,16 @@
 import { DataCollectionConfig, PortalRunConfig } from "../config/config";
 
+export type SimDataPoint = {
+  generation: number;
+} & {
+  [key in keyof DataCollectionConfig["trackedStatistics"]]?: number;
+};
+
+export type SimDataPoints = SimDataPoint[];
+
 export type SimResultsFragment = {
   replicate: number;
-  transfer: number[];
-} & {
-  [key in keyof DataCollectionConfig["trackedStatistics"]]?: number[];
+  points: SimDataPoints;
 };
 
 export type InboundSimWorkerMessage =
@@ -14,7 +20,7 @@ export type InboundSimWorkerMessage =
 
 export type OutboundSimWorkerMessage =
   | { type: "ready" }
-  | { type: "results"; results: SimResultsFragment }
+  | { type: "results"; results: SimResultsFragment[] }
   | { type: "done" };
 
 export interface SimWorkerHandle

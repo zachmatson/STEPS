@@ -4,14 +4,6 @@ use web_sys;
 
 use steps::{cfg::SimConfig, sim::*};
 
-// This is like the `main` function, except for JavaScript.
-#[wasm_bindgen(start)]
-pub fn main_js() -> Result<(), JsValue> {
-    console_error_panic_hook::set_once();
-    web_sys::console::info_1(&JsValue::from_str("WASM Module loaded"));
-    Ok(())
-}
-
 #[wasm_bindgen]
 pub struct JSSimulationHandler {
     cfg: SimConfig,

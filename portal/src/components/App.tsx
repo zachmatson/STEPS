@@ -15,6 +15,8 @@ import {
   SimStatus,
 } from "../config/config";
 import { SimWorkerLink } from "../simulations/SimWorkerLink";
+import { ResultsView } from "./results/ResultsView";
+import { SimChartDatasetsBehaviorSubject } from "../utils/SimChartDatasetsBehaviorSubject";
 
 type AppState = {
   status: SimStatus;
@@ -28,6 +30,7 @@ type AppState = {
 export class App extends React.Component<{}, AppState> {
   formRef = React.createRef<FormHandle>();
   simWorkerLink: SimWorkerLink | undefined;
+  chartDataSubject = new SimChartDatasetsBehaviorSubject([]);
 
   constructor(props: {}) {
     super(props);
@@ -56,20 +59,6 @@ export class App extends React.Component<{}, AppState> {
     this.formRef.current?.submit();
   };
 
-  pauseSim = () => {
-    if (this.state.status == "running") {
-      this.simWorkerLink?.pause();
-      this.setState({ status: "paused" });
-    }
-  };
-
-  resumeSim = () => {
-    if (this.state.status == "paused") {
-      this.simWorkerLink?.resume();
-      this.setState({ status: "running" });
-    }
-  };
-
   setConfigIsDirty = (isDirty: boolean) => {
     this.setState({
       configIsDirty: isDirty,
@@ -85,10 +74,15 @@ export class App extends React.Component<{}, AppState> {
     if (!dataStringy) return;
     const data = portalRunConfigSchema.parse(dataStringy);
 
+    // Need to clear data from all charts by pushing empty dataset
+    this.chartDataSubject.resetData();
+
     // TODO: Clean up the interface here maybe
     this.simWorkerLink?.terminate();
     this.simWorkerLink = new SimWorkerLink({
-      onResults: (results) => console.log(results),
+      onResults: (newResults) => {
+        this.chartDataSubject.nextFromFragments(newResults);
+      },
       onFinish: () => this.setState({ status: "finished" }),
     });
     this.simWorkerLink.start(data);
@@ -110,6 +104,20 @@ export class App extends React.Component<{}, AppState> {
     );
   };
 
+  pauseSim = () => {
+    if (this.state.status == "running") {
+      this.simWorkerLink?.pause();
+      this.setState({ status: "paused" });
+    }
+  };
+
+  resumeSim = () => {
+    if (this.state.status == "paused") {
+      this.simWorkerLink?.resume();
+      this.setState({ status: "running" });
+    }
+  };
+
   render() {
     return (
       <PageLayout
@@ -121,7 +129,16 @@ export class App extends React.Component<{}, AppState> {
             onDirtinessChange={this.setConfigIsDirty}
           />
         }
-        results={<NoResultsPlaceholder />}
+        results={
+          this.state.status == "notStarted" ? (
+            <NoResultsPlaceholder />
+          ) : (
+            <ResultsView
+              config={this.state.activeConfigs.numeric}
+              dataObservable={this.chartDataSubject}
+            />
+          )
+        }
         footer={
           <ButtonFooter
             status={this.state.status}

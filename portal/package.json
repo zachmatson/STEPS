@@ -1,7 +1,7 @@
 {
   "name": "portal",
   "version": "1.0.0",
-  "description": "Web portal for ReLLTEE simulations of evolutionary population dynamics",
+  "description": "Web portal for STEPS simulations of evolutionary population dynamics",
   "scripts": {
     "build": "rimraf dist && webpack --progress --mode=production",
     "start": "webpack s --mode=development",
@@ -16,6 +16,7 @@
     "react": "^18",
     "react-dom": "^18",
     "react-hook-form": "^7.31.1",
+    "rxjs": "^7.5.5",
     "zod": "^3.16.0"
   },
   "devDependencies": {
