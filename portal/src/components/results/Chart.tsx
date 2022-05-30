@@ -9,7 +9,6 @@ import {
   LineElement,
   Tooltip,
   Title,
-  ChartDataset,
 } from "chart.js";
 
 ChartJSChart.register(
@@ -24,8 +23,8 @@ ChartJSChart.register(
 import { DataCollectionConfig, PortalRunConfig } from "../../config/config";
 import { transfersToGenerations } from "../../simulations/transfersToGenerations";
 import { trackedStatisticsFormFields } from "../form/formFields";
-import { SimResultsFragment } from "../../simulations/workerInterface";
 import { BehaviorSubject, Subscription } from "rxjs";
+import { SimChartDatasets } from "../../charts/SimChartDatasets";
 
 const axisNameMap = Object.fromEntries(
   trackedStatisticsFormFields.map(({ label, configPath }) => [
@@ -33,12 +32,6 @@ const axisNameMap = Object.fromEntries(
     label,
   ])
 );
-
-export type SimChartDataset = {
-  data: SimResultsFragment["points"];
-} & ChartDataset<"line">;
-
-export type SimChartDatasets = SimChartDataset[];
 
 export type ChartProps = {
   config: PortalRunConfig;
@@ -71,6 +64,7 @@ export class Chart extends React.PureComponent<ChartProps> {
 
   componentDidUpdate() {
     this.refreshChart();
+    this.subscribeToData();
   }
 
   refreshChart() {
@@ -147,7 +141,7 @@ export class Chart extends React.PureComponent<ChartProps> {
   subscribeToData() {
     this.unsubscribeFromData();
 
-    this.props.dataObservable.subscribe({
+    this.dataSubscription = this.props.dataObservable.subscribe({
       next: (datasets) => {
         if (this.chart) {
           this.chart.data.datasets = datasets;

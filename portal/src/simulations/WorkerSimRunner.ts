@@ -92,7 +92,8 @@ export class WorkerSimRunner {
     this.#paused = false;
     // We don't actually need to do anything after running, it can be thought
     // of as a continuous background process as far as this function is concerned
-    this.run().then(() => {});
+    this.run().then(() => {
+    });
   }
 
   async run() {
@@ -135,7 +136,6 @@ export class WorkerSimRunner {
       this.#buffer.length == 0 ||
       fp.last(this.#buffer)!.replicate != this.#replicate
     ) {
-      await this.#flushAndReceiveData({ force: true });
       this.#buffer.push({
         replicate: this.#replicate,
         points: [],

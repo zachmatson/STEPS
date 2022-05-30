@@ -16,7 +16,7 @@ import {
 } from "../config/config";
 import { SimWorkerLink } from "../simulations/SimWorkerLink";
 import { ResultsView } from "./results/ResultsView";
-import { SimChartDatasetsBehaviorSubject } from "../utils/SimChartDatasetsBehaviorSubject";
+import { SimChartDatasetsBehaviorSubject } from "../charts/SimChartDatasetsBehaviorSubject";
 
 type AppState = {
   status: SimStatus;
