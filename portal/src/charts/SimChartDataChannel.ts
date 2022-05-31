@@ -8,38 +8,48 @@ export type SimChartDataSubscription = {
   unsubscribe: () => void;
 };
 
-export type SubscribeToSimChartData = (
-  next: (data: SimChartDatasets) => void
-) => SimChartDataSubscription;
+export type SimChartDataSubscriptionOnData = (data: SimChartDatasets) => void;
+
+export type SimChartDataSubscriptionCallbacks = {
+  onData: SimChartDataSubscriptionOnData;
+};
+
+export type SimChartDataObservable = {
+  subscribe: (
+    callbacks: SimChartDataSubscriptionCallbacks
+  ) => SimChartDataSubscription;
+};
 
 export class SimChartDataChannel {
   #data: SimChartDatasets = [];
   #subscribers: SubscriptionInternal[] = [];
 
-  subscribable = (): SubscribeToSimChartData => (next) => {
-    const newSubHandle = {
-      unsubscribe: () => {},
-    };
-
+  #subscribe: SimChartDataObservable["subscribe"] = (callbacks) => {
     const newSubInternal: SubscriptionInternal = {
-      next,
+      ...callbacks,
       subscribed: true,
-      externalHandle: newSubHandle,
     };
-
-    newSubHandle.unsubscribe = () => {
-      const internalIndex = this.#subscribers.findIndex(
-        (subInternal) => subInternal.externalHandle === newSubHandle
-      );
-      if (internalIndex) {
-        this.#subscribers[internalIndex].subscribed = false;
-        this.#subscribers = this.#subscribers.splice(internalIndex, 1);
-      }
-    };
-
     this.#subscribers.push(newSubInternal);
-    return newSubHandle;
+    newSubInternal.onData(this.#data);
+
+    return {
+      unsubscribe: () => {
+        const internalIndex = this.#subscribers.indexOf(newSubInternal);
+        if (internalIndex) {
+          this.#subscribers[internalIndex].subscribed = false;
+          this.#subscribers = this.#subscribers.splice(internalIndex, 1);
+        }
+      },
+    };
   };
+
+  #observable: SimChartDataObservable = {
+    subscribe: this.#subscribe,
+  };
+
+  observable() {
+    return this.#observable;
+  }
 
   pushFragments(fragments: SimResultsFragment[]) {
     mergeFragmentsIntoDatasetsInPlace(fragments, this.#data);
@@ -55,14 +65,13 @@ export class SimChartDataChannel {
     const currentData = this.#data;
     this.#subscribers.forEach((sub) => {
       if (sub.subscribed) {
-        setTimeout(() => sub.next(currentData));
+        setTimeout(() => sub.onData(currentData));
       }
     });
   }
 }
 
 type SubscriptionInternal = {
-  next: (data: SimChartDatasets) => void;
+  onData: (data: SimChartDatasets) => void;
   subscribed: boolean;
-  externalHandle: SimChartDataSubscription;
 };

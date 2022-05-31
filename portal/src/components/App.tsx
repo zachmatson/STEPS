@@ -16,7 +16,7 @@ import {
 } from "../config/config";
 import { SimWorkerLink } from "../simulations/SimWorkerLink";
 import { ResultsView } from "./results/ResultsView";
-import { SimChartDatasetsBehaviorSubject } from "../charts/SimChartDatasetsBehaviorSubject";
+import { SimChartDataChannel } from "../charts/SimChartDataChannel";
 
 type AppState = {
   status: SimStatus;
@@ -30,7 +30,7 @@ type AppState = {
 export class App extends React.Component<{}, AppState> {
   formRef = React.createRef<FormHandle>();
   simWorkerLink: SimWorkerLink | undefined;
-  chartDataSubject = new SimChartDatasetsBehaviorSubject([]);
+  chartDataChannel = new SimChartDataChannel();
 
   constructor(props: {}) {
     super(props);
@@ -74,14 +74,14 @@ export class App extends React.Component<{}, AppState> {
     if (!dataStringy) return;
     const data = portalRunConfigSchema.parse(dataStringy);
 
-    // Need to clear data from all charts by pushing empty dataset
-    this.chartDataSubject.resetData();
+    // Clear data from charts
+    this.chartDataChannel.clear();
 
     // TODO: Clean up the interface here maybe
     this.simWorkerLink?.terminate();
     this.simWorkerLink = new SimWorkerLink({
       onResults: (newResults) => {
-        this.chartDataSubject.nextFromFragments(newResults);
+        this.chartDataChannel.pushFragments(newResults);
       },
       onFinish: () => this.setState({ status: "finished" }),
     });
@@ -135,7 +135,7 @@ export class App extends React.Component<{}, AppState> {
           ) : (
             <ResultsView
               config={this.state.activeConfigs.numeric}
-              dataObservable={this.chartDataSubject}
+              dataObservable={this.chartDataChannel.observable()}
             />
           )
         }

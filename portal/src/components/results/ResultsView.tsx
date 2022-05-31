@@ -1,12 +1,11 @@
 import React from "react";
 import { DataCollectionConfig, PortalRunConfig } from "../../config/config";
 import { Chart } from "./Chart";
-import { BehaviorSubject } from "rxjs";
-import { SimChartDatasets } from "../../charts/SimChartDatasets";
+import { SimChartDataObservable } from "../../charts/SimChartDataChannel";
 
 type ResultsViewProps = {
   config: PortalRunConfig;
-  dataObservable: BehaviorSubject<SimChartDatasets>;
+  dataObservable: SimChartDataObservable;
 };
 
 export const ResultsView = ({ config, dataObservable }: ResultsViewProps) => {
