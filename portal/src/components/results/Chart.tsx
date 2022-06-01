@@ -23,10 +23,8 @@ ChartJSChart.register(
 import { DataCollectionConfig, PortalRunConfig } from "../../config/config";
 import { transfersToGenerations } from "../../simulations/transfersToGenerations";
 import { trackedStatisticsFormFields } from "../form/formFields";
-import {
-  SimChartDataObservable,
-  SimChartDataSubscription,
-} from "../../charts/SimChartDataChannel";
+import { Observable, Subscription } from "rxjs";
+import { SimChartDatasets } from "../../charts/SimChartDatasets";
 
 const axisNameMap = Object.fromEntries(
   trackedStatisticsFormFields.map(({ label, configPath }) => [
@@ -38,13 +36,13 @@ const axisNameMap = Object.fromEntries(
 export type ChartProps = {
   config: PortalRunConfig;
   stat: keyof DataCollectionConfig["trackedStatistics"];
-  dataObservable: SimChartDataObservable;
+  dataObservable: Observable<SimChartDatasets>;
 };
 
 export class Chart extends React.PureComponent<ChartProps> {
   ref = React.createRef<HTMLCanvasElement>();
   chart: ChartJSChart | undefined;
-  dataSubscription: SimChartDataSubscription | undefined;
+  dataSubscription: Subscription | undefined;
 
   render() {
     return (
@@ -143,13 +141,11 @@ export class Chart extends React.PureComponent<ChartProps> {
   subscribeToData() {
     this.unsubscribeFromData();
 
-    this.dataSubscription = this.props.dataObservable.subscribe({
-      onData: (datasets) => {
-        if (this.chart) {
-          this.chart.data.datasets = datasets;
-          this.chart.update();
-        }
-      },
+    this.dataSubscription = this.props.dataObservable.subscribe((datasets) => {
+      if (this.chart) {
+        this.chart.data.datasets = datasets;
+        this.chart.update();
+      }
     });
   }
 

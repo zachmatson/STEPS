@@ -34,8 +34,8 @@ const emptyDatasetForReplicate = (replicate: number) => {
 };
 
 export const mergeFragmentsIntoDatasetsInPlace = (
-  fragments: SimResultsFragment[],
-  datasets: SimChartDatasets
+  datasets: SimChartDatasets,
+  fragments: SimResultsFragment[]
 ) => {
   for (const fragment of fragments) {
     const { replicate, points } = fragment;

@@ -14,9 +14,9 @@ import {
   PortalRunConfigStringy,
   SimStatus,
 } from "../config/config";
-import { SimWorkerLink } from "../simulations/SimWorkerLink";
 import { ResultsView } from "./results/ResultsView";
-import { SimChartDataChannel } from "../charts/SimChartDataChannel";
+import { simChartDatasetsChannel } from "../charts/simChartDatasetsChannel";
+import { SimWorkerLinkRxjs } from "../simulations/SimWorkerLinkRxjs";
 
 type AppState = {
   status: SimStatus;
@@ -29,8 +29,10 @@ type AppState = {
 
 export class App extends React.Component<{}, AppState> {
   formRef = React.createRef<FormHandle>();
-  simWorkerLink: SimWorkerLink | undefined;
-  chartDataChannel = new SimChartDataChannel();
+  simWorkerLink = new SimWorkerLinkRxjs();
+  chartDatasetsChannel = simChartDatasetsChannel(
+    this.simWorkerLink.subscribables().results$
+  );
 
   constructor(props: {}) {
     super(props);
@@ -53,6 +55,9 @@ export class App extends React.Component<{}, AppState> {
       },
       configIsDirty: false,
     };
+    this.simWorkerLink
+      .subscribables()
+      .done$.subscribe(() => this.setState({ status: "finished" }));
   }
 
   triggerFormSubmit = () => {
@@ -66,38 +71,28 @@ export class App extends React.Component<{}, AppState> {
   };
 
   startOrRestartSim = () => {
-    // Use getValue instead because we want the stringy data here
-    // This submit handler gets a data argument too but it is the wrong type,
-    // and React-Hook-Form's typing doesn't understand the concept of input vs
-    // output types in zod
-    const dataStringy = fp.cloneDeep(this.formRef.current?.getValues());
-    if (!dataStringy) return;
-    const data = portalRunConfigSchema.parse(dataStringy);
-
-    // Clear data from charts
-    this.chartDataChannel.clear();
+    const configStringy = fp.cloneDeep(this.formRef.current?.getValues());
+    if (!configStringy) return;
+    const config = portalRunConfigSchema.parse(configStringy);
 
     // TODO: Clean up the interface here maybe
-    this.simWorkerLink?.terminate();
-    this.simWorkerLink = new SimWorkerLink({
-      onResults: (newResults) => {
-        this.chartDataChannel.pushFragments(newResults);
-      },
-      onFinish: () => this.setState({ status: "finished" }),
-    });
-    this.simWorkerLink.start(data);
+    // TODO: Make the restarting/clearing a stream in the Link
+    // Clear data from charts
+    this.chartDatasetsChannel?.clear();
+
+    this.simWorkerLink.startOrRestart(config);
 
     this.setState(
       {
         status: "running",
         activeConfigs: {
-          numeric: data,
-          stringy: dataStringy,
+          numeric: config,
+          stringy: configStringy,
         },
         configIsDirty: false,
       },
       () => {
-        this.formRef.current?.reset(dataStringy, {
+        this.formRef.current?.reset(configStringy, {
           keepValues: true,
         });
       }
@@ -107,6 +102,7 @@ export class App extends React.Component<{}, AppState> {
   pauseSim = () => {
     if (this.state.status == "running") {
       this.simWorkerLink?.pause();
+      // TODO: Status state based on Rxjs
       this.setState({ status: "paused" });
     }
   };
@@ -114,6 +110,7 @@ export class App extends React.Component<{}, AppState> {
   resumeSim = () => {
     if (this.state.status == "paused") {
       this.simWorkerLink?.resume();
+      // TODO: Status state based on Rxjs
       this.setState({ status: "running" });
     }
   };
@@ -135,7 +132,7 @@ export class App extends React.Component<{}, AppState> {
           ) : (
             <ResultsView
               config={this.state.activeConfigs.numeric}
-              dataObservable={this.chartDataChannel.observable()}
+              dataObservable={this.chartDatasetsChannel.datasets$}
             />
           )
         }

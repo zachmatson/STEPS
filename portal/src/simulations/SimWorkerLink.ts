@@ -43,15 +43,15 @@ export class SimWorkerLink {
     };
   }
 
-  terminate() {
-    this.#workerHandle?.terminate();
-  }
-
   pause() {
     this.#workerHandle?.postMessage({ type: "pause" });
   }
 
   resume() {
     this.#workerHandle?.postMessage({ type: "resume" });
+  }
+
+  terminate() {
+    this.#workerHandle?.terminate();
   }
 }

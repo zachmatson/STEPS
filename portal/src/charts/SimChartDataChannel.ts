@@ -52,7 +52,7 @@ export class SimChartDataChannel {
   }
 
   pushFragments(fragments: SimResultsFragment[]) {
-    mergeFragmentsIntoDatasetsInPlace(fragments, this.#data);
+    mergeFragmentsIntoDatasetsInPlace(this.#data, fragments);
     this.#notifyAllWithCurrentData();
   }
 
