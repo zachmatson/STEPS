@@ -3,7 +3,7 @@ import fp from "lodash/fp";
 import { JSSimulationHandler } from "../../steps_adapter/pkg";
 
 import { DataCollectionConfig, PortalRunConfig } from "../config/config";
-import { SimResultsFragment, SimWorkerCtx } from "./workerInterface";
+import { SimResultsFragments, SimWorkerCtx } from "./workerInterface";
 import { transfersToGenerations } from "./transfersToGenerations";
 
 // TODO: DRY
@@ -66,7 +66,7 @@ export class WorkerSimRunner {
 
   #paused = false;
 
-  #buffer: SimResultsFragment[] = [];
+  #buffer: SimResultsFragments = [];
   #lastPostTime = Date.now();
   readonly #minimumPostInterval = 100;
 
@@ -92,8 +92,7 @@ export class WorkerSimRunner {
     this.#paused = false;
     // We don't actually need to do anything after running, it can be thought
     // of as a continuous background process as far as this function is concerned
-    this.run().then(() => {
-    });
+    this.run().then(() => {});
   }
 
   async run() {

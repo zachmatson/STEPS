@@ -1,4 +1,7 @@
-import { SimResultsFragment } from "../simulations/workerInterface";
+import {
+  SimResultsFragment,
+  SimResultsFragments,
+} from "../simulations/workerInterface";
 import { ChartDataset } from "chart.js";
 
 export type SimChartDataset = {
@@ -35,7 +38,7 @@ const emptyDatasetForReplicate = (replicate: number) => {
 
 export const mergeFragmentsIntoDatasetsInPlace = (
   datasets: SimChartDatasets,
-  fragments: SimResultsFragment[]
+  fragments: SimResultsFragments
 ) => {
   for (const fragment of fragments) {
     const { replicate, points } = fragment;

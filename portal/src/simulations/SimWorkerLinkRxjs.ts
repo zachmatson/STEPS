@@ -6,18 +6,19 @@ import {
   share,
   Subject,
   switchMap,
-  take,
-  takeUntil,
+  withLatestFrom,
 } from "rxjs";
 
 import {
+  InboundSimWorkerMessage,
   OutboundSimWorkerMessage,
+  OutboundSimWorkerMessageResults,
   SimResultsFragment,
   SimWorkerHandle,
 } from "./workerInterface";
 import { PortalRunConfig } from "../config/config";
 import { NarrowUnionByType } from "../utils/NarrowUnionByType";
-import { ignoreValue } from "../utils/rxjs";
+import { ignoreValue, makeHotImmediate } from "../utils/rxjs";
 
 const filterMessageType =
   <Type extends OutboundSimWorkerMessage["type"]>(type: Type) =>
@@ -27,89 +28,84 @@ const filterMessageType =
       map((msg) => msg as NarrowUnionByType<OutboundSimWorkerMessage, Type>)
     );
 
-export interface SimSubscribables {
+export interface SimObservables2 {
+  start$: Observable<void>;
   results$: Observable<SimResultsFragment[]>;
   done$: Observable<void>;
-  paused$: Observable<void>;
-  resumed$: Observable<void>;
 }
 
 export class SimWorkerLinkRxjs {
-  #worker$: Subject<SimWorkerHandle>;
-  #currentWorkerHandle: SimWorkerHandle | null = null;
-  #incomingMessage$: Observable<OutboundSimWorkerMessage>;
-  #ready$: Observable<void>;
-  #results$: Observable<SimResultsFragment[]>;
-  #done$: Observable<void>;
-  #paused$: Subject<void>;
-  #resumed$: Subject<void>;
+  #startWithConfig$: Subject<PortalRunConfig> = new Subject();
+  #workerHandle$ = this.#startWithConfig$.pipe(
+    map(
+      () =>
+        new Worker(
+          new URL("./worker.ts", import.meta.url)
+        ) as unknown as SimWorkerHandle
+    ),
+    makeHotImmediate()
+  );
+  #incomingMessage$ = this.#workerHandle$.pipe(
+    switchMap((handle) =>
+      fromEvent<MessageEvent>(handle, "message").pipe(
+        map((msg) => msg.data as OutboundSimWorkerMessage)
+      )
+    ),
+    share()
+  );
+  #outgoingMessage$: Subject<InboundSimWorkerMessage> = new Subject();
+  #ready$ = this.#incomingMessage$.pipe(
+    filterMessageType("ready"),
+    ignoreValue(),
+    share()
+  );
+  #result$ = this.#incomingMessage$.pipe(
+    filterMessageType("results"),
+    map<OutboundSimWorkerMessageResults, SimResultsFragment[]>(
+      (data) => data.results
+    ),
+    share()
+  );
+  #done$ = this.#incomingMessage$.pipe(
+    filterMessageType("done"),
+    ignoreValue(),
+    share()
+  );
+  #observablesExternal$: SimObservables2 = {
+    start$: this.#startWithConfig$.pipe(ignoreValue()),
+    results$: this.#result$,
+    done$: this.#done$,
+  };
 
   constructor() {
-    this.#worker$ = new Subject<SimWorkerHandle>();
-    this.#incomingMessage$ = this.#worker$.pipe(
-      switchMap((worker) =>
-        fromEvent<MessageEvent>(worker, "message").pipe(
-          map((msg) => msg.data as OutboundSimWorkerMessage)
-        )
-      ),
-      share()
-    );
-    this.#ready$ = this.#incomingMessage$.pipe(
-      filterMessageType("ready"),
-      ignoreValue(),
-      share()
-    );
-    this.#results$ = this.#incomingMessage$.pipe(
-      filterMessageType("results"),
-      map((msg) => msg.results),
-      share()
-    );
-    this.#done$ = this.#incomingMessage$.pipe(
-      filterMessageType("done"),
-      ignoreValue(),
-      share()
-    );
-    // TODO: Declarative status observable
-    this.#paused$ = new Subject<void>();
-    this.#paused$.subscribe(() =>
-      this.#currentWorkerHandle?.postMessage({ type: "pause" })
-    );
-    this.#resumed$ = new Subject<void>();
-    this.#resumed$.subscribe(() =>
-      this.#currentWorkerHandle?.postMessage({ type: "resume" })
-    );
+    // Send outgoing messages
+    this.#outgoingMessage$
+      .pipe(withLatestFrom(this.#workerHandle$))
+      .subscribe(([message, workerHandle]) => {
+        workerHandle.postMessage(message);
+      });
+
+    // Start worker with config when it is ready
+    this.#ready$
+      .pipe(withLatestFrom(this.#startWithConfig$))
+      .subscribe(([_, config]) => {
+        this.#outgoingMessage$.next({ type: "start", config });
+      });
   }
 
   startOrRestart(config: PortalRunConfig) {
-    this.#currentWorkerHandle?.terminate();
-    const worker = new Worker(
-      new URL("./worker.ts", import.meta.url)
-    ) as unknown as SimWorkerHandle;
-    this.#currentWorkerHandle = worker;
-    this.#worker$.next(worker);
-
-    this.#ready$.pipe(takeUntil(this.#worker$), take(1)).subscribe(() =>
-      worker.postMessage({
-        type: "start",
-        config: config,
-      })
-    );
+    this.#startWithConfig$.next(config);
   }
 
   pause() {
-    this.#paused$.next();
+    this.#outgoingMessage$.next({ type: "pause" });
   }
 
   resume() {
-    this.#resumed$.next();
+    this.#outgoingMessage$.next({ type: "resume" });
   }
 
-  subscribables(): SimSubscribables {
-    return {
-      results$: this.#results$,
-      done$: this.#done$,
-      paused$: this.#paused$,
-      resumed$: this.#resumed$,
-    };
+  observables(): SimObservables2 {
+    return this.#observablesExternal$;
   }
 }

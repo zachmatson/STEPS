@@ -13,6 +13,8 @@ export type SimResultsFragment = {
   points: SimDataPoints;
 };
 
+export type SimResultsFragments = SimResultsFragment[];
+
 export type InboundSimWorkerMessage =
   | { type: "start"; config: PortalRunConfig }
   | { type: "pause" }
@@ -21,7 +23,7 @@ export type InboundSimWorkerMessage =
 export type OutboundSimWorkerMessageReady = { type: "ready" };
 export type OutboundSimWorkerMessageResults = {
   type: "results";
-  results: SimResultsFragment[];
+  results: SimResultsFragments;
 };
 export type OutboundSimWorkerMessageDone = { type: "done" };
 

@@ -3,13 +3,14 @@ import {
   map,
   Observable,
   ObservableInput,
+  Subject,
   SubjectLike,
 } from "rxjs";
 
-export const ignoreValue = () => map(() => {});
+export const ignoreValue = <T>() => map<T, void>(() => {});
 
-export const connectWithSubject =
-  <T>(connector: () => SubjectLike<T>) =>
+export const makeHotImmediate =
+  <T>(connector: () => SubjectLike<T> = () => new Subject<T>()) =>
   (source: ObservableInput<T>): Observable<T> => {
     const sourceShared$ = connectable(source, {
       connector,
