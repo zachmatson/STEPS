@@ -1,13 +1,13 @@
 import React from "react";
 
 import fp from "lodash/fp";
+import { decodeConfigFromURL } from "../config/configEncoding";
 
 import { PageLayout } from "./PageLayout";
 import { Form, FormHandle } from "./form/Form";
 import { ButtonFooter } from "./ButtonFooter";
 import { NoResultsPlaceholder } from "./results/NoResultsPlaceholder";
 import {
-  decodeConfigFromURL,
   defaultPortalRunConfig,
   PortalRunConfig,
   portalRunConfigSchema,
@@ -16,7 +16,7 @@ import {
 } from "../config/config";
 import { ResultsView } from "./results/ResultsView";
 import { simChartDatasetsObservable } from "../charts/simChartDatasetsObservable";
-import { SimWorkerLinkRxjs } from "../simulations/SimWorkerLinkRxjs";
+import { SimWorkerLink } from "../simulations/SimWorkerLink";
 
 type AppState = {
   status: SimStatus;
@@ -29,7 +29,7 @@ type AppState = {
 
 export class App extends React.Component<{}, AppState> {
   formRef = React.createRef<FormHandle>();
-  simWorkerLink = new SimWorkerLinkRxjs();
+  simWorkerLink = new SimWorkerLink();
   chartDatasets$ = simChartDatasetsObservable(this.simWorkerLink.observables());
 
   constructor(props: {}) {

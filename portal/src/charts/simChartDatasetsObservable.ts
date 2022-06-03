@@ -8,12 +8,13 @@ import {
   scan,
   switchMap,
 } from "rxjs";
+
 import { SimResultsFragments } from "../simulations/workerInterface";
+import { makeHotImmediate } from "../utils/rxjs";
 import {
   mergeFragmentsIntoDatasetsInPlace,
   SimChartDatasets,
 } from "./SimChartDatasets";
-import { makeHotImmediate } from "../utils/rxjs";
 
 export interface DatasetsSourceObservables {
   start$: Observable<unknown>;

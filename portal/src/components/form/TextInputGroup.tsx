@@ -1,6 +1,6 @@
 import React from "react";
 
-import { FormFieldSet } from "./formFields";
+import { FormFieldSet } from "../../config/formFields";
 import { TextInputField } from "./TextInputField";
 import { FieldErrors, UseFormRegister } from "react-hook-form";
 import { PortalRunConfigStringy } from "../../config/config";

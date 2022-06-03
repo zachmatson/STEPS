@@ -2,12 +2,12 @@ import React, { useEffect, useRef } from "react";
 
 import ClipboardJS from "clipboard";
 import fp from "lodash/fp";
+import { encodeConfigInURL } from "../config/configEncoding";
 
 import { Button } from "./general/Button";
 import * as icons from "./icons/Icons";
 import {
   SimStatus,
-  encodeConfigInURL,
   PortalRunConfigStringy,
   PortalRunConfig,
 } from "../config/config";

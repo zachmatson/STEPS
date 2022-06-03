@@ -1,8 +1,13 @@
 import React from "react";
-import { DataCollectionConfig, PortalRunConfig } from "../../config/config";
-import { Chart } from "./Chart";
+
 import { Observable } from "rxjs";
+
+import { DataCollectionConfig, PortalRunConfig } from "../../config/config";
+import { statFormattedNames } from "../../config/statNameMap";
+import { Collapsible } from "../general/Collapsible";
+import { Chart } from "./Chart";
 import { SimChartDatasets } from "../../charts/SimChartDatasets";
+import { ChartSettingsMenu } from "./ChartSettingsMenu";
 
 type ResultsViewProps = {
   config: PortalRunConfig;
@@ -16,14 +21,25 @@ export const ResultsView = ({ config, dataObservable }: ResultsViewProps) => {
       {/* TODO: Axis options */}
       {Object.entries(config.dataConfig.trackedStatistics)
         .filter(([_, enabled]) => enabled)
-        .map(([stat, _]) => (
-          <Chart
-            stat={stat as keyof DataCollectionConfig["trackedStatistics"]}
-            key={stat}
-            config={config}
-            dataObservable={dataObservable}
-          />
-        ))}
+        .map(([statUntyped, _]) => {
+          const stat =
+            statUntyped as keyof DataCollectionConfig["trackedStatistics"];
+          const statName = statFormattedNames[stat];
+          return (
+            <Collapsible
+              title={statName}
+              defaultExpanded
+              settingsIcon={<ChartSettingsMenu statName={statName} />}
+            >
+              <Chart
+                stat={stat as keyof DataCollectionConfig["trackedStatistics"]}
+                key={stat}
+                config={config}
+                dataObservable={dataObservable}
+              />
+            </Collapsible>
+          );
+        })}
     </>
   );
 };

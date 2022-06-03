@@ -1,15 +1,18 @@
-import React from "react";
-
-import fp from "lodash/fp";
 import {
   Chart as ChartJSChart,
   LinearScale,
   LineController,
-  PointElement,
   LineElement,
-  Tooltip,
+  PointElement,
   Title,
+  Tooltip,
 } from "chart.js";
+import React from "react";
+import { Observable, Subscription } from "rxjs";
+import { SimChartDatasets } from "../../charts/SimChartDatasets";
+import { DataCollectionConfig, PortalRunConfig } from "../../config/config";
+import { statFormattedNames } from "../../config/statNameMap";
+import { transfersToGenerations } from "../../simulations/transfersToGenerations";
 
 ChartJSChart.register(
   LinearScale,
@@ -18,19 +21,6 @@ ChartJSChart.register(
   LineElement,
   Tooltip,
   Title
-);
-
-import { DataCollectionConfig, PortalRunConfig } from "../../config/config";
-import { transfersToGenerations } from "../../simulations/transfersToGenerations";
-import { trackedStatisticsFormFields } from "../form/formFields";
-import { Observable, Subscription } from "rxjs";
-import { SimChartDatasets } from "../../charts/SimChartDatasets";
-
-const axisNameMap = Object.fromEntries(
-  trackedStatisticsFormFields.map(({ label, configPath }) => [
-    fp.last(configPath.split(".")),
-    label,
-  ])
 );
 
 export type ChartProps = {
@@ -121,7 +111,7 @@ export class Chart extends React.PureComponent<ChartProps> {
             type: "linear",
             title: {
               display: true,
-              text: axisNameMap[stat],
+              text: statFormattedNames[stat],
             },
           },
         },

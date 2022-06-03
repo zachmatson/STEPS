@@ -1,13 +1,10 @@
 import {
   connectable,
-  map,
   Observable,
   ObservableInput,
   Subject,
   SubjectLike,
 } from "rxjs";
-
-export const ignoreValue = <T>() => map<T, void>(() => {});
 
 export const makeHotImmediate =
   <T>(connector: () => SubjectLike<T> = () => new Subject<T>()) =>

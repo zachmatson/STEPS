@@ -17,7 +17,7 @@ import {
   dataCollectionFormFields,
   FormFieldSet,
   simParamsFormFields,
-} from "./formFields";
+} from "../../config/formFields";
 import {
   portalRunConfigSchema,
   PortalRunConfigStringy,

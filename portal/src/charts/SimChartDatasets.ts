@@ -25,7 +25,7 @@ const colors = [
   "#c8d0d9",
 ];
 
-const emptyDatasetForReplicate = (replicate: number) => {
+export const emptyDatasetForReplicate = (replicate: number) => {
   const colorIdx = (replicate - 1) % colors.length;
   return {
     label: `Replicate ${replicate}`,

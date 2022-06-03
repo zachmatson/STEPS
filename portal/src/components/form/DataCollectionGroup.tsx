@@ -10,7 +10,7 @@ import {
   dataResolutionFormField,
   enableCSVFormField,
   trackedStatisticsFormFields,
-} from "./formFields";
+} from "../../config/formFields";
 
 export type DataCollectionGroupProps = {
   errors: FieldErrors<PortalRunConfigStringy>;

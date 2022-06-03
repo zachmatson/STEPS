@@ -20,17 +20,10 @@ export type InboundSimWorkerMessage =
   | { type: "pause" }
   | { type: "resume" };
 
-export type OutboundSimWorkerMessageReady = { type: "ready" };
-export type OutboundSimWorkerMessageResults = {
-  type: "results";
-  results: SimResultsFragments;
-};
-export type OutboundSimWorkerMessageDone = { type: "done" };
-
 export type OutboundSimWorkerMessage =
-  | OutboundSimWorkerMessageReady
-  | OutboundSimWorkerMessageResults
-  | OutboundSimWorkerMessageDone;
+  | { type: "ready" }
+  | { type: "results"; results: SimResultsFragments }
+  | { type: "done" };
 
 export interface SimWorkerHandle
   extends Omit<Worker, "postMessage" | "onmessage"> {

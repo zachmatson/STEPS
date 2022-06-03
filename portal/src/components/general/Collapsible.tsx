@@ -2,6 +2,15 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 
 import * as icons from "../icons/Icons";
 
+export type CollapsibleProps = {
+  title: string;
+  defaultExpanded?: boolean;
+  scrollIntoView?: boolean;
+  problem?: boolean;
+  children?: React.ReactNode;
+  settingsIcon?: React.ReactElement;
+};
+
 export const Collapsible = ({
   defaultExpanded = false,
   scrollIntoView = true,
@@ -11,9 +20,13 @@ export const Collapsible = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [isOpen, setIsOpen] = useState(defaultExpanded);
-  const onClick = useCallback(() => setIsOpen((old) => !old), []);
+  const [clicked, setClicked] = useState(false);
+  const onClick = useCallback(() => {
+    setIsOpen((old) => !old);
+    setClicked(true);
+  }, []);
   useEffect(() => {
-    if (isOpen && scrollIntoView) {
+    if (clicked && isOpen && scrollIntoView) {
       containerRef.current?.scrollIntoView();
     }
   }, [isOpen]);
@@ -22,6 +35,7 @@ export const Collapsible = ({
 
   return (
     <div ref={containerRef}>
+      {/* TODO Make button not wrap passed in components*/}
       <button
         onClick={onClick}
         type="button"
@@ -30,9 +44,13 @@ export const Collapsible = ({
       >
         <Icon className="h-5 pr-1" />
         {props.title}
-        {problem && <icons.Warning className="h-5 pr-1 ml-auto text-red-600" />}
+        <div className="h-5 ml-auto flex">
+          {props.settingsIcon && (
+            <div className="h-full pr-1">{props.settingsIcon}</div>
+          )}
+          {problem && <icons.Warning className="h-full pr-1 text-red-600" />}
+        </div>
       </button>
-      {/* TODO: Compare performance to conditional rendering */}
       <div
         className={`px-7 pt-4 mb-1 ${isOpen ? "" : "hidden"}`}
         key="children"
@@ -41,12 +59,4 @@ export const Collapsible = ({
       </div>
     </div>
   );
-};
-
-export type CollapsibleProps = {
-  title: string;
-  defaultExpanded?: boolean;
-  scrollIntoView?: boolean;
-  problem?: boolean;
-  children?: React.ReactNode;
 };
