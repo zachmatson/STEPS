@@ -79,7 +79,6 @@ export const dataCollectionConfigSchema = z.object({
     genotypeCount: zBoolean,
     shannonDiversity: zBoolean,
   }),
-  // TODO: Typing of optional
   dataResolution: zPosInt({ optional: true }),
 });
 

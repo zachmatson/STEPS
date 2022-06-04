@@ -26,7 +26,7 @@ export const simChartDatasetsObservable = (
 ): Observable<SimChartDatasets> =>
   sources.start$.pipe(
     switchMap(() =>
-      concat(of([] as SimResultsFragments), sources.results$).pipe(
+      concat(of<SimResultsFragments>([]), sources.results$).pipe(
         scan<SimResultsFragments, SimChartDatasets>(
           mergeFragmentsIntoDatasetsInPlace,
           []

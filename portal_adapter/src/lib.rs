@@ -3,6 +3,9 @@ use wasm_bindgen::prelude::*;
 use web_sys;
 
 use steps::{cfg::SimConfig, sim::*};
+use steps::cfg::SummaryOutputConfig;
+use steps::io::SummaryOutputter;
+use steps::sim::summarize::marker_1_ratio;
 
 #[wasm_bindgen]
 pub struct JSSimulationHandler {
@@ -16,6 +19,7 @@ impl JSSimulationHandler {
         let mut cfg: SimConfig = serde_wasm_bindgen::from_value(cfg_js).unwrap();
         cfg.finish_initialization();
         let inner = SimulationHandler::new(cfg.clone(), false);
+
         Self { cfg, inner }
     }
 

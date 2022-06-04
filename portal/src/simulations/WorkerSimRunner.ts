@@ -6,19 +6,7 @@ import { DataCollectionConfig, PortalRunConfig } from "../config/config";
 import { SimResultsFragments, SimWorkerCtx } from "./workerInterface";
 import { transfersToGenerations } from "./transfersToGenerations";
 
-// TODO: DRY
-type StatNameMap = {
-  avgW: "avg_W";
-  marker1Ratio: "marker_1_ratio";
-  stdevW: "stdev_W";
-  maxW: "max_W";
-  stdevAccumulatedMuts: "stdev_accumulated_muts";
-  maxAccumulatedMuts: "max_accumulated_muts";
-  genotypeCount: "genotype_count";
-  shannonDiversity: "shannon_diversity";
-};
-
-const statNameMap: StatNameMap = {
+const statNameMap = <const>{
   avgW: "avg_W",
   marker1Ratio: "marker_1_ratio",
   stdevW: "stdev_W",
@@ -29,7 +17,7 @@ const statNameMap: StatNameMap = {
   shannonDiversity: "shannon_diversity",
 };
 
-const paramNameMap = {
+const paramNameMap = <const>{
   replicates: "replicates",
   transfers: "transfers",
   maxPopSize: "max_pop_size",

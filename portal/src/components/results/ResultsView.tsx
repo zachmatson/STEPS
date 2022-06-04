@@ -17,7 +17,7 @@ type ResultsViewProps = {
 export const ResultsView = ({ config, dataObservable }: ResultsViewProps) => {
   return (
     <>
-      {/* TODO: Collapsible and sortable */}
+      {/* TODO: Sortable */}
       {/* TODO: Axis options */}
       {Object.entries(config.dataConfig.trackedStatistics)
         .filter(([_, enabled]) => enabled)
