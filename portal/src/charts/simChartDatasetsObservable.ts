@@ -10,7 +10,7 @@ import {
 } from "rxjs";
 
 import { SimResultsFragments } from "../simulations/workerInterface";
-import { makeHotImmediate } from "../utils/rxjs";
+import { toSubscribedSubject } from "../utils/rxjs";
 import {
   mergeFragmentsIntoDatasetsInPlace,
   SimChartDatasets,
@@ -33,6 +33,6 @@ export const simChartDatasetsObservable = (
         )
       )
     ),
-    makeHotImmediate(() => new BehaviorSubject([] as SimChartDatasets)),
+    toSubscribedSubject(() => new BehaviorSubject<SimChartDatasets>([])),
     observeOn(asyncScheduler)
   );

@@ -1,18 +1,11 @@
-import {
-  connectable,
-  Observable,
-  ObservableInput,
-  Subject,
-  SubjectLike,
-} from "rxjs";
+import { map, Observable, Subject } from "rxjs";
 
-export const makeHotImmediate =
-  <T>(connector: () => SubjectLike<T> = () => new Subject<T>()) =>
-  (source: ObservableInput<T>): Observable<T> => {
-    const sourceShared$ = connectable(source, {
-      connector,
-      resetOnDisconnect: false,
-    });
-    sourceShared$.connect();
-    return sourceShared$;
+export const discardValues = () => map(() => {});
+
+export const toSubscribedSubject =
+  <T>(subjectFactory: () => Subject<T> = () => new Subject<T>()) =>
+  (source$: Observable<T>): Observable<T> => {
+    const subject = subjectFactory();
+    source$.subscribe(subject);
+    return subject.asObservable();
   };
