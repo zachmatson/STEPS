@@ -35,7 +35,6 @@ export class App extends React.Component<{}, AppState> {
   constructor(props: {}) {
     super(props);
 
-    // TODO: Error checking and reporting
     // Load from URL
     let activeConfigStringy: PortalRunConfigStringy = fp.cloneDeep(
       defaultPortalRunConfig

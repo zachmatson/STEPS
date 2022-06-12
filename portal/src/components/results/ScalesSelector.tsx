@@ -26,7 +26,9 @@ export const ScalesSelector = ({ value, onChange }: ScalesSelectorProps) => {
     (field) =>
       useCallback(
         (newValue: AxisScale) => {
-          onChange?.({ ...value, [field]: newValue });
+          if (newValue != value[field]) {
+            onChange?.({ ...value, [field]: newValue });
+          }
         },
         [value, onChange]
       )

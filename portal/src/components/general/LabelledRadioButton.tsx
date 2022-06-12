@@ -7,10 +7,12 @@ export type LabelledRadioButtonProps = {
 };
 
 export const LabelledRadioButton = React.memo(
-  ({ onCheck, ...props }: LabelledRadioButtonProps) => {
+  ({ checked, onCheck, label }: LabelledRadioButtonProps) => {
     const onClick = useCallback(
       (e: MouseEvent<unknown> | ChangeEvent<unknown>) => {
-        onCheck?.();
+        if (!checked) {
+          onCheck?.();
+        }
         e.stopPropagation();
       },
       [onCheck]
@@ -28,9 +30,9 @@ export const LabelledRadioButton = React.memo(
             flex justify-center items-center \
             checked:before:h-[0.625rem] checked:before:w-[0.625rem] checked:before:rounded-[0.625rem] checked:before:bg-blue-600"
           }
-          checked={props.checked}
+          checked={checked}
         />
-        <span>{props.label}</span>
+        <span>{label}</span>
       </label>
     );
   }
