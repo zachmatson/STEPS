@@ -13,7 +13,7 @@ import {
   portalRunConfigSchema,
   PortalRunConfigStringy,
   SimStatus,
-} from "../config/config";
+} from "../config/PortalRunConfig";
 import { ResultsView } from "./results/ResultsView";
 import { simChartDatasetsObservable } from "../charts/simChartDatasetsObservable";
 import { SimWorkerLink } from "../simulations/SimWorkerLink";

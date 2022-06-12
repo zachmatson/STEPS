@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  MouseEventHandler,
+} from "react";
 
 import * as icons from "../icons/Icons";
 
@@ -27,30 +33,49 @@ export const Collapsible = ({
   }, []);
   useEffect(() => {
     if (clicked && isOpen && scrollIntoView) {
-      containerRef.current?.scrollIntoView();
+      containerRef.current?.scrollIntoView({ block: "nearest" });
     }
   }, [isOpen]);
+  // Need to stop propagation so clicks in settings icon element don't trigger open/close
+  const settingsIconOnClick: MouseEventHandler<HTMLDivElement> = useCallback(
+    (e) => {
+      e.stopPropagation();
+    },
+    []
+  );
 
   const Icon = isOpen ? icons.ChevronDown : icons.ChevronRight;
 
   return (
     <div ref={containerRef}>
-      {/* TODO Make button not wrap passed in components*/}
-      <button
-        onClick={onClick}
-        type="button"
-        className={`w-full h-12 p-2 flex flex-row justify-start items-center select-none cursor-pointer text-md\
+      {/* Div for header part */}
+      <div
+        className={`w-full h-12 px-2 flex justify-start items-center cursor-pointer \
                     ${isOpen ? "bg-gray-300" : ""}`}
+        onClick={onClick}
       >
-        <Icon className="h-5 pr-1" />
-        {props.title}
-        <div className="h-5 ml-auto flex">
-          {props.settingsIcon && (
-            <div className="h-full pr-1">{props.settingsIcon}</div>
+        <button
+          type="button"
+          className="w-full h-full py-2 flex justify-start items-center select-none text-md"
+        >
+          <Icon className="h-5 pr-1" />
+          {props.title}
+          {problem && (
+            <icons.Warning className="h-5 ml-auto pr-1 text-red-600" />
           )}
-          {problem && <icons.Warning className="h-full pr-1 text-red-600" />}
-        </div>
-      </button>
+        </button>
+        {/* Settings Icon placed outside of HTML button element for header to prevent button nesting */}
+        {props.settingsIcon && (
+          <div className="h-5 pr-1">
+            <div
+              className="h-full cursor-[initial]"
+              onClick={settingsIconOnClick}
+            >
+              {props.settingsIcon}
+            </div>
+          </div>
+        )}
+      </div>
       <div
         className={`px-7 pt-4 mb-1 ${isOpen ? "" : "hidden"}`}
         key="children"

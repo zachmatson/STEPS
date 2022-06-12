@@ -1,5 +1,5 @@
 import fp from "lodash/fp";
-import { DataCollectionConfig } from "./config";
+import { DataCollectionConfig } from "./PortalRunConfig";
 
 import { trackedStatisticsFormFields } from "./formFields";
 

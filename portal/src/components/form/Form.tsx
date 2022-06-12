@@ -21,7 +21,7 @@ import {
 import {
   portalRunConfigSchema,
   PortalRunConfigStringy,
-} from "../../config/config";
+} from "../../config/PortalRunConfig";
 import { TextInputGroup } from "./TextInputGroup";
 import { useMatchRefsToVals } from "../../utils/useMatchRefsToVals";
 import { DataCollectionGroup } from "./DataCollectionGroup";

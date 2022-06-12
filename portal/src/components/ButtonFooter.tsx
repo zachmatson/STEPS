@@ -10,7 +10,7 @@ import {
   SimStatus,
   PortalRunConfigStringy,
   PortalRunConfig,
-} from "../config/config";
+} from "../config/PortalRunConfig";
 
 export type ButtonFooterProps = {
   status: SimStatus;

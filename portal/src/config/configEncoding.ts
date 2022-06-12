@@ -9,7 +9,7 @@ import {
   PortalRunConfig,
   PortalRunConfigStringy,
   portalRunConfigStringySchema,
-} from "./config";
+} from "./PortalRunConfig";
 
 export const encodeConfigInURL = (
   config: PortalRunConfig | PortalRunConfigStringy,

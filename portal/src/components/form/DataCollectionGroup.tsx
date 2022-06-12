@@ -4,7 +4,7 @@ import { FieldErrors, UseFormRegister } from "react-hook-form";
 
 import { CheckboxField } from "./CheckboxField";
 import { TextInputField } from "./TextInputField";
-import { PortalRunConfigStringy } from "../../config/config";
+import { PortalRunConfigStringy } from "../../config/PortalRunConfig";
 import { extractError } from "./extractError";
 import {
   dataResolutionFormField,

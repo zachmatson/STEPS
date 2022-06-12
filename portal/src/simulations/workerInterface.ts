@@ -1,4 +1,7 @@
-import { DataCollectionConfig, PortalRunConfig } from "../config/config";
+import {
+  DataCollectionConfig,
+  PortalRunConfig,
+} from "../config/PortalRunConfig";
 
 export type SimDataPoint = {
   generation: number;

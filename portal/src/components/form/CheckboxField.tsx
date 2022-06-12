@@ -1,5 +1,5 @@
 import { FieldPath, UseFormRegister } from "react-hook-form";
-import { PortalRunConfigStringy } from "../../config/config";
+import { PortalRunConfigStringy } from "../../config/PortalRunConfig";
 import React from "react";
 
 export type CheckboxFieldProps = {

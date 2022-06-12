@@ -1,7 +1,7 @@
 import React from "react";
 
 import { FieldError, FieldPath, UseFormRegister } from "react-hook-form";
-import { PortalRunConfigStringy } from "../../config/config";
+import { PortalRunConfigStringy } from "../../config/PortalRunConfig";
 
 export type LabelledInputProps = {
   label: string;

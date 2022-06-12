@@ -3,7 +3,7 @@ import React from "react";
 import { FormFieldSet } from "../../config/formFields";
 import { TextInputField } from "./TextInputField";
 import { FieldErrors, UseFormRegister } from "react-hook-form";
-import { PortalRunConfigStringy } from "../../config/config";
+import { PortalRunConfigStringy } from "../../config/PortalRunConfig";
 import { extractError } from "./extractError";
 
 export type LabelledInputGroupProps = {

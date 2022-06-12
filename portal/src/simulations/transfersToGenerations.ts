@@ -1,4 +1,4 @@
-import { SimParams } from "../config/config";
+import { SimParams } from "../config/PortalRunConfig";
 
 export const transfersToGenerations = (
   transfers: number,

@@ -1,6 +1,6 @@
 import { FieldPath } from "react-hook-form";
 
-import { PortalRunConfig } from "./config";
+import { PortalRunConfig } from "./PortalRunConfig";
 
 // TODO: Tooltips
 export type FormFieldSet = {

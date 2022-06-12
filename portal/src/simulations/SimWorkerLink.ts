@@ -1,5 +1,5 @@
 import { SimResultsFragments, SimWorkerHandle } from "./workerInterface";
-import { PortalRunConfig } from "../config/config";
+import { PortalRunConfig } from "../config/PortalRunConfig";
 import { Observable, Subject } from "rxjs";
 
 export interface SimObservables {

@@ -1,15 +1,28 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ChartScales } from "../../config/chartConfig";
 
 import * as icons from "../icons/Icons";
+import { ScalesSelector } from "./ScalesSelector";
 
 export type ChartSettingsMenuProps = {
-  statName: string;
+  scalesValue: ChartScales;
+  onScalesChange: (value: ChartScales) => void;
 };
 
-export const ChartSettingsMenu = (_: ChartSettingsMenuProps) => {
+export const ChartSettingsMenu = ({
+  scalesValue,
+  onScalesChange,
+}: ChartSettingsMenuProps) => {
   const [expanded, setExpanded] = useState(false);
-  // TODO: Clicks outside
-  const onClick: React.MouseEventHandler<HTMLButtonElement> = useCallback(
+
+  const onClickOutside: React.FocusEventHandler<HTMLDivElement> = useCallback(
+    (event) => {
+      setExpanded(false);
+      event.stopPropagation();
+    },
+    []
+  );
+  const onIconClick: React.MouseEventHandler<HTMLButtonElement> = useCallback(
     (event) => {
       setExpanded((old) => !old);
       event.stopPropagation();
@@ -17,38 +30,28 @@ export const ChartSettingsMenu = (_: ChartSettingsMenuProps) => {
     []
   );
 
+  const popupRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (expanded) {
+      popupRef.current?.focus();
+    }
+  }, [popupRef.current, expanded]);
+
   return (
     <div className="h-full relative inline-block">
-      <button className="h-full" onClick={onClick}>
+      <button className="h-full cursor-pointer" onClick={onIconClick}>
         <icons.SliderSettings className="h-full" />
       </button>
       <div
-        className={`${expanded ? "block" : "hidden"} absolute z-50 \
-        right-0 p-3 bg-gray-50 rounded shadow-lg \
+        className={`\
+          ${expanded ? "block" : "hidden"} \
+          absolute z-50 right-0 focus:outline-none
         `}
+        ref={popupRef}
+        onBlur={onClickOutside}
+        tabIndex={-1}
       >
-        <p className="mb-1 m-0 text-left text-md">Y Scale</p>
-        <div className="flex flex-nowrap mb-3.5">
-          <label className="whitespace-nowrap pr-3">
-            <input type="radio" />
-            <span className="pl-1">Linear</span>
-          </label>
-          <label className="whitespace-nowrap pr-2">
-            <input type="radio" />
-            <span className="pl-1">Log2</span>
-          </label>
-        </div>
-        <p className="mb-1 m-0 text-left text-md">X Scale</p>
-        <div className="flex flex-nowrap">
-          <label className="whitespace-nowrap pr-3">
-            <input type="radio" />
-            <span className="pl-1">Linear</span>
-          </label>
-          <label className="whitespace-nowrap pr-2">
-            <input type="radio" />
-            <span className="pl-1">Log2</span>
-          </label>
-        </div>
+        <ScalesSelector value={scalesValue} onChange={onScalesChange} />
       </div>
     </div>
   );

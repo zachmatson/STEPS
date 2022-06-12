@@ -1,11 +1,20 @@
+import { ChartDataset } from "chart.js";
+import fp from "lodash/fp";
+
 import {
-  SimResultsFragment,
+  SimDataPoint,
   SimResultsFragments,
 } from "../simulations/workerInterface";
-import { ChartDataset } from "chart.js";
+
+export type SimChartDataPoint = {
+  linear: SimDataPoint;
+  log2: SimDataPoint;
+};
+
+export type SimChartDataPoints = SimChartDataPoint[];
 
 export type SimChartDataset = {
-  data: SimResultsFragment["points"];
+  data: SimChartDataPoints;
 } & ChartDataset<"line">;
 
 export type SimChartDatasets = SimChartDataset[];
@@ -25,7 +34,9 @@ const colors = [
   "#c8d0d9",
 ];
 
-export const emptyDatasetForReplicate = (replicate: number) => {
+export const emptyDatasetForReplicate = (
+  replicate: number
+): SimChartDataset => {
   const colorIdx = (replicate - 1) % colors.length;
   return {
     label: `Replicate ${replicate}`,
@@ -44,7 +55,12 @@ export const mergeFragmentsIntoDatasetsInPlace = (
     const { replicate, points } = fragment;
     const idx = replicate - 1;
     datasets[idx] ??= emptyDatasetForReplicate(replicate);
-    datasets[idx].data.push(...points);
+    datasets[idx].data.push(
+      ...points.map((point) => ({
+        linear: point,
+        log2: fp.mapValues(Math.log2)(point) as SimDataPoint,
+      }))
+    );
   }
 
   return datasets;

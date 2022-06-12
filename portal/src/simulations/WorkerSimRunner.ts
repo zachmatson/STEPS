@@ -2,7 +2,10 @@ import fp from "lodash/fp";
 
 import { JSSimulationHandler } from "../../steps_adapter/pkg";
 
-import { DataCollectionConfig, PortalRunConfig } from "../config/config";
+import {
+  DataCollectionConfig,
+  PortalRunConfig,
+} from "../config/PortalRunConfig";
 import { SimResultsFragments, SimWorkerCtx } from "./workerInterface";
 import { transfersToGenerations } from "./transfersToGenerations";
 

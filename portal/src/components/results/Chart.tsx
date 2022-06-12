@@ -1,16 +1,27 @@
+import React from "react";
+
 import {
   Chart as ChartJSChart,
   LinearScale,
   LineController,
   LineElement,
+  LogarithmicScale,
   PointElement,
   Title,
   Tooltip,
 } from "chart.js";
-import React from "react";
 import { Observable, Subscription } from "rxjs";
+
+import {
+  adaptNameForAxisScale,
+  mapValueToAxisScale,
+} from "../../charts/scaleUtils";
 import { SimChartDatasets } from "../../charts/SimChartDatasets";
-import { DataCollectionConfig, PortalRunConfig } from "../../config/config";
+import { ChartScales } from "../../config/chartConfig";
+import {
+  DataCollectionConfig,
+  PortalRunConfig,
+} from "../../config/PortalRunConfig";
 import { statFormattedNames } from "../../config/statNameMap";
 import { transfersToGenerations } from "../../simulations/transfersToGenerations";
 
@@ -20,13 +31,15 @@ ChartJSChart.register(
   PointElement,
   LineElement,
   Tooltip,
-  Title
+  Title,
+  LogarithmicScale
 );
 
 export type ChartProps = {
   config: PortalRunConfig;
   stat: keyof DataCollectionConfig["trackedStatistics"];
   dataObservable: Observable<SimChartDatasets>;
+  scales: ChartScales;
 };
 
 export class Chart extends React.PureComponent<ChartProps> {
@@ -99,10 +112,10 @@ export class Chart extends React.PureComponent<ChartProps> {
             type: "linear",
             title: {
               display: true,
-              text: "Generation",
+              text: adaptNameForAxisScale("Generation", this.props.scales.x),
             },
             min: 0,
-            max: generations,
+            max: mapValueToAxisScale(generations, this.props.scales.x),
             ticks: {
               includeBounds: false,
             },
@@ -111,13 +124,16 @@ export class Chart extends React.PureComponent<ChartProps> {
             type: "linear",
             title: {
               display: true,
-              text: statFormattedNames[stat],
+              text: adaptNameForAxisScale(
+                statFormattedNames[stat],
+                this.props.scales.y
+              ),
             },
           },
         },
         parsing: {
-          xAxisKey: "generation",
-          yAxisKey: stat,
+          xAxisKey: `${this.props.scales.x}.generation`,
+          yAxisKey: `${this.props.scales.y}.${stat}`,
         },
       },
     });
