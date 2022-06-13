@@ -558,13 +558,10 @@ fn extract_headers<P: AsRef<Path>>(path: P) -> Result<ExtractedHeaders> {
         .into());
     }
 
-    let mut sim_cfg: SimConfig = match lines.next() {
+    let sim_cfg: SimConfig = match lines.next() {
         Some(line) => serde_json::from_str(line?.trim_start_matches("# "))?,
         None => return Err(MetadataError::MissingHeaders.into()),
     };
-    // Must finish initialization steps
-    // Because not everything in SimConfig can be serialized
-    sim_cfg.finish_initialization();
 
     Ok(ExtractedHeaders {
         metadata,

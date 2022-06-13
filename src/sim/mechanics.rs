@@ -19,9 +19,9 @@ pub fn phase_1_doublings_required(cfg: &SimConfig) -> usize {
 /// The total population size is approximately doubled, with growth
 /// run for whatever time step will provide that.  
 /// New mutants are added and no bottlenecking occurs
-pub fn growth_phase_1<R: Rng>(
+pub(super) fn growth_phase_1<R: Rng>(
     data: &mut LineagesData,
-    cfg: &SimConfig,
+    cfg: &InternalSimConfig,
     rng: &mut R,
     mutations: &mut Option<MutationsData>,
 ) {
@@ -42,16 +42,16 @@ pub fn growth_phase_1<R: Rng>(
 /// size to approximately Nmax   
 /// New mutants are added and bottlenecking occurs  
 /// Only mutations which survive bottlenecking are generated and tracked
-pub fn growth_phase_2<R: Rng>(
+pub(super) fn growth_phase_2<R: Rng>(
     data: &mut LineagesData,
-    cfg: &SimConfig,
+    cfg: &InternalSimConfig,
     rng: &mut R,
     mutations: &mut Option<MutationsData>,
 ) {
     let (sum_N, avg_W) = sum_N_and_avg_W(data);
     // Must grow population size to Nmax
     // Where growth is approximately a factor of 2^(avg_W * delta_t)
-    let delta_t = (cfg.max_pop_size / sum_N).log2() / avg_W;
+    let delta_t = (cfg.inner.max_pop_size / sum_N).log2() / avg_W;
 
     assert!(delta_t >= 0.0);
 
@@ -96,7 +96,7 @@ pub fn growth_phase_2<R: Rng>(
 fn add_mutants<R: Rng>(
     data: &mut LineagesData,
     delta_N: &[f64],
-    cfg: &SimConfig,
+    cfg: &InternalSimConfig,
     rng: &mut R,
     mutations: &mut Option<MutationsData>,
 ) {
@@ -200,7 +200,12 @@ fn add_mutants<R: Rng>(
 
 /// Generate a descendant lineage from `parent` with population size `1.0`  
 /// Does not handle updating of IDs
-fn new_mutant<R: Rng>(parent: Lineage, order: u32, cfg: &SimConfig, rng: &mut R) -> Lineage {
+fn new_mutant<R: Rng>(
+    parent: Lineage,
+    order: u32,
+    cfg: &InternalSimConfig,
+    rng: &mut R,
+) -> Lineage {
     let mut mutant = Lineage { N: 1.0, ..parent };
 
     for _ in 0..order {
@@ -219,24 +224,28 @@ fn new_mutant<R: Rng>(parent: Lineage, order: u32, cfg: &SimConfig, rng: &mut R)
 }
 
 /// Applies a beneficial mutation to `lineage` in-place
-fn apply_beneficial_mutation<R: Rng>(lineage: &mut Lineage, cfg: &SimConfig, rng: &mut R) {
+fn apply_beneficial_mutation<R: Rng>(lineage: &mut Lineage, cfg: &InternalSimConfig, rng: &mut R) {
     let size = rand_distr::Exp::new(lineage.secondary.lambda)
         .unwrap()
         .sample(rng);
 
     lineage.W *= 1.0 + size;
-    lineage.secondary.lambda *= 1.0 + cfg.diminishing_returns_epistasis_strength * size;
+    lineage.secondary.lambda *= 1.0 + cfg.inner.diminishing_returns_epistasis_strength * size;
 }
 
 /// Applies a deleterious mutation to `lineage` in-place
 #[allow(unused_variables)]
-fn apply_deleterious_mutation<R: Rng>(lineage: &mut Lineage, cfg: &SimConfig, rng: &mut R) {
+fn apply_deleterious_mutation<R: Rng>(lineage: &mut Lineage, cfg: &InternalSimConfig, rng: &mut R) {
     deleterious_todo()
 }
 
 /// Applies a mutation rate mutation to `lineage` in-place
 #[allow(unused_variables)]
-fn apply_mutation_rate_mutation<R: Rng>(lineage: &mut Lineage, cfg: &SimConfig, rng: &mut R) {
+fn apply_mutation_rate_mutation<R: Rng>(
+    lineage: &mut Lineage,
+    cfg: &InternalSimConfig,
+    rng: &mut R,
+) {
     mutation_rate_todo()
 }
 

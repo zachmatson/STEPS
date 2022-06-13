@@ -1,3 +1,5 @@
+use structopt::StructOpt;
+
 use steps::{
     cfg::{Config, Subcommand::*},
     cli,

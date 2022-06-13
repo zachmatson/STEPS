@@ -63,7 +63,7 @@ fn run_simulations_inner(output_cfg: &CLIOutputConfig, sim_cfg: &SimConfig) -> R
 
     // Objects which manage the underlying simulations and the outputting of results
     let tracking_mutations = output_cfg.should_track_mutations();
-    let mut simulation_handler = SimulationHandler::new(sim_cfg.to_owned(), tracking_mutations);
+    let mut simulation_handler = SimulationHandler::new(sim_cfg, tracking_mutations);
     let mut output_handler = OutputHandler::new(output_cfg, sim_cfg)?;
 
     for r in 1..=sim_cfg.replicates {

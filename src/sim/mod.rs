@@ -5,6 +5,7 @@
 #![allow(non_snake_case)]
 
 use rand::prelude::*;
+use rand_distr::weighted::WeightedIndex;
 use rand_pcg::Pcg64;
 
 use crate::cfg::*;
@@ -41,7 +42,7 @@ fn default_sim_rng(cfg: &SimConfig) -> SimRng {
 /// Then use `transfer` to perform each transfer within a replicate
 pub struct SimulationHandler {
     /// Simulation options
-    cfg: SimConfig,
+    cfg: InternalSimConfig,
     /// Number of phase 1 doublings to perform
     phase_1_doublings: usize,
     /// Lineages in the simulation  
@@ -59,20 +60,16 @@ pub struct SimulationHandler {
 
 impl SimulationHandler {
     /// Create a new `SimulationHandler` with new RNG
-    pub fn new(cfg: SimConfig, track_mutations: bool) -> Self {
-        let phase_1_doublings = phase_1_doublings_required(&cfg);
-        let rng = default_sim_rng(&cfg);
-        let mutations = match track_mutations {
-            true => Some(MutationsData::default()),
-            false => None,
-        };
-
+    pub fn new(cfg: &SimConfig, track_mutations: bool) -> Self {
         Self {
-            cfg,
-            phase_1_doublings,
+            cfg: InternalSimConfig::new(cfg),
+            phase_1_doublings: phase_1_doublings_required(cfg),
             lineages: LineagesData::default(),
-            mutations,
-            rng,
+            mutations: match track_mutations {
+                true => Some(MutationsData::default()),
+                false => None,
+            },
+            rng: default_sim_rng(cfg),
         }
     }
 
@@ -136,5 +133,64 @@ impl SimulationHandler {
         if let Some(mutations) = &mut self.mutations {
             mutations.pruned_muts.clear();
         }
+    }
+}
+
+/// Options for simulations which are computed based on publicly available options, rather than
+/// being directly publicly available
+struct InternalSimConfig {
+    /// Underlying config for internal config
+    inner: SimConfig,
+
+    /// Total mutation rate
+    pub total_mutation_rate: f64,
+    /// Reciprocal of dilution factor
+    pub dilution_coefficient: f64,
+
+    /// Distribution from which to pick mutation types
+    mutation_type_index_distribution: Option<WeightedIndex<f64>>,
+}
+
+impl InternalSimConfig {
+    /// Available mutation types
+    const MUTATION_TYPES: [MutationType; 4] = [
+        MutationType::Beneficial,
+        MutationType::Neutral,
+        MutationType::Deleterious,
+        MutationType::MutationRate,
+    ];
+
+    pub fn new(cfg: &SimConfig) -> Self {
+        let total_mutation_rate = cfg.beneficial_mutation_rate
+            + cfg.deleterious_mutation_rate
+            + cfg.neutral_mutation_rate
+            + cfg.mutation_rate_mutation_rate;
+
+        Self {
+            inner: cfg.clone(),
+            total_mutation_rate,
+            dilution_coefficient: cfg.dilution_factor.recip(),
+            mutation_type_index_distribution: if total_mutation_rate > 0.0 {
+                Some(
+                    WeightedIndex::new(vec![
+                        cfg.beneficial_mutation_rate,
+                        cfg.neutral_mutation_rate,
+                        cfg.deleterious_mutation_rate,
+                        cfg.mutation_rate_mutation_rate,
+                    ])
+                    .unwrap(),
+                )
+            } else {
+                None
+            },
+        }
+    }
+
+    /// Randomly pick a mutation type weighted by the mutation rates selected  
+    /// Will return None iff all mutation rates are 0
+    pub fn sample_mutation_type<R: Rng>(&self, rng: &mut R) -> Option<MutationType> {
+        self.mutation_type_index_distribution
+            .as_ref()
+            .map(|dist| Self::MUTATION_TYPES[dist.sample(rng)])
     }
 }

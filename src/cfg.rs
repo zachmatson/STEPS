@@ -9,12 +9,8 @@
 
 use std::path::PathBuf;
 
-use rand::prelude::*;
-use rand_distr::weighted::WeightedIndex;
 use serde::{Deserialize, Serialize};
 use structopt::{clap, StructOpt};
-
-use crate::sim::MutationType;
 
 /// Configuration options for STEPS command line app  
 #[derive(StructOpt)]
@@ -23,22 +19,6 @@ pub struct Config {
     /// Subcommands of STEPS
     #[structopt(subcommand)]
     pub subcommand: Subcommand,
-}
-
-impl Config {
-    /// Generate `Config` from command line arguments  
-    /// Exits the program if there is a failure  
-    pub fn from_args() -> Self {
-        // Underlying StructOpt/clap implementation performs the actual building of `Config`
-        let mut cfg = <Config as StructOpt>::from_args();
-        // Additional initialization where needed
-        match &mut cfg.subcommand {
-            Subcommand::Simulate(sim_cfg) => sim_cfg.finish_initialization(),
-            Subcommand::Reproduce(_) => (),
-        };
-
-        cfg
-    }
 }
 
 /// Subcommand definitions
@@ -62,13 +42,6 @@ pub struct SimulationsCLIConfig {
     /// Simulation options
     #[structopt(flatten)]
     pub sim_cfg: SimConfig,
-}
-
-impl SimulationsCLIConfig {
-    /// Finish the initialization work that cannot be handled by StructOpt/Clap
-    fn finish_initialization(&mut self) {
-        self.sim_cfg.finish_initialization();
-    }
 }
 
 /// Reproduce results of a previous run of the STEPS simulation
@@ -208,69 +181,6 @@ pub struct SimConfig {
     /// Maximum population size reached before transfer
     #[structopt(long = "Nmax", default_value = "5E8")]
     pub max_pop_size: f64,
-
-    //
-    // Must be calculated after other fields are known
-    //
-    /// Total mutation rate
-    #[structopt(skip)]
-    #[serde(skip)]
-    pub total_mutation_rate: f64,
-    /// Reciprocal of dilution factor
-    #[structopt(skip)]
-    #[serde(skip)]
-    pub dilution_coefficient: f64,
-
-    //
-    // Private fields
-    //
-    /// Distribution from which to pick mutation types
-    #[structopt(skip)]
-    #[serde(skip)]
-    mutation_type_index_distribution: Option<WeightedIndex<f64>>,
-}
-
-impl SimConfig {
-    /// Available mutation types
-    const MUTATION_TYPES: [MutationType; 4] = [
-        MutationType::Beneficial,
-        MutationType::Neutral,
-        MutationType::Deleterious,
-        MutationType::MutationRate,
-    ];
-
-    /// Finish initialization for fields that require additional steps
-    pub fn finish_initialization(&mut self) {
-        self.total_mutation_rate = self.beneficial_mutation_rate
-            + self.deleterious_mutation_rate
-            + self.neutral_mutation_rate
-            + self.mutation_rate_mutation_rate;
-
-        self.dilution_coefficient = self.dilution_factor.recip();
-
-        // Weights for the elements of Self::MUTATION_TYPES
-        self.mutation_type_index_distribution = if self.total_mutation_rate > 0.0 {
-            Some(
-                WeightedIndex::new(vec![
-                    self.beneficial_mutation_rate,
-                    self.neutral_mutation_rate,
-                    self.deleterious_mutation_rate,
-                    self.mutation_rate_mutation_rate,
-                ])
-                .unwrap(),
-            )
-        } else {
-            None
-        }
-    }
-
-    /// Randomly pick a mutation type weighted by the mutation rates selected  
-    /// Will return None iff all mutation rates are 0
-    pub fn sample_mutation_type<R: Rng>(&self, rng: &mut R) -> Option<MutationType> {
-        self.mutation_type_index_distribution
-            .as_ref()
-            .map(|dist| Self::MUTATION_TYPES[dist.sample(rng)])
-    }
 }
 
 /// Call where code to support deleterious mutations is activated  
