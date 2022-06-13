@@ -1,26 +1,27 @@
-use paste::paste;
-use wasm_bindgen::prelude::*;
-use web_sys;
+use std::ops::Deref;
 
-use steps::{cfg::SimConfig, sim::*};
-use steps::cfg::SummaryOutputConfig;
-use steps::io::SummaryOutputter;
-use steps::sim::summarize::marker_1_ratio;
+use wasm_bindgen::prelude::*;
+use paste::paste;
+
+use steps::sim::*;
+use web_sys::console::assert;
+
+mod types;
+
+pub use types::*;
 
 #[wasm_bindgen]
-pub struct JSSimulationHandler {
-    cfg: SimConfig,
+pub struct JsSimulationHandler {
     inner: SimulationHandler,
 }
 
 #[wasm_bindgen]
-impl JSSimulationHandler {
-    pub fn new(cfg_js: JsValue) -> Self {
-        let mut cfg: SimConfig = serde_wasm_bindgen::from_value(cfg_js).unwrap();
-        cfg.finish_initialization();
-        let inner = SimulationHandler::new(cfg.clone(), false);
+impl JsSimulationHandler {
+    pub fn new(cfg_js: JsPortalRunConfig) -> Self {
+        let cfg: PortalRunConfig = serde_wasm_bindgen::from_value(cfg_js.deref().to_owned()).unwrap();
+        let inner = SimulationHandler::new(&extract_sim_config(cfg), false);
 
-        Self { cfg, inner }
+        Self { inner }
     }
 
     pub fn start_replicate(&mut self) {
@@ -44,7 +45,7 @@ macro_rules! make_stat_check_functions {
         paste! {
             #[allow(non_snake_case)]
             #[wasm_bindgen]
-            impl JSSimulationHandler {
+            impl JsSimulationHandler {
                 pub fn [<check_ $stat>](&mut self) -> $ty {
                     summarize::$stat(self.inner.lineages())
                 }
