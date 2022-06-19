@@ -8,7 +8,7 @@ export interface SimObservables {
   done$: Observable<void>;
 }
 
-export class SimWorkerLink {
+export class SimLink {
   #start$: Subject<PortalRunConfig> = new Subject();
   #results$: Subject<SimResultsFragments> = new Subject();
   #done$: Subject<void> = new Subject();

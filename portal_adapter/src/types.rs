@@ -1,12 +1,12 @@
-use wasm_bindgen::prelude::*;
 use serde::Deserialize;
+use wasm_bindgen::prelude::*;
 
-use steps::cfg::SimConfig;
+use steps::cfg::{SimConfig, SummaryOutputConfig};
 
 /*
-    Due to current limitations, the TypeScript interface and Rust types defined below it must be
-    manually kept in sync. Assuming this is done, everything else should get caught statically.
- */
+   Due to current limitations, the TypeScript interface and Rust types defined below it must be
+   manually kept in sync. Assuming this is done, everything else should get caught statically.
+*/
 
 #[wasm_bindgen(typescript_custom_section)]
 const TS_TYPES: &'static str = r#"
@@ -97,8 +97,8 @@ pub struct PortalRunConfig {
     pub dataConfig: DataConfig,
 }
 
-pub fn extract_sim_config(cfg: PortalRunConfig) -> SimConfig {
-    let sim_params = cfg.simParams;
+pub fn extract_sim_config(cfg: &PortalRunConfig) -> SimConfig {
+    let sim_params = &cfg.simParams;
     SimConfig {
         replicates: sim_params.replicates,
         transfers: sim_params.transfers,
@@ -114,5 +114,18 @@ pub fn extract_sim_config(cfg: PortalRunConfig) -> SimConfig {
         mutation_rate_mutation_size_factor: sim_params.mutationRateMutationSizeFactor,
         diminishing_returns_epistasis_strength: sim_params.diminishingReturnsEpistasisStrength,
         seed: Some(sim_params.seed),
+    }
+}
+
+pub fn extract_summary_output_config(cfg: &PortalRunConfig) -> SummaryOutputConfig {
+    let tracked_statistics = &cfg.dataConfig.trackedStatistics;
+    SummaryOutputConfig {
+        marker_1_ratio: tracked_statistics.marker1Ratio,
+        stdev_W: tracked_statistics.stdevW,
+        max_W: tracked_statistics.maxW,
+        stdev_accumulated_muts: tracked_statistics.stdevAccumulatedMuts,
+        max_accumulated_muts: tracked_statistics.maxAccumulatedMuts,
+        genotype_count: tracked_statistics.genotypeCount,
+        shannon_diversity: tracked_statistics.shannonDiversity,
     }
 }
