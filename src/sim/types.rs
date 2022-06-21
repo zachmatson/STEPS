@@ -1,24 +1,20 @@
-//! Types used for storing simulation data;
+//! Types used for storing simulation data
 
 use hashbrown::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_tuple::*;
 
-use super::*;
+use crate::sim::InternalSimConfig;
 
 /// Container for data on a population of lineages
-///
-/// **Do not** change the length of the vectors when accessing them directly
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct LineagesData {
-    // Visibilities set to pub(super) so only the sim module can access them
-    // This will prevent outside modification which could break the invariant
-    // that all of the lengths must remain equal
     /// Population sizes of lineages
     pub(super) N: Vec<f64>,
     /// Fitnesses of lineages
     pub(super) W: Vec<f64>,
     /// Total mutation rates of lineages
+    ///
     /// Defer to `SimConfig` for relative rates of specific mutation types
     pub(super) U: Vec<f64>,
     /// Additional data in AoS format
@@ -31,7 +27,7 @@ pub struct LineagesData {
 
 /// Complete data for a single lineage
 #[derive(Copy, Clone, Debug)]
-pub(super) struct Lineage {
+pub struct Lineage {
     /// Population size
     pub N: f64,
     /// Fitness
@@ -44,22 +40,22 @@ pub(super) struct Lineage {
 
 /// Secondary data for lineages  
 ///
-/// Used for data that is not accessed in vectorized computational kernels,
-/// and therefore can be efficiently stored in individual structs
+/// Used for data that is not accessed in vectorized computational kernels, and therefore can be
+/// efficiently stored in individual structs
 #[derive(Copy, Clone, Debug, Default, Serialize_tuple, Deserialize_tuple)]
-pub(super) struct SecondaryLineageData {
+pub struct SecondaryLineageData {
     /// Reciprocal of the mean of the beneficial mutation size
     pub lambda: f64,
 
     /// Unique lineage identifier
-    /// (also uniquely identifies the mutation
-    /// between the parent and this lineage)
+    ///
+    /// Also uniquely identifies the mutation between the parent and this lineage
     pub id: u64,
     /// Lineage identifier for the parent
     pub parent_id: u64,
     /// Lineage identifier for the initial neutral marker mutation
     pub marker: u16,
-    /// Number of accumulated mutations relative to the ancestor mutation
+    /// Number of accumulated mutations relative to the ancestor mutation (each marker starts at 1)
     pub accumulated_muts: u32,
 }
 
@@ -68,7 +64,7 @@ impl LineagesData {
     ///
     /// Use this only to start a new replicate. For creating a new container to transfer
     /// into use `LineagesData::successor` to ensure that the IDs remain properly numbered
-    pub(super) fn from_simconfig(
+    pub(super) fn for_sim_config(
         cfg: &InternalSimConfig,
         mutations: &mut Option<MutationsData>,
     ) -> Self {
@@ -77,8 +73,7 @@ impl LineagesData {
         // Size, parent ID, and marker won't matter
         let ancestor = Lineage {
             N: 0.0,
-            // W and U may be used for comparison to the markers
-            // in the case of mutation tracking
+            // W and U may be used for comparison to the markers in the case of mutation tracking
             W: 1.0,
             U: cfg.total_mutation_rate,
             secondary: SecondaryLineageData {
@@ -87,18 +82,21 @@ impl LineagesData {
                 id: 0,
                 parent_id: 0,
                 marker: 0,
+                // accumulated_muts is incremented for each child
                 accumulated_muts: 0,
             },
         };
 
-        // Initialize with a lineage for each marker and a population size of
-        // Nmax/D, evenly divided between the markers
+        // Initialize with a lineage for each marker and a population size of Nmax/D, evenly divided
+        // between the markers
         let N =
             (cfg.inner.max_pop_size * cfg.dilution_coefficient / cfg.inner.markers as f64).round();
 
-        // 1 index the markers beacuse "0" ID is reserved for the immediate ancestor of the neutral marker mutations
+        // 1 index the markers beacuse "0" ID is reserved for the immediate ancestor of the neutral
+        // marker mutations
         for m in 1..=cfg.inner.markers {
-            // ID, parent ID, and accumulated muts will be assigned by push_child so it doesn't matter what we use for them here
+            // ID, parent ID, and accumulated muts will be assigned by push_child so it doesn't
+            // matter what we use for them here
             let marker_mutant = Lineage {
                 N,
                 secondary: SecondaryLineageData {
@@ -126,9 +124,8 @@ impl LineagesData {
     /// the old instance (currently 1x the length of the old instance) and preserve the
     /// counter used to generate unique IDs.
     ///
-    /// This is the proper way to generate a new instance to move lineages into from an old instance,
-    /// such as when bottlenecking.  
-    /// To start a new replicate, use `LineagesData::from_simconfig`
+    /// This is the proper way to generate a new instance to move lineages into from an old instance
+    /// when bottlenecking. To start a new replicate, use `LineagesData::for_sim_config`
     pub(super) fn successor(old: &LineagesData) -> Self {
         let mut new = LineagesData {
             unique_id_counter: old.unique_id_counter,
@@ -146,9 +143,8 @@ impl LineagesData {
         self.secondary.push(data.secondary);
     }
 
-    /// Push a new `child` `Lineage` of `parent` to the collection
-    /// Properly assigning its Parent ID and its own ID,
-    /// and registers the mutation with the MutationsData if applicable
+    /// Push a new `child` `Lineage` of `parent` to the collection, properly assigning its Parent
+    /// ID, its own ID, and registering the mutation with the `MutationsData` if applicable
     pub(super) fn push_child(
         &mut self,
         mut child: Lineage,
@@ -188,21 +184,21 @@ impl LineagesData {
         }
     }
 
-    /// Asserts that the length of all component vectors is greater than or equal to `len`
+    /// Asserts that the length of all component vectors is equal to `len`
     ///
     /// # Panics
-    /// Panics if any of the component vectors have lengths less than `len`
-    pub(super) fn assert_len_ge(&self, len: usize) {
-        assert!(self.N.len() >= len);
-        assert!(self.W.len() >= len);
-        assert!(self.U.len() >= len);
-        assert!(self.secondary.len() >= len);
+    /// Panics if any of the component vectors have lengths different than `len`
+    pub(super) fn assert_len_eq(&self, len: usize) {
+        assert_eq!(self.N.len(), len);
+        assert_eq!(self.W.len(), len);
+        assert_eq!(self.U.len(), len);
+        assert_eq!(self.secondary.len(), len);
     }
 }
 
 /// Types of mutations which can occur
 #[derive(Debug, Copy, Clone)]
-pub(super) enum MutationType {
+pub enum MutationType {
     /// A mutation increasing fitness
     Beneficial,
     /// A mutation with no effect
@@ -219,7 +215,7 @@ pub(super) enum MutationType {
 /// method every time a new mutation you want to track
 /// arises, so that mutation's information will be stored
 ///
-/// You must also call `increment_transfer` after each
+/// You must also call `set_transfer` after each
 /// transfer to have meaningful data about the transfer
 /// times each mutation occurred at
 #[derive(Debug, Default)]
@@ -241,8 +237,8 @@ impl MutationsData {
     /// Increment the transfer the mutation data is being called for
     ///
     /// Must be called every time transfer changes to get correct results
-    pub(super) fn increment_transfer(&mut self) {
-        self.on_transfer += 1;
+    pub(super) fn set_transfer(&mut self, transfer: u32) {
+        self.on_transfer = transfer;
     }
 
     /// Register a new `child` `Lineage` by calculating the `Mutation` from its `parent`
@@ -262,49 +258,27 @@ impl MutationsData {
 }
 
 /// Data for one Mutation being tracked  
-/// Should not be edited outside of sequencing functions
 #[derive(Debug, Serialize_tuple)]
-pub(crate) struct Mutation {
-    /// ID of the `Mutation`  
+pub struct Mutation {
+    /// ID of the `Mutation`
+    ///
     /// Corresponds to the ID of the first `Lineage` instance with this mutation
-    pub(super) id: u64,
-    /// ID of the background of the `Mutation`  
+    pub id: u64,
+    /// ID of the background of the `Mutation`
+    ///
     /// Corresponds to the ID of the *parent* of the first `Lineage` instance with this mutation
-    pub(super) background_id: u64,
+    pub background_id: u64,
     /// Multiplicative change in fitness as a result of this mutation
-    pub(super) delta_W: f64,
+    pub delta_W: f64,
     /// Multiplicative change in mutation rate as a result of this mutation
-    pub(super) delta_U: f64,
-    /// The first transfer at which this mutation appeared  
-    /// This is also the transfer corresponding to the first
-    /// entry in the vector of population sizes
-    pub(super) first_transfer: u32,
-    /// Vector of population sizes for each transfer tracked starting
-    /// from `self.first_transfer`
-    pub(super) N: Vec<f64>,
-    /// Was the mutation just updated in the last round of updating
-    /// sizes?
+    pub delta_U: f64,
+    /// The first transfer at which this mutation appeared
+    ///
+    /// This is also the transfer corresponding to the first entry in the vector of population sizes
+    pub first_transfer: u32,
+    /// Vector of population sizes for each transfer tracked starting from `self.first_transfer`
+    pub N: Vec<f64>,
+    /// Was the mutation just updated in the last round of updating sizes?
     #[serde(skip)]
     pub(super) just_updated: bool,
-}
-
-impl Mutation {
-    /// ID of the `Mutation`  
-    /// Corresponds to the ID of the first `Lineage` instance with this mutation
-    pub fn id(&self) -> u64 {
-        self.id
-    }
-
-    /// The first transfer at which this mutation appeared  
-    /// This is also the transfer corresponding to the first
-    /// entry in the vector of population sizes
-    pub fn first_transfer(&self) -> u32 {
-        self.first_transfer
-    }
-
-    /// Vector of population sizes for each transfer tracked starting
-    /// from `self.first_transfer()`
-    pub fn N(&self) -> &Vec<f64> {
-        &self.N
-    }
 }

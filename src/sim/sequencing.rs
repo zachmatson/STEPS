@@ -1,6 +1,8 @@
+//! Implementation of mutation tracking
+
 use itertools::izip;
 
-use super::*;
+use crate::sim::types::{LineagesData, Mutation, MutationsData};
 
 /// Update the population sizes of mutations being tracked in `sequencing_data` based on
 /// the lineages in `population_data`
@@ -8,8 +10,8 @@ use super::*;
 /// Mutations must already have been registered to be updated, this will not create/register
 /// any new mutations
 ///
-/// Calling this function may cause some mutations to become pruned, after which point
-/// they will no longer be updated
+/// Calling this function may cause some mutations to become pruned, after which point they will no
+/// longer be updated
 pub fn update_sizes(sequencing_data: &mut MutationsData, population_data: &LineagesData) {
     let LineagesData { N, secondary, .. } = population_data;
     assert_eq!(N.len(), secondary.len());

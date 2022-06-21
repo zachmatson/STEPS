@@ -2,33 +2,45 @@
 
 use itertools::izip;
 
-use super::LineagesData;
+use crate::sim::LineagesData;
 
-/// Get the total population size and arithmetic mean fitness
-/// of all of the lineages in `data`
-///
-/// Return format is `(sum_N, avg_W)`
-pub fn sum_N_and_avg_W(data: &LineagesData) -> (f64, f64) {
-    assert_eq!(data.N.len(), data.W.len());
+/// Total population size and weighted average fitness of some lineages
+pub struct SumNAndAvgW {
+    /// Total population
+    pub sum_N: f64,
+    /// Average fitness
+    pub avg_W: f64,
+}
+
+/// Get the total population size and arithmetic mean fitness of all of the lineages in `lineages`
+pub fn sum_N_and_avg_W(lineages: &LineagesData) -> SumNAndAvgW {
+    assert_eq!(lineages.N.len(), lineages.W.len());
 
     let mut sum_N = 0.0;
     let mut weighted_sum_W = 0.0;
 
-    for (n, w) in izip!(&data.N, &data.W) {
+    for (n, w) in izip!(&lineages.N, &lineages.W) {
         sum_N += n;
         weighted_sum_W += n * w;
     }
 
-    (sum_N, weighted_sum_W / sum_N)
+    SumNAndAvgW {
+        sum_N,
+        avg_W: weighted_sum_W / sum_N,
+    }
 }
 
-/// Get the ratio of marker 1 individuals to individuals with other markers,
-/// and arithmetic mean fitness of all of the lineages in `data`
-pub fn marker_1_ratio(data: &LineagesData) -> f64 {
+/// Weighted arithmetic mean opf lineage fitnesses
+pub fn avg_W(lineages: &LineagesData) -> f64 {
+    sum_N_and_avg_W(lineages).avg_W
+}
+
+/// Ratio of marker 1 population to total population of other markers
+pub fn marker_1_ratio(lineages: &LineagesData) -> f64 {
     let mut sum_N = 0.0;
     let mut marker_1_sum_N = 0.0;
 
-    for (&n, secondary) in izip!(&data.N, &data.secondary) {
+    for (&n, secondary) in izip!(&lineages.N, &lineages.secondary) {
         sum_N += n;
         if secondary.marker == 1 {
             marker_1_sum_N += n;
@@ -38,16 +50,17 @@ pub fn marker_1_ratio(data: &LineagesData) -> f64 {
     marker_1_sum_N / (sum_N - marker_1_sum_N)
 }
 
-/// Weighted population standard deviation  
+/// Weighted population standard deviation
+///
 /// Computations performed after conversion to f64
 #[inline]
 fn stdev<E, W, IE, IW>(elements: impl Fn() -> IE, weights: impl Fn() -> IW) -> f64
-where
-    E: Copy,
-    W: Copy,
-    IE: Iterator<Item = E>,
-    IW: Iterator<Item = W>,
-    f64: From<E> + From<W>,
+    where
+        E: Copy,
+        W: Copy,
+        IE: Iterator<Item=E>,
+        IW: Iterator<Item=W>,
+        f64: From<E> + From<W>,
 {
     let n = weights().map(f64::from).sum::<f64>();
     let mean = izip!(weights(), elements())
@@ -62,21 +75,21 @@ where
 }
 
 /// Population standard deviation of lineage fitnesses
-pub fn stdev_W(data: &LineagesData) -> f64 {
-    stdev(|| data.W.iter().copied(), || data.N.iter().copied())
+pub fn stdev_W(lineages: &LineagesData) -> f64 {
+    stdev(|| lineages.W.iter().copied(), || lineages.N.iter().copied())
 }
 
 /// Population standard deviation of number of accumulated mutations for all lineages in the population
-pub fn stdev_accumulated_muts(data: &LineagesData) -> f64 {
+pub fn stdev_accumulated_muts(lineages: &LineagesData) -> f64 {
     stdev(
-        || data.secondary.iter().map(|s| s.accumulated_muts),
-        || data.N.iter().copied(),
+        || lineages.secondary.iter().map(|s| s.accumulated_muts),
+        || lineages.N.iter().copied(),
     )
 }
 
 /// Maximum fitness of any lineage in the population
-pub fn max_W(data: &LineagesData) -> f64 {
-    *data
+pub fn max_W(lineages: &LineagesData) -> f64 {
+    *lineages
         .W
         .iter()
         .max_by(|x, y| x.partial_cmp(y).unwrap())
@@ -84,28 +97,29 @@ pub fn max_W(data: &LineagesData) -> f64 {
 }
 
 /// Maximum number of mutations away from the ancestor of any lineage in the population
-pub fn max_accumulated_muts(data: &LineagesData) -> u32 {
-    data.secondary
+pub fn max_accumulated_muts(lineages: &LineagesData) -> u32 {
+    lineages
+        .secondary
         .iter()
-        .map(|s| s.accumulated_muts)
+        .map(|s| s.accumulated_muts - 1)
         .max()
         .unwrap()
 }
 
 /// Number of lineages/genotypes in the population
-pub fn genotype_count(data: &LineagesData) -> usize {
+pub fn genotype_count(lineages: &LineagesData) -> usize {
     // Can happen when all members of a lineage are replaced with new mutants
     #[allow(clippy::float_cmp_const)]
-    data.N.iter().filter(|&&n| n != 0.0).count()
+        lineages.N.iter().filter(|&&n| n != 0.0).count()
 }
 
 /// Shannon diversity of genotypes, sum(p ln p) for all lineages where p is the lineage size
 /// divided by the total size of all lineages
-pub fn shannon_diversity(data: &LineagesData) -> f64 {
+pub fn shannon_diversity(lineages: &LineagesData) -> f64 {
     let mut sum_N = 0.0;
     let mut weighted_sum_log_N = 0.0;
 
-    for &n in &data.N {
+    for &n in &lineages.N {
         // Can happen when all members of a lineage are replaced with new mutants
         #[allow(clippy::float_cmp_const)]
         if n == 0.0 {

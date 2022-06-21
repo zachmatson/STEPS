@@ -1,23 +1,47 @@
-//! Functions to run the simulations and output results with command line display
-//! after configuration options are retrieved and processed
+//! Library for concerns and functions specific to the STEPS CLI, rather than the STEPS library
+//!
+//! This is kept separate to "dogfood" the STEPS lib interface by making the CLI use it,
+//! to prevent overly tight coupling of the CLI and the main lib, and to keep CLI concerns totally
+//! out of the public STEPS interface.
 
 use std::time;
 
-use anyhow::Result;
+use anyhow::{Error, Result};
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use itertools::{izip, Itertools};
 
-use crate::{cfg::*, io::*, sim::*};
+use steps::cfg::SimConfig;
+use steps::sim::{SimulationHandler, SimulationState};
 
-/// Run the `Simulate` subcommand with command line display
-pub fn run_simulations(cfg: &SimulationsCLIConfig) {
-    run_simulations_private(&cfg.output_cfg, &cfg.sim_cfg);
+use cfg::{CliOutputConfig, ReproduceConfig, Subcommand};
+use io::{extract_sim_config_from_path, outputter_group_for_cli};
+
+mod cfg;
+mod io;
+
+pub use cfg::CliConfig;
+
+/// Run the CLI as specified by some `CliConfig`
+pub fn run_cli_config(cfg: CliConfig) {
+    match cfg.subcommand {
+        Subcommand::Simulate(sim_cli_cfg) => {
+            run_simulations(&sim_cli_cfg.output_cfg, sim_cli_cfg.sim_cfg)
+        }
+        Subcommand::Reproduce(reproduce_cfg) => reproduce_simulations(&reproduce_cfg),
+    }
 }
 
-/// Reproduce simulation results by extracting settings and handing off to the normal
-/// `Simulate` subcommand
-pub fn reproduce_simulations(cfg: &ReproduceConfig) {
-    match extract_sim_config(&cfg.input_path) {
+/// Run the simulations with command line display and display error results if applicable
+fn run_simulations(output_cfg: &CliOutputConfig, sim_cfg: SimConfig) {
+    if let Err(e) = run_simulations_inner(output_cfg, sim_cfg) {
+        report_error("Error: Failed to properly output results.", e);
+    }
+}
+
+/// Reproduce simulation results by extracting settings and handing off to the normal `Simulate`
+/// subcommand
+fn reproduce_simulations(cfg: &ReproduceConfig) {
+    match extract_sim_config_from_path(&cfg.input_path) {
         Ok(sim_cfg) => {
             if sim_cfg.seed.is_none() {
                 eprintln!(
@@ -26,31 +50,19 @@ pub fn reproduce_simulations(cfg: &ReproduceConfig) {
                 );
             }
 
-            run_simulations_private(&cfg.output_cfg, &sim_cfg);
+            run_simulations(&cfg.output_cfg, sim_cfg);
         }
         Err(e) => {
-            eprintln!("Error: Failed to read simulation options for reproduction");
-            eprintln!("{:#}", e);
-            eprintln!("Details:\n{:#?}", e);
+            report_error(
+                "Error: Failed to read simulation options for reproduction",
+                e,
+            );
         }
-    }
-}
-
-/// Run the simulations with command line display and display error results if applicable
-///
-/// Exists as a wrapped function to be reused by run_simulations and reproduce_simulations
-fn run_simulations_private(output_cfg: &CLIOutputConfig, sim_cfg: &SimConfig) {
-    if let Err(e) = run_simulations_inner(output_cfg, sim_cfg) {
-        eprintln!("Error: Failed to properly output results.");
-        eprintln!("{:#}", e);
-        eprintln!("Details:\n{:#?}", e);
     }
 }
 
 /// Run the simulations with command line display and pass error results up
-///
-/// To display the error results to the user use `run_simulations_outer`
-fn run_simulations_inner(output_cfg: &CLIOutputConfig, sim_cfg: &SimConfig) -> Result<()> {
+fn run_simulations_inner(output_cfg: &CliOutputConfig, sim_cfg: SimConfig) -> Result<()> {
     // Create the progress bars
     const TARGET_UPDATE_INTERVAL: time::Duration = time::Duration::from_millis(500);
     let mut bar_handler = ProgressBarHandler::new(
@@ -62,41 +74,39 @@ fn run_simulations_inner(output_cfg: &CLIOutputConfig, sim_cfg: &SimConfig) -> R
     );
 
     // Objects which manage the underlying simulations and the outputting of results
-    let tracking_mutations = output_cfg.should_track_mutations();
-    let mut simulation_handler = SimulationHandler::new(sim_cfg, tracking_mutations);
-    let mut output_handler = OutputHandler::new(output_cfg, sim_cfg)?;
+    let mut output_handler = outputter_group_for_cli(output_cfg, &sim_cfg)?;
+    let mut simulation_handler =
+        SimulationHandler::new(sim_cfg, output_cfg.should_track_mutations());
 
-    for r in 1..=sim_cfg.replicates {
-        simulation_handler.start_replicate();
-        // All other lineages will be handled after transferring
-        // Must handle the output for the initial lineages before any transfers
-        output_handler.handle_output_for_transfer(r, 0, simulation_handler.lineages())?;
+    while let Some(state) = simulation_handler.next_state() {
+        let SimulationState {
+            replicate,
+            transfer,
+            end_of_replicate,
+            lineages,
+            mutations,
+        } = state;
 
-        // 1 index because t is day *1* after the first transfer
-        for t in 1..=sim_cfg.transfers {
-            simulation_handler.transfer();
+        output_handler.record_lineages(replicate, transfer, lineages)?;
 
-            output_handler.handle_output_for_transfer(r, t, simulation_handler.lineages())?;
-            if tracking_mutations {
-                // Pruned mutations, no longer being used for sequencing, can be output then
-                // cleared so the population_handler no longer has to keep them in memory
-                output_handler
-                    .output_pruned_mutations(r, simulation_handler.mutations().unwrap())?;
-                simulation_handler.clear_pruned_mutations();
+        if let Some(mutations) = mutations {
+            output_handler.record_pruned_mutations(replicate, mutations)?;
+            if end_of_replicate {
+                output_handler.record_active_mutations(replicate, mutations)?;
             }
-
-            bar_handler.maybe_set_positions([r as u64 - 1, t as u64]);
         }
 
-        // Only *pruned* mutations have been output up until this point
-        // Many mutations will not have been pruned by the end of replicate
-        if tracking_mutations {
-            output_handler
-                .finish_replicate_mutations(r, simulation_handler.mutations().unwrap())?;
-        }
+        bar_handler.maybe_set_positions([replicate as u64 - 1, transfer as u64]);
     }
 
     Ok(())
+}
+
+/// Report an `error` and a `message` to the user
+fn report_error(message: &str, error: Error) {
+    eprintln!("{}", message);
+    eprintln!("{:#}", error);
+    eprintln!("Details:\n{:#?}", error);
 }
 
 /// Get `ProgressBar` with style options and a custom prefix set to use for displaying progress

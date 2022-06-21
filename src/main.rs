@@ -1,15 +1,8 @@
 use structopt::StructOpt;
 
-use steps::{
-    cfg::{Config, Subcommand::*},
-    cli,
-};
+mod cli;
 
 fn main() {
-    let cfg = Config::from_args();
-
-    match cfg.subcommand {
-        Simulate(x) => cli::run_simulations(&x),
-        Reproduce(x) => cli::reproduce_simulations(&x),
-    }
+    let cfg = cli::CliConfig::from_args();
+    cli::run_cli_config(cfg);
 }
