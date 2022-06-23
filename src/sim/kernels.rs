@@ -1,7 +1,10 @@
 //! Performance sensitive and optimized computational kernels for the simulations  
-//! Includes lower-level implementation details of the transfer process  
+//! Includes lower-level implementation details of the transfer process
+
+use std::ops::Mul;
 
 use itertools::izip;
+use slices_dispatch_wide::slices_dispatch_wide;
 
 use super::LineagesData;
 
@@ -11,24 +14,12 @@ use super::LineagesData;
 ///
 /// The length of any vector in `data` will *not* be changed
 pub fn grow_lineages_inplace(data: &mut LineagesData, delta_t: f64) {
-    extern "C" {
-        /// Defined in kernels.c
-        ///
-        /// Explicitly vectorized where AVX2 is available
-        fn grow_lineages_inplace_c(
-            len: cty::size_t,
-            N: *mut cty::c_double,
-            W: *const cty::c_double,
-            delta_t: cty::c_double,
-        );
-    }
+    assert_eq!(data.N.len(), data.W.len());
 
-    // Bounds check now to make sure the C code will be safe
-    let len = data.N.len();
-    assert_eq!(len, data.W.len());
-    unsafe {
-        grow_lineages_inplace_c(len, data.N.as_mut_ptr(), data.W.as_ptr(), delta_t);
-    }
+    let delta_t_scaled = delta_t * 2f64.ln();
+    slices_dispatch_wide!(4, |data.N => original_W mut: f64, data.W => W: f64| {
+        original_W *= W.mul(delta_t_scaled).exp();
+    });
 }
 
 /// Convert a slice of pre-growth population sizes to a slice of population changes
