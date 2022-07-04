@@ -1,6 +1,6 @@
 import fp from "lodash/fp";
 
-import { JSSimulationHandler } from "../../steps_adapter/pkg";
+import { JsSimulationHandler } from "../../steps_adapter/pkg";
 
 import {
   DataCollectionConfig,
@@ -20,35 +20,13 @@ const statNameMap = <const>{
   shannonDiversity: "shannon_diversity",
 };
 
-const paramNameMap = <const>{
-  replicates: "replicates",
-  transfers: "transfers",
-  maxPopSize: "max_pop_size",
-  dilutionFactor: "dilution_factor",
-  markers: "markers",
-  beneficialMutationRate: "beneficial_mutation_rate",
-  neutralMutationRate: "neutral_mutation_rate",
-  deleteriousMutationRate: "deleterious_mutation_rate",
-  mutationRateMutationRate: "mutation_rate_mutation_rate",
-  initialBeneficialMutationSize: "initial_beneficial_mutation_size",
-  deleteriousMutationSizeFactor: "deleterious_mutation_size_factor",
-  mutationRateMutationSizeFactor: "mutation_rate_mutation_size_factor",
-  diminishingReturnsEpistasisStrength: "diminishing_returns_epistasis_strength",
-  seed: "seed",
-};
-
-const extractSimParams = (config: PortalRunConfig) =>
-  fp.mapKeys((key: string) => paramNameMap[key as keyof typeof paramNameMap])(
-    config.simParams
-  );
-
 const yieldToEventLoop = () => new Promise((res) => setTimeout(res, 0));
 
 export class WorkerSimRunner {
   readonly #ctx: SimWorkerCtx;
 
   readonly #config: PortalRunConfig;
-  readonly #handler: JSSimulationHandler;
+  readonly #handler: JsSimulationHandler;
   readonly #enabledStats: (keyof DataCollectionConfig["trackedStatistics"])[];
   readonly #resolution: number;
 
@@ -64,7 +42,7 @@ export class WorkerSimRunner {
   constructor(ctx: SimWorkerCtx, config: PortalRunConfig) {
     this.#ctx = ctx;
     this.#config = config;
-    this.#handler = JSSimulationHandler.new(extractSimParams(config));
+    this.#handler = JsSimulationHandler.new(config);
     this.#enabledStats = Object.entries(config.dataConfig.trackedStatistics)
       .filter(([_, val]) => val)
       .map(
@@ -92,7 +70,7 @@ export class WorkerSimRunner {
 
     while (!this.#paused) {
       if (this.#transfer == 0) {
-        this.#handler.start_replicate();
+        this.#handler.start_replicate(this.#replicate);
         await this.#record();
       }
 
@@ -115,7 +93,11 @@ export class WorkerSimRunner {
   }
 
   async #advanceAndRecord(advanceBy: number) {
-    this.#handler.advance(BigInt(advanceBy));
+    this.#handler.advance_and_record(
+      this.#replicate,
+      this.#transfer,
+      advanceBy
+    );
     this.#transfer += advanceBy;
     await this.#record();
   }
@@ -150,7 +132,10 @@ export class WorkerSimRunner {
 
   async #finalize() {
     await this.#flushAndReceiveData({ force: true });
-    this.#ctx.postMessage({ type: "done" });
+    this.#ctx.postMessage({
+      type: "done",
+      downloadUrl: this.#handler.into_output_object_url(),
+    });
   }
 
   async #flushAndReceiveData({ force }: { force: boolean }) {

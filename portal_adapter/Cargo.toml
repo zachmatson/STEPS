@@ -15,6 +15,6 @@ serde = "1.0"
 wasm-bindgen = { version = "0.2" }
 serde-wasm-bindgen = "0.4.3"
 js-sys = "0.3.57"
-web-sys = { version = "0.3", features = ["Blob", "Url", "console"] }
+web-sys = { version = "0.3", features = ["Blob", "Url"] }
 console_error_panic_hook = "0.1"
 paste = "1.0.6"

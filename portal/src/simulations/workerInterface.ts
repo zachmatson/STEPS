@@ -26,7 +26,7 @@ export type InboundSimWorkerMessage =
 export type OutboundSimWorkerMessage =
   | { type: "ready" }
   | { type: "results"; results: SimResultsFragments }
-  | { type: "done" };
+  | { type: "done"; downloadUrl?: string };
 
 export interface SimWorkerHandle
   extends Omit<Worker, "postMessage" | "onmessage"> {
