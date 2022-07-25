@@ -80,22 +80,22 @@ impl OutputterGroup {
 /// An outputter that can record the data for `LineagesData`
 pub trait LineagesOutputter {
     /// Record the data in `lineages`, at a specific replicate and transfer
-    fn record_lineages(&mut self, r: u32, t: u32, lineages: &LineagesData) -> Result<()>;
+    fn record_lineages(&mut self, replicate: u32, transfer: u32, lineages: &LineagesData) -> Result<()>;
 }
 
 /// And outputter that can record the data for `MutationsData`
 pub trait MutationsOutputter {
     /// Record a single `mutation` at a specific replicate and transfer
-    fn record_mutation(&mut self, r: u32, mutation: &Mutation) -> Result<()>;
+    fn record_mutation(&mut self, replicate: u32, mutation: &Mutation) -> Result<()>;
 }
 
 impl dyn MutationsOutputter {
     /// Record all pruned mutations in some `MutationsData`
     ///
     /// Pruned mutations should be recorded at each transfer to avoid missing any
-    pub fn record_pruned_mutations(&mut self, r: u32, mutations: &MutationsData) -> Result<()> {
+    pub fn record_pruned_mutations(&mut self, replicate: u32, mutations: &MutationsData) -> Result<()> {
         for mutation in &mutations.pruned_muts {
-            self.record_mutation(r, mutation)?;
+            self.record_mutation(replicate, mutation)?;
         }
         Ok(())
     }
@@ -104,9 +104,9 @@ impl dyn MutationsOutputter {
     ///
     /// Active mutations may eventually become pruned, and should probably only be recorded at the
     /// end of a replicate to avoid duplicate recording
-    pub fn record_active_mutations(&mut self, r: u32, mutations: &MutationsData) -> Result<()> {
+    pub fn record_active_mutations(&mut self, replicate: u32, mutations: &MutationsData) -> Result<()> {
         for mutation in mutations.muts.values() {
-            self.record_mutation(r, mutation)?;
+            self.record_mutation(replicate, mutation)?;
         }
         Ok(())
     }
