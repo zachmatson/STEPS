@@ -1,100 +1,73 @@
-use serde::Deserialize;
+#![allow(non_snake_case)]
+
 use wasm_bindgen::prelude::*;
 
 use steps::cfg::{SimConfig, SummaryOutputConfig};
 
-/*
-   Due to current limitations, the TypeScript interface and Rust types defined below it must be
-   manually kept in sync. Assuming this is done, everything else should get caught statically.
-*/
+use create_typescript_interface::create_typescript_interface;
 
-#[wasm_bindgen(typescript_custom_section)]
-const TS_TYPES: &'static str = r#"
-interface JsPortalRunConfig {
-  simParams: {
-    replicates: number;
-    transfers: number;
-    maxPopSize: number;
-    dilutionFactor: number;
-    markers: number;
-    beneficialMutationRate: number;
-    neutralMutationRate: number;
-    deleteriousMutationRate: number;
-    mutationRateMutationRate: number;
-    initialBeneficialMutationSize: number;
-    deleteriousMutationSizeFactor: number;
-    mutationRateMutationSizeFactor: number;
-    diminishingReturnsEpistasisStrength: number;
-    seed: BigInt;
-  };
-  dataConfig: {
-    prepareCSV: boolean;
-    trackedStatistics: {
-      avgW: boolean;
-      marker1Ratio: boolean;
-      stdevW: boolean;
-      maxW: boolean;
-      stdevAccumulatedMuts: boolean;
-      maxAccumulatedMuts: boolean;
-      genotypeCount: boolean;
-      shannonDiversity: boolean;
-    };
-    dataResolution?: number;
-  };
+create_typescript_interface! {
+    PortalRunConfig {
+        simParams: (SimParams, JsSimParams),
+        dataConfig: (DataConfig, JsDataConfig),
+    }
+
+    SimParams {
+        replicates: (u32, number),
+        transfers: (u32, number),
+        maxPopSize: (f64, number),
+        dilutionFactor: (f64, number),
+        markers: (u16, number),
+        beneficialMutationRate: (f64, number),
+        neutralMutationRate: (f64, number),
+        deleteriousMutationRate: (f64, number),
+        mutationRateMutationRate: (f64, number),
+        initialBeneficialMutationSize: (f64, number),
+        deleteriousMutationSizeFactor: (f64, number),
+        mutationRateMutationSizeFactor: (f64, number),
+        diminishingReturnsEpistasisStrength: (f64, number),
+        seed: (u64, BigInt),
+    }
+
+    DataConfig {
+        prepareCSV: (bool, boolean),
+        trackedStatistics: (TrackedStatistics, JsTrackedStatistics),
+        dataResolution: (u32, number),
+    }
+
+    TrackedStatistics {
+        avgW: (bool, boolean),
+        marker1Ratio: (bool, boolean),
+        stdevW: (bool, boolean),
+        maxW: (bool, boolean),
+        stdevAccumulatedMuts: (bool, boolean),
+        maxAccumulatedMuts: (bool, boolean),
+        genotypeCount: (bool, boolean),
+        shannonDiversity: (bool, boolean),
+    }
+
+    SimDataPoint {
+        generation: (f64, number),
+        avgW?: (f64, number),
+        marker1Ratio?: (f64, number),
+        stdevW?: (f64, number),
+        maxW?: (f64, number),
+        stdevAccumulatedMuts?: (f64, number),
+        maxAccumulatedMuts?: (u32, number),
+        genotypeCount?: (usize, number),
+        shannonDiversity?: (f64, number),
+    }
+
+    SimResultsFragment {
+        replicate: (u32, number),
+        points: (Vec<SimDataPoint>, JsSimDataPoint[])
+    }
 }
-"#;
 
 #[wasm_bindgen]
 extern "C" {
-    #[wasm_bindgen(typescript_type = "JsPortalRunConfig")]
-    pub type JsPortalRunConfig;
-}
-
-#[allow(non_snake_case)]
-#[derive(Deserialize)]
-pub struct SimParams {
-    pub replicates: u32,
-    pub transfers: u32,
-    pub maxPopSize: f64,
-    pub dilutionFactor: f64,
-    pub markers: u16,
-    pub beneficialMutationRate: f64,
-    pub neutralMutationRate: f64,
-    pub deleteriousMutationRate: f64,
-    pub mutationRateMutationRate: f64,
-    pub initialBeneficialMutationSize: f64,
-    pub deleteriousMutationSizeFactor: f64,
-    pub mutationRateMutationSizeFactor: f64,
-    pub diminishingReturnsEpistasisStrength: f64,
-    pub seed: u64,
-}
-
-#[allow(non_snake_case)]
-#[derive(Deserialize)]
-pub struct TrackedStatistics {
-    pub avgW: bool,
-    pub marker1Ratio: bool,
-    pub stdevW: bool,
-    pub maxW: bool,
-    pub stdevAccumulatedMuts: bool,
-    pub maxAccumulatedMuts: bool,
-    pub genotypeCount: bool,
-    pub shannonDiversity: bool,
-}
-
-#[allow(non_snake_case)]
-#[derive(Deserialize)]
-pub struct DataConfig {
-    pub prepareCSV: bool,
-    pub trackedStatistics: TrackedStatistics,
-    pub dataResolution: Option<u32>,
-}
-
-#[allow(non_snake_case)]
-#[derive(Deserialize)]
-pub struct PortalRunConfig {
-    pub simParams: SimParams,
-    pub dataConfig: DataConfig,
+    #[wasm_bindgen(typescript_type = "JsSimResultsFragment[]")]
+    pub type JsSimResultsFragments;
 }
 
 pub fn extract_sim_config(cfg: &PortalRunConfig) -> SimConfig {
@@ -120,6 +93,7 @@ pub fn extract_sim_config(cfg: &PortalRunConfig) -> SimConfig {
 pub fn extract_summary_output_config(cfg: &PortalRunConfig) -> SummaryOutputConfig {
     let tracked_statistics = &cfg.dataConfig.trackedStatistics;
     SummaryOutputConfig {
+        avg_W: tracked_statistics.avgW,
         marker_1_ratio: tracked_statistics.marker1Ratio,
         stdev_W: tracked_statistics.stdevW,
         max_W: tracked_statistics.maxW,

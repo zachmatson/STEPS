@@ -10,8 +10,8 @@ export type SafeParseResult<T> =
     };
 
 const safeParse =
-  (parser: (value: string) => string) =>
-  (value: string): SafeParseResult<any> => {
+  <T>(parser: (value: string) => T) =>
+  (value: string): SafeParseResult<T> => {
     try {
       return { success: true, data: parser(value) };
     } catch (e) {

@@ -1,22 +1,17 @@
 use std::ops::Deref;
 
-use paste::paste;
 use wasm_bindgen::prelude::*;
 
-use steps::io::SummaryOutputter;
-use steps::sim::*;
+use steps::io::{LineagesOutputter, SummaryOutputter};
+use steps::sim::{summarize, LineagesData, SimulationHandler, SimulationState};
 
 mod types;
 
 use types::*;
 
-// TODO:
-//     Make sure Avg W output is controllable
-//     Requires STEPS changes
-//     Bigger refactor -> Output handlers and Sim handler are combined into a big handler with callbacks
-
 #[wasm_bindgen]
 pub struct JsSimulationHandler {
+    cfg: PortalRunConfig,
     inner: SimulationHandler,
     outputter: Option<Box<SummaryOutputter<Vec<u8>>>>,
 }
@@ -24,43 +19,75 @@ pub struct JsSimulationHandler {
 #[wasm_bindgen]
 impl JsSimulationHandler {
     pub fn new(cfg_js: JsPortalRunConfig) -> Self {
+        console_error_panic_hook::set_once();
         let cfg: PortalRunConfig =
             serde_wasm_bindgen::from_value(cfg_js.deref().to_owned()).unwrap();
         let sim_cfg = extract_sim_config(&cfg);
 
         Self {
-            inner: SimulationHandler::new(&sim_cfg, false),
-            outputter: if cfg.dataConfig.prepareCSV {
-                Some(Box::new(
+            outputter: match cfg.dataConfig.prepareCSV {
+                true => Some(Box::new(
                     SummaryOutputter::new(
                         Vec::new(),
                         extract_summary_output_config(&cfg),
                         &sim_cfg,
                     )
-                        .unwrap(),
-                ))
-            } else {
-                None
+                    .unwrap(),
+                )),
+                false => None,
             },
+            inner: SimulationHandler::new(sim_cfg, false),
+            cfg,
         }
     }
 
-    pub fn start_replicate(&mut self, replicate: u32) {
-        self.inner.start_replicate();
-        self.record(replicate, 0);
-    }
+    pub fn next_fragment(&mut self, max_time_ms: u32) -> Option<JsSimResultsFragments> {
+        let end_at = js_sys::Date::now() + max_time_ms as f64;
 
-    pub fn advance_and_record(&mut self, replicate: u32, start_transfer: u32, step: u32) {
-        for _ in 0..step {
-            self.inner.transfer();
+        if self.inner.is_finished() {
+            return None;
         }
-        self.record(replicate, start_transfer + step);
-    }
 
-    fn record(&mut self, replicate: u32, transfer: u32) {
-        if let Some(outputter) = &mut self.outputter {
-            outputter.record_lineages(replicate, transfer, self.inner.lineages()).unwrap();
+        let resolution = self.cfg.dataConfig.dataResolution;
+        let mut results: Vec<SimResultsFragment> = Vec::new();
+
+        while js_sys::Date::now() < end_at {
+            if let Some(state) = self.inner.next_state() {
+                if state.end_of_replicate || state.transfer % resolution == 0 {
+                    let SimulationState {
+                        replicate,
+                        transfer,
+                        lineages,
+                        ..
+                    } = state;
+
+                    let fragment = match results.iter_mut().last() {
+                        Some(fragment) if fragment.replicate == replicate => fragment,
+                        _ => {
+                            results.push(SimResultsFragment {
+                                replicate,
+                                points: Vec::new(),
+                            });
+                            results.iter_mut().last().unwrap()
+                        }
+                    };
+
+                    fragment.points.push(make_data_point(
+                        transfer_to_generation(transfer, self.cfg.simParams.dilutionFactor),
+                        &self.cfg.dataConfig.trackedStatistics,
+                        lineages,
+                    ));
+
+                    if let Some(outputter) = &mut self.outputter {
+                        outputter
+                            .record_lineages(replicate, transfer, lineages)
+                            .unwrap();
+                    }
+                }
+            }
         }
+
+        Some(JsValue::from_serde(&results).unwrap().into())
     }
 
     pub fn into_output_object_url(self) -> Option<String> {
@@ -72,33 +99,38 @@ impl JsSimulationHandler {
         let blob = web_sys::Blob::new_with_u8_array_sequence(&js_sys::Array::of1(&buffer)).ok()?;
         web_sys::Url::create_object_url_with_blob(&blob).ok()
     }
+}
 
-    #[allow(non_snake_case)]
-    pub fn check_avg_W(&mut self) -> f64 {
-        summarize::sum_N_and_avg_W(self.inner.lineages()).1
+fn transfer_to_generation(transfer: u32, dilution_factor: f64) -> f64 {
+    transfer as f64 * dilution_factor.log2()
+}
+
+macro_rules! impl_make_data_point {
+    ($(($config_name:ident, $fn_name:ident)),*) => {
+        fn make_data_point(
+            generation: f64,
+            tracked_statistics: &TrackedStatistics,
+            lineages: &LineagesData,
+        ) -> SimDataPoint {
+            SimDataPoint {
+                generation,
+                $(
+                    $config_name: tracked_statistics
+                        .$config_name
+                        .then(|| summarize::$fn_name(lineages))
+                ),*
+            }
+        }
     }
 }
 
-macro_rules! make_stat_check_functions {
-    ($(($stat:ident, $ty:ident)),+) => {$(
-        paste! {
-            #[allow(non_snake_case)]
-            #[wasm_bindgen]
-            impl JsSimulationHandler {
-                pub fn [<check_ $stat>](&mut self) -> $ty {
-                    summarize::$stat(self.inner.lineages())
-                }
-            }
-        }
-    )+}
-}
-
-make_stat_check_functions! {
-    (marker_1_ratio, f64),
-    (stdev_W, f64),
-    (max_W, f64),
-    (stdev_accumulated_muts, f64),
-    (max_accumulated_muts, u32),
-    (genotype_count, usize),
-    (shannon_diversity, f64)
+impl_make_data_point! {
+    (avgW, avg_W),
+    (marker1Ratio, marker_1_ratio),
+    (stdevW, stdev_W),
+    (maxW, max_W),
+    (stdevAccumulatedMuts, stdev_accumulated_muts),
+    (maxAccumulatedMuts, max_accumulated_muts),
+    (genotypeCount, genotype_count),
+    (shannonDiversity, shannon_diversity)
 }

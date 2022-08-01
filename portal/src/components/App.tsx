@@ -16,7 +16,7 @@ import {
 } from "../config/PortalRunConfig";
 import { ResultsView } from "./results/ResultsView";
 import { simChartDatasetsObservable } from "../charts/simChartDatasetsObservable";
-import { SimWorkerLink } from "../simulations/SimWorkerLink";
+import { SimLink } from "../simulations/SimLink";
 
 type AppState = {
   status: SimStatus;
@@ -29,8 +29,8 @@ type AppState = {
 
 export class App extends React.Component<{}, AppState> {
   formRef = React.createRef<FormHandle>();
-  simWorkerLink = new SimWorkerLink();
-  chartDatasets$ = simChartDatasetsObservable(this.simWorkerLink.observables());
+  simLink = new SimLink();
+  chartDatasets$ = simChartDatasetsObservable(this.simLink.observables());
 
   constructor(props: {}) {
     super(props);
@@ -44,7 +44,7 @@ export class App extends React.Component<{}, AppState> {
       activeConfigStringy = suppliedConfig.data;
     }
 
-    this.simWorkerLink
+    this.simLink
       .observables()
       .done$.subscribe(() => this.setState({ status: "finished" }));
 
@@ -73,7 +73,7 @@ export class App extends React.Component<{}, AppState> {
     if (!configStringy) return;
     const config = portalRunConfigSchema.parse(configStringy);
 
-    this.simWorkerLink.startOrRestart(config);
+    this.simLink.startOrRestart(config);
 
     this.setState(
       {
@@ -94,14 +94,14 @@ export class App extends React.Component<{}, AppState> {
 
   pauseSim = () => {
     if (this.state.status == "running") {
-      this.simWorkerLink?.pause();
+      this.simLink?.pause();
       this.setState({ status: "paused" });
     }
   };
 
   resumeSim = () => {
     if (this.state.status == "paused") {
-      this.simWorkerLink?.resume();
+      this.simLink?.resume();
       this.setState({ status: "running" });
     }
   };
