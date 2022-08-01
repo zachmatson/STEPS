@@ -114,6 +114,15 @@ impl SimulationHandler {
         self.current_state()
     }
 
+    /// Whether the simulations are finished
+    ///
+    /// This function returning `true` means `next_state` will return `None`
+    pub fn is_finished(&self) -> bool {
+        // Number of transfers doesn't matter if replicates is 0
+        self.replicate == self.cfg.inner.replicates
+            && (self.replicate == 0 || self.transfer == self.cfg.inner.transfers)
+    }
+
     /// Initialization that must be performed at the start of each replicate
     fn start_replicate(&mut self) {
         self.mutations = self.mutations.as_ref().map(|_| MutationsData::new());
