@@ -1,5 +1,3 @@
-import fp from "lodash/fp";
-
 import { JsSimulationHandler } from "../../steps_adapter/pkg";
 
 import { PortalRunConfig } from "../config/PortalRunConfig";
@@ -15,15 +13,23 @@ export class WorkerSimRunner {
   #paused = false;
 
   constructor(ctx: SimWorkerCtx, config: PortalRunConfig) {
-    // Data resolution property required for WASM side
-    config = fp.cloneDeep(config);
-    config.dataConfig.dataResolution ??= Math.max(
-      1,
-      Math.floor(config.simParams.transfers / 100)
-    );
+    // Data resolution property required for WASM side, but it may be missing
+    //
+    // This destructuring and restructuring scheme is used to clone the object,
+    // but is also necessary for convincing TypeScript that the value won't be
+    // undefined
+    const adaptedConfig = {
+      ...config,
+      dataConfig: {
+        ...config.dataConfig,
+        dataResolution:
+          config.dataConfig.dataResolution ??
+          Math.max(1, Math.floor(config.simParams.transfers / 100)),
+      },
+    };
 
     this.#ctx = ctx;
-    this.#handler = JsSimulationHandler.new(config);
+    this.#handler = JsSimulationHandler.new(adaptedConfig);
   }
 
   pause() {
@@ -48,7 +54,7 @@ export class WorkerSimRunner {
       } else {
         this.#ctx.postMessage({
           type: "done",
-          downloadUrl: this.#handler.into_output_object_url(),
+          outcome: { csvDownloadUrl: this.#handler.into_output_object_url() },
         });
         return;
       }

@@ -1,10 +1,6 @@
 import { ChartDataset } from "chart.js";
 import fp from "lodash/fp";
-
-import {
-  SimDataPoint,
-  SimResultsFragments,
-} from "../simulations/workerInterface";
+import { SimDataPoint, SimResultsFragments } from "../simulations/simTypes";
 
 export type SimChartDataPoint = {
   linear: SimDataPoint;

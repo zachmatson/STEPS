@@ -10,11 +10,11 @@ crate-type = ["cdylib"]
 lto = true
 
 [dependencies]
+create_typescript_interface = { path = "./create_typescript_interface" }
 steps = { path = "../../steps" }
 js-sys = "0.3.57"
 web-sys = { version = "0.3", features = ["Blob", "Url"] }
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 console_error_panic_hook = "0.1"
-create_typescript_interface = { path = "./create_typescript_interface" }
 serde = "1.0"
 serde-wasm-bindgen = "0.4.3"

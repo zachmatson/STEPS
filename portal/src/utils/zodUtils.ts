@@ -25,7 +25,7 @@ type ZSchemaOptions<T extends z.ZodType> = {
   defaultValue?: z.infer<T> | (() => z.infer<T>);
 };
 
-const zNumberFactory =
+const zNumberFactoryFactory =
   <T extends z.ZodType>(
     invalidMsg: string,
     postTransform: (schema: z.ZodNumber, msg: string) => T,
@@ -50,22 +50,22 @@ const zNumberFactory =
     return z.preprocess(numParser(preParseTest), innerResult);
   };
 
-export const zPosNumber = zNumberFactory(
+export const zPosNumber = zNumberFactoryFactory(
   "Field should be a positive number",
   (schema, msg) => schema.positive(msg)
 );
 
-export const zNonNegNumber = zNumberFactory(
+export const zNonNegNumber = zNumberFactoryFactory(
   "Field should be a non-negative number",
   (schema, msg) => schema.nonnegative(msg)
 );
 
-export const zGe1Number = zNumberFactory(
+export const zGe1Number = zNumberFactoryFactory(
   "Field should be a number and at least 1",
   (schema, msg) => schema.min(1, msg)
 );
 
-export const zPosInt = zNumberFactory(
+export const zPosInt = zNumberFactoryFactory(
   "Field should be a positive integer",
   (schema, msg) => schema.positive(msg).int(msg),
   /^\d+$/
@@ -82,7 +82,7 @@ export const zSeed = z.preprocess(
       message: shouldBeU64ErrorMessage,
     })
     .default(() => BigInt(Math.floor(Math.random() * 2 ** 64 - 1)))
-);
+) as unknown as z.ZodDefault<z.ZodEffects<z.ZodBigInt, bigint, bigint>>;
 
 export const zBoolean = z.boolean({
   required_error: requiredErrorMessage,

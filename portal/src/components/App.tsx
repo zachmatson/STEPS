@@ -25,6 +25,7 @@ type AppState = {
     stringy: PortalRunConfigStringy;
   };
   configIsDirty: boolean;
+  csvDownloadUrl: string | null;
 };
 
 export class App extends React.Component<{}, AppState> {
@@ -44,9 +45,12 @@ export class App extends React.Component<{}, AppState> {
       activeConfigStringy = suppliedConfig.data;
     }
 
-    this.simLink
-      .observables()
-      .done$.subscribe(() => this.setState({ status: "finished" }));
+    this.simLink.observables().outcome$.subscribe((outcome) =>
+      this.setState({
+        status: "finished",
+        csvDownloadUrl: outcome.csvDownloadUrl ?? null,
+      })
+    );
 
     this.state = {
       status: "notStarted",
@@ -55,6 +59,7 @@ export class App extends React.Component<{}, AppState> {
         stringy: activeConfigStringy,
       },
       configIsDirty: false,
+      csvDownloadUrl: null,
     };
   }
 
@@ -83,6 +88,7 @@ export class App extends React.Component<{}, AppState> {
           stringy: configStringy,
         },
         configIsDirty: false,
+        csvDownloadUrl: null,
       },
       () => {
         this.formRef.current?.reset(configStringy, {
@@ -132,6 +138,7 @@ export class App extends React.Component<{}, AppState> {
             status={this.state.status}
             configs={this.state.activeConfigs}
             configIsDirty={this.state.configIsDirty}
+            csvDownloadUrl={this.state.csvDownloadUrl ?? undefined}
             startOrRestartSim={this.triggerFormSubmit}
             pauseSim={this.pauseSim}
             resumeSim={this.resumeSim}

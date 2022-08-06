@@ -8,8 +8,8 @@ import {
   scan,
   switchMap,
 } from "rxjs";
+import { SimResultsFragments } from "../simulations/simTypes";
 
-import { SimResultsFragments } from "../simulations/workerInterface";
 import { toSubscribedSubject } from "../utils/rxjsUtils";
 import {
   mergeFragmentsIntoDatasetsInPlace,

@@ -2,8 +2,29 @@ use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
 use syn::{braced, parenthesized, Error, Ident, Token, Type};
 
-use crate::{InterfaceTypeDefinition, InterfaceTypeDefinitions, InterfaceTypeField};
+/// Series of type definitions
+pub struct InterfaceTypeDefinitions {
+    pub definitions: Vec<InterfaceTypeDefinition>,
+}
 
+/// Definition for a single interface type which will have corresponding types generated in Rust
+/// and TypeScript, and an extern type created in Rust which translates to the proper type in
+/// wasm bindgen
+pub struct InterfaceTypeDefinition {
+    pub name_rust: Ident,
+    pub name_js: Option<Ident>,
+    pub fields: Vec<InterfaceTypeField>,
+}
+
+/// Single field of an interface type definition
+pub struct InterfaceTypeField {
+    pub name: Ident,
+    pub type_rust: Type,
+    pub type_js: proc_macro2::TokenStream,
+    pub optional: bool,
+}
+
+/// Error message for issues parsing the struct name(s)
 const STRUCT_NAME_ERROR_MSG: &'static str =
     "Expected either the format `RustName` or `RustName, JavaScriptName`";
 
@@ -62,6 +83,7 @@ impl Parse for InterfaceTypeField {
     }
 }
 
+/// Parse series of interface type fields inside braces
 fn extract_interface_type_fields(input: ParseStream) -> Result<Vec<InterfaceTypeField>> {
     let inner;
     braced!(inner in input);

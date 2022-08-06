@@ -79,7 +79,10 @@ export const dataCollectionConfigSchema = z.object({
     genotypeCount: zBoolean,
     shannonDiversity: zBoolean,
   }),
-  dataResolution: zPosInt({ optional: true }),
+  // TODO: See if we can use fancier type signatures in the underlying methods instead of this
+  dataResolution: zPosInt({
+    optional: true,
+  }) as unknown as z.ZodOptional<z.ZodNumber>,
 });
 
 export type DataCollectionConfig = z.infer<typeof dataCollectionConfigSchema>;

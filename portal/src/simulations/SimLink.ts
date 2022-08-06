@@ -1,21 +1,22 @@
-import { SimResultsFragments, SimWorkerHandle } from "./workerInterface";
+import { SimOutcome, SimResultsFragments } from "./simTypes";
+import { SimWorkerHandle } from "./workerInterface";
 import { PortalRunConfig } from "../config/PortalRunConfig";
 import { Observable, Subject } from "rxjs";
 
 export interface SimObservables {
   start$: Observable<PortalRunConfig>;
   results$: Observable<SimResultsFragments>;
-  done$: Observable<void>;
+  outcome$: Observable<SimOutcome>;
 }
 
 export class SimLink {
   #start$: Subject<PortalRunConfig> = new Subject();
   #results$: Subject<SimResultsFragments> = new Subject();
-  #done$: Subject<void> = new Subject();
+  #outcome$: Subject<SimOutcome> = new Subject();
   #publicObservables: SimObservables = {
     start$: this.#start$.asObservable(),
     results$: this.#results$.asObservable(),
-    done$: this.#done$.asObservable(),
+    outcome$: this.#outcome$.asObservable(),
   };
 
   #workerHandle: SimWorkerHandle | undefined;
@@ -35,7 +36,7 @@ export class SimLink {
           this.#results$.next(data.results);
           break;
         case "done":
-          this.#done$.next();
+          this.#outcome$.next(data.outcome);
           break;
       }
     };
@@ -51,7 +52,7 @@ export class SimLink {
     this.#workerHandle?.postMessage({ type: "resume" });
   }
 
-  observables() {
+  observables(): SimObservables {
     return this.#publicObservables;
   }
 }

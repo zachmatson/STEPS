@@ -1,40 +1,23 @@
-import {
-  DataCollectionConfig,
-  PortalRunConfig,
-} from "../config/PortalRunConfig";
+import { PortalRunConfig } from "../config/PortalRunConfig";
+import { SimOutcome, SimResultsFragments } from "./simTypes";
 
-export type SimDataPoint = {
-  generation: number;
-} & {
-  [key in keyof DataCollectionConfig["trackedStatistics"]]?: number;
-};
-
-export type SimDataPoints = SimDataPoint[];
-
-export type SimResultsFragment = {
-  replicate: number;
-  points: SimDataPoints;
-};
-
-export type SimResultsFragments = SimResultsFragment[];
-
-export type InboundSimWorkerMessage =
+export type SimWorkerInboundMessage =
   | { type: "start"; config: PortalRunConfig }
   | { type: "pause" }
   | { type: "resume" };
 
-export type OutboundSimWorkerMessage =
+export type SimWorkerOutboundMessage =
   | { type: "ready" }
   | { type: "results"; results: SimResultsFragments }
-  | { type: "done"; downloadUrl?: string };
+  | { type: "done"; outcome: SimOutcome };
 
 export interface SimWorkerHandle
   extends Omit<Worker, "postMessage" | "onmessage"> {
-  onmessage: (message: { data: OutboundSimWorkerMessage }) => void;
-  postMessage: (message: InboundSimWorkerMessage) => void;
+  onmessage: (message: { data: SimWorkerOutboundMessage }) => void;
+  postMessage: (message: SimWorkerInboundMessage) => void;
 }
 
 export interface SimWorkerCtx {
-  onmessage: (message: { data: InboundSimWorkerMessage }) => void;
-  postMessage: (message: OutboundSimWorkerMessage) => void;
+  onmessage: (message: { data: SimWorkerInboundMessage }) => void;
+  postMessage: (message: SimWorkerOutboundMessage) => void;
 }

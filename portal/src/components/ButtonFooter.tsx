@@ -19,6 +19,7 @@ export type ButtonFooterProps = {
     stringy: PortalRunConfigStringy;
   };
   configIsDirty: boolean;
+  csvDownloadUrl?: string;
   startOrRestartSim: () => void;
   pauseSim: () => void;
   resumeSim: () => void;
@@ -28,6 +29,7 @@ export const ButtonFooter = ({
   status,
   configs,
   configIsDirty,
+  csvDownloadUrl,
   startOrRestartSim,
   pauseSim,
   resumeSim,
@@ -80,9 +82,11 @@ export const ButtonFooter = ({
       </div>
 
       <div className="flex items-center flex-wrap gap-4">
-        <button disabled>
-          <icons.Download className="h-10" />
-        </button>
+        <a href={csvDownloadUrl} download="steps_results.csv">
+          <button disabled={!csvDownloadUrl}>
+            <icons.Download className="h-10" />
+          </button>
+        </a>
         <button disabled={!started} ref={copySeedRef}>
           <icons.LinkSeed className="h-10" />
         </button>

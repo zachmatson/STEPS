@@ -23,7 +23,7 @@ import {
   PortalRunConfig,
 } from "../../config/PortalRunConfig";
 import { statFormattedNames } from "../../config/statNameMap";
-import { transfersToGenerations } from "../../simulations/transfersToGenerations";
+import { transfersToGenerations } from "../../simulations/simUtils";
 
 ChartJSChart.register(
   LinearScale,

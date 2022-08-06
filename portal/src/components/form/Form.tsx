@@ -9,6 +9,7 @@ import {
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import fp from "lodash/fp";
+import { useMatchRefsToVals } from "../../utils/reactUtils";
 
 import { Collapsible } from "../general/Collapsible";
 import { InfoBox } from "../general/InfoBox";
@@ -23,7 +24,6 @@ import {
   PortalRunConfigStringy,
 } from "../../config/PortalRunConfig";
 import { TextInputGroup } from "./TextInputGroup";
-import { useMatchRefsToVals } from "../../utils/useMatchRefsToVals";
 import { DataCollectionGroup } from "./DataCollectionGroup";
 
 export type FormProps = {
