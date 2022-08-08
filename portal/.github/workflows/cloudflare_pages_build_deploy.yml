@@ -19,6 +19,15 @@ jobs:
           target: wasm32-unknown-unknown
           default: true
       - uses: jetli/wasm-pack-action@v0.3.0
+      # Give cargo access to the STEPS-Development repo
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.STEPS_DEVELOPMENT_GIT_CREDENTIALS }}
       - run: |
           npm ci
           npm run build
+      # - uses: cloudflare/wrangler-action@2.0.0
+      #   with:
+      #     apiToken: ${{ secrets.CF_API_TOKEN }}
+      #     accountId: ${{ secrets.CF_ACCOUNT_ID }}
+      #     command: pages publish --project-name="steps-portal"
