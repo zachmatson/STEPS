@@ -11,7 +11,7 @@ lto = true
 
 [dependencies]
 create_typescript_interface = { path = "./create_typescript_interface" }
-steps = { git = "https://github.com/zachmatson/STEPS-Development" }
+steps = { git = "ssh://git@github.com:zachmatson/STEPS-Development.git" }
 js-sys = "0.3.57"
 web-sys = { version = "0.3", features = ["Blob", "Url"] }
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
