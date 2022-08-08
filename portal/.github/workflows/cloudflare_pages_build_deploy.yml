@@ -22,7 +22,7 @@ jobs:
       # Give cargo access to the STEPS-Development repo
       - uses: webfactory/ssh-agent@v0.5.4
         with:
-          ssh-private-key: ${{ secrets.STEPS_DEVELOPMENT_GIT_CREDENTIALS }}
+          ssh-private-key: ${{ secrets.STEPS_DEVELOPMENT_GIT_PRIVATE_KEY }}
       - run: |
           npm ci
           npm run build
