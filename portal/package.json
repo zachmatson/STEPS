@@ -10,7 +10,7 @@
   "dependencies": {
     "@hookform/resolvers": "^2.8.9",
     "chart.js": "^3.7.1",
-    "clipboard": "^2.0.11",
+    "clipboardy": "^3.0.0",
     "js-base64": "^3.7.2",
     "lodash": "^4.17.21",
     "npm": "^8.19.1",

@@ -1,10 +1,11 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback } from "react";
 
-import ClipboardJS from "clipboard";
 import fp from "lodash/fp";
 import { encodeConfigInURL } from "../config/configEncoding";
 
 import { Button } from "./general/Button";
+import { CopyToClipboardButton } from "./general/CopyToClipboardButton";
+import { Tooltip } from "./general/Tooltip";
 import * as icons from "./icons/Icons";
 import {
   SimStatus,
@@ -38,26 +39,16 @@ export const ButtonFooter = ({
   const running = status == "running";
   const paused = status == "paused";
 
-  const copySeedRef = useRef<HTMLButtonElement>(null);
-  const copyNoSeedRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (copySeedRef.current && copyNoSeedRef.current) {
-      new ClipboardJS(copySeedRef.current, {
-        text: () => {
-          const seedConfig = fp.cloneDeep(configs.stringy);
-          seedConfig.simParams.seed = configs.numeric.simParams.seed.toString();
-          return encodeConfigInURL(seedConfig);
-        },
-      });
-      new ClipboardJS(copyNoSeedRef.current, {
-        text: () => {
-          const seedlessConfig = fp.cloneDeep(configs.stringy);
-          seedlessConfig.simParams.seed = "";
-          return encodeConfigInURL(seedlessConfig);
-        },
-      });
-    }
-  }, [configs, copySeedRef.current, copyNoSeedRef.current]);
+  const copySeedGetText = useCallback(() => {
+    const seedConfig = fp.cloneDeep(configs.stringy);
+    seedConfig.simParams.seed = configs.numeric.simParams.seed.toString();
+    return encodeConfigInURL(seedConfig);
+  }, [configs]);
+  const copyNoSeedGetText = useCallback(() => {
+    const seedlessConfig = fp.cloneDeep(configs.stringy);
+    seedlessConfig.simParams.seed = "";
+    return encodeConfigInURL(seedlessConfig);
+  }, [configs]);
 
   return (
     <div className="flex justify-between flex-wrap gap-4 p-2 lg:py-4 border-gray-300 border-t-2">
@@ -82,17 +73,35 @@ export const ButtonFooter = ({
       </div>
 
       <div className="flex items-center flex-wrap gap-4">
-        <a href={csvDownloadUrl} download="steps_results.csv">
-          <button disabled={!csvDownloadUrl}>
-            <icons.Download className="h-10" />
-          </button>
-        </a>
-        <button disabled={!started} ref={copySeedRef}>
+        <Tooltip
+          text={
+            !!csvDownloadUrl
+              ? "Download CSV"
+              : configs.numeric.dataConfig.prepareCSV
+              ? "CSV download available after simulations complete"
+              : "CSV download not enabled"
+          }
+        >
+          <a href={csvDownloadUrl} download="steps_results.csv">
+            <button disabled={!csvDownloadUrl}>
+              <icons.Download className="h-10" />
+            </button>
+          </a>
+        </Tooltip>
+        <CopyToClipboardButton
+          tooltipDescription="Copy link with seed"
+          getText={copySeedGetText}
+          disabled={!started}
+        >
           <icons.LinkSeed className="h-10" />
-        </button>
-        <button disabled={!started} ref={copyNoSeedRef}>
+        </CopyToClipboardButton>
+        <CopyToClipboardButton
+          tooltipDescription="Copy link without seed"
+          getText={copyNoSeedGetText}
+          disabled={!started}
+        >
           <icons.LinkNoSeed className="h-10" />
-        </button>
+        </CopyToClipboardButton>
       </div>
     </div>
   );

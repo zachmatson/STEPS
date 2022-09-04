@@ -20,13 +20,6 @@ export type ResultsViewProps = {
   dataObservable: Observable<SimChartDatasets>;
 };
 
-/*
-    Idea for the API of SortableMappedList:
-      Take a sorted list as input via controlled component pattern
-      Take comprehensive list of elements as another input
-      Use some reconciler strategy
- */
-
 export const ResultsView = ({ config, dataObservable }: ResultsViewProps) => {
   // TODO: Move this state up into the app to save it in the URL
   const [scaleConfig, setScaleConfig] = useState(() =>
