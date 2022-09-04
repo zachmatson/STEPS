@@ -5,7 +5,6 @@ import {
   LinearScale,
   LineController,
   LineElement,
-  LogarithmicScale,
   PointElement,
   Title,
   Tooltip,
@@ -31,8 +30,7 @@ ChartJSChart.register(
   PointElement,
   LineElement,
   Tooltip,
-  Title,
-  LogarithmicScale
+  Title
 );
 
 export type ChartProps = {
@@ -56,8 +54,7 @@ export class Chart extends React.PureComponent<ChartProps> {
   }
 
   componentDidMount() {
-    this.refreshChart();
-    this.subscribeToData();
+    this.componentDidUpdate();
   }
 
   componentWillUnmount() {
