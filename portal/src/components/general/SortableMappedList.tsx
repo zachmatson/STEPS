@@ -1,16 +1,32 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 import { ReactSortable, ItemInterface } from "react-sortablejs";
+import { v4 as uuidv4 } from "uuid";
+import fp from "lodash/fp";
+
+export type SortableMappedListRenderInput = {
+  key: string;
+  handleClass?: string;
+};
 
 export type SortableMappedListProps = {
   keys: string[];
-  renderKey: (key: string) => React.ReactNode;
+  handle?: boolean | string;
+  children: (key: SortableMappedListRenderInput) => React.ReactNode;
 };
 
 export const SortabbleMappedList = ({
   keys,
-  renderKey,
+  handle,
+  children: render,
 }: SortableMappedListProps) => {
+  const handleClass = useMemo<string | undefined>(
+    () => (fp.isString(handle) || handle === undefined ? handle : uuidv4()),
+    [handle]
+  );
+
+  console.log(handleClass);
+
   const [list, setList] = useState<ItemInterface[]>([]);
 
   // Handle changes in keys
@@ -19,8 +35,8 @@ export const SortabbleMappedList = ({
   }, [keys]);
 
   return (
-    <ReactSortable list={list} setList={setList}>
-      {list.map((item) => renderKey(item.id as string))}
+    <ReactSortable list={list} setList={setList} handle={`.${handleClass}`}>
+      {list.map((item) => render({ key: item.id as string, handleClass }))}
     </ReactSortable>
   );
 };

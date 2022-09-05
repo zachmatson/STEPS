@@ -21,6 +21,7 @@
     "reactjs-popup": "^2.0.5",
     "rxjs": "^7.5.5",
     "sortablejs": "^1.15.0",
+    "uuid": "^8.3.2",
     "zod": "^3.16.0"
   },
   "devDependencies": {
@@ -33,6 +34,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/sortablejs": "^1.13.0",
+    "@types/uuid": "^8.3.4",
     "@typescript-eslint/eslint-plugin": "^5.7.0",
     "@typescript-eslint/parser": "^5.7.0",
     "@wasm-tool/wasm-pack-plugin": "^1.6.0",

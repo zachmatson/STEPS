@@ -13,8 +13,9 @@ export type CollapsibleProps = {
   defaultExpanded?: boolean;
   scrollIntoView?: boolean;
   problem?: boolean;
-  children?: React.ReactNode;
   settingsIcon?: React.ReactElement;
+  dragHandleClass?: string;
+  children?: React.ReactNode;
 };
 
 export const Collapsible = ({
@@ -54,6 +55,11 @@ export const Collapsible = ({
                     ${isOpen ? "bg-gray-300" : ""}`}
         onClick={onClick}
       >
+        {props.dragHandleClass && (
+          <button className={`${props.dragHandleClass} h-full`}>
+            <icons.DragHandle className="h-5" />
+          </button>
+        )}
         <button
           type="button"
           className="w-full h-full py-2 flex justify-start items-center select-none text-md"

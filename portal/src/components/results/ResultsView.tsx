@@ -39,11 +39,9 @@ export const ResultsView = ({ config, dataObservable }: ResultsViewProps) => {
   )(config.dataConfig.trackedStatistics);
 
   return (
-    <SortabbleMappedList
-      keys={enabledStats}
-      renderKey={(statUntyped) => {
-        const stat =
-          statUntyped as keyof DataCollectionConfig["trackedStatistics"];
+    <SortabbleMappedList keys={enabledStats} handle>
+      {({ key, handleClass }) => {
+        const stat = key as keyof DataCollectionConfig["trackedStatistics"];
         const statName = statFormattedNames[stat];
 
         return (
@@ -51,6 +49,7 @@ export const ResultsView = ({ config, dataObservable }: ResultsViewProps) => {
             title={statName}
             key={stat}
             defaultExpanded
+            dragHandleClass={handleClass}
             settingsIcon={
               <ChartSettingsMenu
                 scalesValue={scaleConfig[stat]}
@@ -70,6 +69,6 @@ export const ResultsView = ({ config, dataObservable }: ResultsViewProps) => {
           </Collapsible>
         );
       }}
-    />
+    </SortabbleMappedList>
   );
 };
