@@ -71,9 +71,9 @@ export const dataCollectionConfigSchema = z.object({
   prepareCSV: zBoolean,
   trackedStatistics: z.object({
     avgW: zBoolean,
-    marker1Ratio: zBoolean,
     stdevW: zBoolean,
     maxW: zBoolean,
+    marker1Ratio: zBoolean,
     stdevAccumulatedMuts: zBoolean,
     maxAccumulatedMuts: zBoolean,
     genotypeCount: zBoolean,
@@ -91,9 +91,9 @@ export const dataCollectionConfigStringySchema = z.object({
   prepareCSV: zBoolean,
   trackedStatistics: z.object({
     avgW: zBoolean,
-    marker1Ratio: zBoolean,
     stdevW: zBoolean,
     maxW: zBoolean,
+    marker1Ratio: zBoolean,
     stdevAccumulatedMuts: zBoolean,
     maxAccumulatedMuts: zBoolean,
     genotypeCount: zBoolean,

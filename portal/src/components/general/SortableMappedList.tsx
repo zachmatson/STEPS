@@ -21,10 +21,20 @@ export class SortableMappedList extends React.Component<SortableMappedListProps>
 
   componentDidMount() {
     if (this.containerRef.current) {
-      this.sortable = Sortable.create(this.containerRef.current, {
-        handle: this.props.handle ? "." + this.handleClassname : undefined,
-      });
+      this.sortable = Sortable.create(this.containerRef.current);
+      this.componentDidUpdate();
     }
+  }
+
+  componentWillUnmount() {
+    this.sortable?.destroy();
+  }
+
+  componentDidUpdate() {
+    this.sortable?.option(
+      "handle",
+      this.props.handle ? "." + this.handleClassname : undefined
+    );
   }
 
   render() {
