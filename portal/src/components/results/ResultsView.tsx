@@ -10,7 +10,7 @@ import {
 } from "../../config/PortalRunConfig";
 import { statFormattedNames } from "../../config/statNameMap";
 import { Collapsible } from "../general/Collapsible";
-import { SortabbleMappedList } from "../general/SortableMappedList";
+import { SortableMappedList } from "../general/SortableMappedList";
 import { Chart } from "./Chart";
 import { SimChartDatasets } from "../../charts/SimChartDatasets";
 import { ChartSettingsMenu } from "./ChartSettingsMenu";
@@ -39,8 +39,8 @@ export const ResultsView = ({ config, dataObservable }: ResultsViewProps) => {
   )(config.dataConfig.trackedStatistics);
 
   return (
-    <SortabbleMappedList keys={enabledStats} handle>
-      {({ key, handleClass }) => {
+    <SortableMappedList keys={enabledStats} handle>
+      {({ key, handleClassname }) => {
         const stat = key as keyof DataCollectionConfig["trackedStatistics"];
         const statName = statFormattedNames[stat];
 
@@ -49,7 +49,7 @@ export const ResultsView = ({ config, dataObservable }: ResultsViewProps) => {
             title={statName}
             key={stat}
             defaultExpanded
-            dragHandleClass={handleClass}
+            dragHandleClassname={handleClassname}
             settingsIcon={
               <ChartSettingsMenu
                 scalesValue={scaleConfig[stat]}
@@ -69,6 +69,6 @@ export const ResultsView = ({ config, dataObservable }: ResultsViewProps) => {
           </Collapsible>
         );
       }}
-    </SortabbleMappedList>
+    </SortableMappedList>
   );
 };

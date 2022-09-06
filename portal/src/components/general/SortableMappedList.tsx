@@ -1,54 +1,39 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React from "react";
 
-import { ReactSortable, ItemInterface } from "react-sortablejs";
+import Sortable from "sortablejs";
 import { v4 as uuidv4 } from "uuid";
-import fp from "lodash/fp";
 
 export type SortableMappedListRenderInput = {
   key: string;
-  handleClass?: string;
+  handleClassname?: string;
 };
 
 export type SortableMappedListProps = {
   keys: string[];
-  handle?: boolean | string;
+  handle?: boolean;
   children: (key: SortableMappedListRenderInput) => React.ReactNode;
 };
 
-export const SortabbleMappedList = ({
-  keys,
-  handle,
-  children: render,
-}: SortableMappedListProps) => {
-  const handleClass = useMemo<string | undefined>(
-    () => (fp.isString(handle) || handle === undefined ? handle : uuidv4()),
-    [handle]
-  );
+export class SortableMappedList extends React.Component<SortableMappedListProps> {
+  sortable: Sortable | null = null;
+  containerRef = React.createRef<HTMLDivElement>();
+  handleClassname = "handle-" + uuidv4(); // Classname must start with letter
 
-  console.log(handleClass);
+  componentDidMount() {
+    if (this.containerRef.current) {
+      this.sortable = Sortable.create(this.containerRef.current, {
+        handle: this.props.handle ? "." + this.handleClassname : undefined,
+      });
+    }
+  }
 
-  const [list, setList] = useState<ItemInterface[]>([]);
-
-  // Handle changes in keys
-  useEffect(() => {
-    setList((oldList) => updateListForKeys(oldList, keys));
-  }, [keys]);
-
-  return (
-    <ReactSortable list={list} setList={setList} handle={`.${handleClass}`}>
-      {list.map((item) => render({ key: item.id as string, handleClass }))}
-    </ReactSortable>
-  );
-};
-
-const keysToItemInterface = (key: string): ItemInterface => ({ id: key });
-const itemInterfaceToKeys = (item: ItemInterface) => item.id;
-const updateListForKeys = (oldList: ItemInterface[], keys: string[]) => {
-  const oldListSet = new Set(oldList.map(itemInterfaceToKeys));
-  const keysSet = new Set(keys);
-
-  return [
-    ...oldList.filter((item) => keysSet.has(item.id as string)),
-    ...keys.filter((key) => !oldListSet.has(key)).map(keysToItemInterface),
-  ];
-};
+  render() {
+    return (
+      <div ref={this.containerRef}>
+        {this.props.keys.map((key) =>
+          this.props.children({ key, handleClassname: this.handleClassname })
+        )}
+      </div>
+    );
+  }
+}

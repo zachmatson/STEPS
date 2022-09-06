@@ -14,7 +14,7 @@ export type CollapsibleProps = {
   scrollIntoView?: boolean;
   problem?: boolean;
   settingsIcon?: React.ReactElement;
-  dragHandleClass?: string;
+  dragHandleClassname?: string;
   children?: React.ReactNode;
 };
 
@@ -55,8 +55,8 @@ export const Collapsible = ({
                     ${isOpen ? "bg-gray-300" : ""}`}
         onClick={onClick}
       >
-        {props.dragHandleClass && (
-          <button className={`${props.dragHandleClass} h-full`}>
+        {props.dragHandleClassname && (
+          <button className={`${props.dragHandleClassname} h-full`}>
             <icons.DragHandle className="h-5" />
           </button>
         )}
