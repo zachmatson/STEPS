@@ -68,7 +68,7 @@ export const defaultSimParams: SimParamsStringy = {
 };
 
 export const dataCollectionConfigSchema = z.object({
-  prepareCSV: zBoolean,
+  prepareCsv: zBoolean,
   trackedStatistics: z.object({
     avgW: zBoolean,
     stdevW: zBoolean,
@@ -88,7 +88,7 @@ export const dataCollectionConfigSchema = z.object({
 export type DataCollectionConfig = z.infer<typeof dataCollectionConfigSchema>;
 
 export const dataCollectionConfigStringySchema = z.object({
-  prepareCSV: zBoolean,
+  prepareCsv: zBoolean,
   trackedStatistics: z.object({
     avgW: zBoolean,
     stdevW: zBoolean,
@@ -107,7 +107,7 @@ export type DataCollectionConfigStringy = z.infer<
 >;
 
 export const defaultDataCollectionConfig: DataCollectionConfigStringy = {
-  prepareCSV: false,
+  prepareCsv: false,
   trackedStatistics: {
     avgW: true,
     stdevW: false,

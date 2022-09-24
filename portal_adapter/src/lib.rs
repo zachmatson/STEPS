@@ -32,17 +32,16 @@ impl JsSimulationHandler {
         let sim_cfg = extract_sim_config(&cfg);
 
         Self {
-            outputter: match cfg.dataConfig.prepareCSV {
-                true => Some(Box::new(
+            outputter: cfg.dataConfig.prepareCsv.then(|| {
+                Box::new(
                     SummaryOutputter::new(
                         Vec::new(),
                         extract_summary_output_config(&cfg),
                         &sim_cfg,
                     )
                     .unwrap(),
-                )),
-                false => None,
-            },
+                )
+            }),
             inner: SimulationHandler::new(sim_cfg, false),
             cfg,
         }
@@ -73,14 +72,14 @@ impl JsSimulationHandler {
                         ..
                     } = state;
 
-                    let fragment = match results.iter_mut().last() {
+                    let fragment = match results.last_mut() {
                         Some(fragment) if fragment.replicate == replicate => fragment,
                         _ => {
                             results.push(SimResultsFragment {
                                 replicate,
                                 points: Vec::new(),
                             });
-                            results.iter_mut().last().unwrap()
+                            results.last_mut().unwrap()
                         }
                     };
 
@@ -108,11 +107,13 @@ impl JsSimulationHandler {
     /// at which CSV results can be downloaded (if they are being tracked)
     pub fn into_output_object_url(self) -> Option<String> {
         let output = self.outputter?.into_inner().ok()?;
-        // Safety: Buffer invalidated on malloc from wasm code,
-        // this buffer is only used here to create the blob on the next line,
-        // so its validity doesn't matter afterwards
-        let buffer = unsafe { js_sys::Uint8Array::view(&output) };
-        let blob = web_sys::Blob::new_with_u8_array_sequence(&js_sys::Array::of1(&buffer)).ok()?;
+        let blob = {
+            // Safety: Buffer invalidated on malloc from wasm code,
+            // this buffer is only used here to create the blob on the next line,
+            // so its validity doesn't matter afterwards
+            let buffer = unsafe { js_sys::Uint8Array::view(&output) };
+            web_sys::Blob::new_with_u8_array_sequence(&js_sys::Array::of1(&buffer)).ok()?
+        };
         web_sys::Url::create_object_url_with_blob(&blob).ok()
     }
 }

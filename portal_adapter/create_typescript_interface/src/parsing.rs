@@ -63,14 +63,14 @@ impl Parse for InterfaceTypeDefinition {
 
 impl Parse for InterfaceTypeField {
     fn parse(input: ParseStream) -> Result<Self> {
-        let name = input.parse()?;
+        let name = input.parse::<Ident>()?;
 
         let optional = input.parse::<Token![?]>().is_ok();
         input.parse::<Token![:]>()?;
 
         let types;
         parenthesized!(types in input);
-        let type_rust: Type = types.parse()?;
+        let type_rust = types.parse::<Type>()?;
         types.parse::<Token![,]>()?;
         let type_js = types.parse()?;
 

@@ -77,7 +77,7 @@ export const ButtonFooter = ({
           text={
             !!csvDownloadUrl
               ? "Download CSV"
-              : configs.numeric.dataConfig.prepareCSV
+              : configs.numeric.dataConfig.prepareCsv
               ? "CSV download available after simulations complete"
               : "CSV download not enabled"
           }

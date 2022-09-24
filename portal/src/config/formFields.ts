@@ -58,7 +58,7 @@ export const advSimParamFormFields: FormFieldSet = [
 
 export const enableCSVFormField: FormFieldSet[0] = {
   label: "CSV Download",
-  configPath: "dataConfig.prepareCSV",
+  configPath: "dataConfig.prepareCsv",
 };
 
 export const dataResolutionFormField: FormFieldSet[0] = {

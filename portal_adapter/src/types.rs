@@ -30,7 +30,7 @@ create_typescript_interface! {
     }
 
     DataConfig {
-        prepareCSV: (bool, boolean),
+        prepareCsv: (bool, boolean),
         trackedStatistics: (TrackedStatistics, JsTrackedStatistics),
         dataResolution: (u32, number),
     }
