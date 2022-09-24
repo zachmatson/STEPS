@@ -30,9 +30,8 @@ const STRUCT_NAME_ERROR_MSG: &'static str =
 
 impl Parse for InterfaceTypeDefinitions {
     fn parse(input: ParseStream) -> Result<Self> {
-        let definitions = std::iter::from_fn(|| match input.is_empty() {
-            false => Some(input.parse::<InterfaceTypeDefinition>()),
-            true => None,
+        let definitions = std::iter::from_fn(|| {
+            (!input.is_empty()).then(|| input.parse::<InterfaceTypeDefinition>())
         })
         .collect::<Result<Vec<_>>>()?;
 
