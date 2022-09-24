@@ -116,7 +116,7 @@ impl SimulationHandler {
 
     /// Whether the simulations are finished
     ///
-    /// This function returning `true` means `next_state` will return `None`
+    /// This function returning `true` means `next_state` will return `None` and vice versa
     pub fn is_finished(&self) -> bool {
         // Number of transfers doesn't matter if replicates is 0
         self.replicate == self.cfg.inner.replicates

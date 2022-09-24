@@ -42,8 +42,8 @@ impl Metadata {
             name: "STEPS".to_string(),
             version: get_current_version_str().to_string(),
             description:
-            "STEPS simulation of bacterial evolution written by Devin Lake and Zachary Matson"
-                .to_string(),
+                "STEPS simulation of bacterial evolution written by Devin Lake and Zachary Matson"
+                    .to_string(),
             output_mode,
         }
     }

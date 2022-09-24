@@ -55,12 +55,12 @@ pub fn marker_1_ratio(lineages: &LineagesData) -> f64 {
 /// Computations performed after conversion to f64
 #[inline]
 fn stdev<E, W, IE, IW>(elements: impl Fn() -> IE, weights: impl Fn() -> IW) -> f64
-    where
-        E: Copy,
-        W: Copy,
-        IE: Iterator<Item=E>,
-        IW: Iterator<Item=W>,
-        f64: From<E> + From<W>,
+where
+    E: Copy,
+    W: Copy,
+    IE: Iterator<Item = E>,
+    IW: Iterator<Item = W>,
+    f64: From<E> + From<W>,
 {
     let n = weights().map(f64::from).sum::<f64>();
     let mean = izip!(weights(), elements())
@@ -110,7 +110,7 @@ pub fn max_accumulated_muts(lineages: &LineagesData) -> u32 {
 pub fn genotype_count(lineages: &LineagesData) -> usize {
     // Can happen when all members of a lineage are replaced with new mutants
     #[allow(clippy::float_cmp_const)]
-        lineages.N.iter().filter(|&&n| n != 0.0).count()
+    lineages.N.iter().filter(|&&n| n != 0.0).count()
 }
 
 /// Shannon diversity of genotypes, sum(p ln p) for all lineages where p is the lineage size

@@ -37,7 +37,7 @@ fn extract_headers<R: Read>(source: R) -> Result<ExtractedHeaders<R>> {
         return Err(MetadataError::IncompatibleVersion {
             version: (&metadata.version).to_owned(),
         }
-            .into());
+        .into());
     }
 
     let sim_cfg: SimConfig = match lines.next() {

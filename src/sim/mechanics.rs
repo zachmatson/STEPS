@@ -125,7 +125,7 @@ fn add_mutants<R: Rng>(
     // Cutoffs must be in order for the iteration
     cutoffs.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
 
-    let mut cutoffs_iter = cutoffs.iter().copied().peekable();
+    let mut cutoffs_iter = cutoffs.iter().copied();
     let mut cutoff = match cutoffs_iter.next() {
         Some(x) => x,
         None => return,

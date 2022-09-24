@@ -32,42 +32,52 @@ pub struct SummaryOutputter<W: Write> {
 /// Using this as a single macro with functions rather than separate macros ensures the order of the stats is consistent,
 /// which we need it to be
 macro_rules! summary_lineages_outputter_create_stats_helpers {
-    ($($stat:ident),+) => {
-        /// Push labels for enabled stats to the end of headers in proper order
-        fn push_enabled_stat_headers(cfg: &SummaryOutputConfig, headers: &mut Vec<&str>) {
-            $(
-                if cfg.$stat {
-                    headers.push(stringify!($stat));
-                }
-            )+
+    ($($stat:ident),+ $(,)?) => {
+        impl<W: Write> SummaryOutputter<W> {
+            /// Push labels for enabled stats to the end of headers in proper order
+            fn push_enabled_stat_headers(cfg: &SummaryOutputConfig, headers: &mut Vec<&str>) {
+                $(
+                    if cfg.$stat {
+                        headers.push(stringify!($stat));
+                    }
+                )+
+            }
+
+            /// Write the CSV fields for enabled stats in proper order
+            fn write_enabled_stat_fields(&mut self, data: &LineagesData) -> Result<()> {
+                $(
+                    if self.cfg.$stat {
+                        self.writer.write_field(format!("{}", summarize::$stat(data)))?;
+                    }
+                )+
+
+                Ok(())
+            }
         }
 
-        /// Write the CSV fields for enabled stats in proper order
-        fn write_enabled_stat_fields(&mut self, data: &LineagesData) -> Result<()> {
-            $(
-                if self.cfg.$stat {
-                    self.writer.write_field(format!("{}", summarize::$stat(data)))?;
-                }
-            )+
-
-            Ok(())
-        }
+        // Verify that all available statistics are accounted for in the macro invocation
+        // Struct isn't actually used for anything but all fields must be supplied
+        const _: () = {
+            SummaryOutputConfig {
+                $($stat: false),+
+            };
+        };
     }
 }
 
-impl<W: Write> SummaryOutputter<W> {
-    summary_lineages_outputter_create_stats_helpers! {
-        avg_W,
-        marker_1_ratio,
-        stdev_W,
-        max_W,
-        stdev_accumulated_muts,
-        max_accumulated_muts,
-        genotype_count,
-        shannon_diversity
-    }
+summary_lineages_outputter_create_stats_helpers! {
+    avg_W,
+    marker_1_ratio,
+    stdev_W,
+    max_W,
+    stdev_accumulated_muts,
+    max_accumulated_muts,
+    genotype_count,
+    shannon_diversity,
+}
 
-    /// Create a new `SummaryOutputter` from options in an `OutputConfig` and `SimConfig`  
+impl<W: Write> SummaryOutputter<W> {
+    /// Create a new `SummaryOutputter` from options in an `OutputConfig` and `SimConfig`
     ///
     /// Writes header data to the underlying `writer`
     pub fn new(writer: W, summary_cfg: SummaryOutputConfig, sim_cfg: &SimConfig) -> Result<Self> {
@@ -93,7 +103,12 @@ impl<W: Write> SummaryOutputter<W> {
 }
 
 impl<W: Write> LineagesOutputter for SummaryOutputter<W> {
-    fn record_lineages(&mut self, replicate: u32, transfer: u32, lineages: &LineagesData) -> Result<()> {
+    fn record_lineages(
+        &mut self,
+        replicate: u32,
+        transfer: u32,
+        lineages: &LineagesData,
+    ) -> Result<()> {
         #![allow(non_snake_case)]
 
         self.writer.write_field(replicate.to_string())?;
@@ -142,8 +157,12 @@ impl<W: Write> MutationSummaryOutputter<W> {
 impl<W: Write> MutationsOutputter for MutationSummaryOutputter<W> {
     fn record_mutation(&mut self, replicate: u32, mutation: &Mutation) -> Result<()> {
         for (i, n) in mutation.N.iter().enumerate() {
-            self.writer
-                .serialize((replicate, mutation.first_transfer + i as u32, mutation.id, *n))?;
+            self.writer.serialize((
+                replicate,
+                mutation.first_transfer + i as u32,
+                mutation.id,
+                *n,
+            ))?;
         }
 
         Ok(())
@@ -178,8 +197,17 @@ impl<W: Write> RawOutputter<W> {
 }
 
 impl<W: Write> LineagesOutputter for RawOutputter<W> {
-    fn record_lineages(&mut self, replicate: u32, transfer: u32, lineages: &LineagesData) -> Result<()> {
-        let record = RawOutputterRecord { r: replicate, t: transfer, lineages };
+    fn record_lineages(
+        &mut self,
+        replicate: u32,
+        transfer: u32,
+        lineages: &LineagesData,
+    ) -> Result<()> {
+        let record = RawOutputterRecord {
+            r: replicate,
+            t: transfer,
+            lineages,
+        };
         serde_json::to_writer(&mut self.writer, &record)?;
         // Separate from next record to be written
         writeln!(&mut self.writer)?;

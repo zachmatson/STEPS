@@ -31,8 +31,10 @@ pub struct OutputterGroup {
     /// No effect on mutation outputs, defaults to `1`
     #[builder(default = "1")]
     lineage_sampling_frequency: u32,
+    /// Outputters for lineage data
     #[builder(setter(each(name = "lineage_outputter")), default)]
     lineages_outputters: Vec<Box<dyn LineagesOutputter>>,
+    /// Outputters for mutation dataa
     #[builder(setter(each(name = "mutation_outputter")), default)]
     mutations_outputters: Vec<Box<dyn MutationsOutputter>>,
 }
@@ -40,7 +42,12 @@ pub struct OutputterGroup {
 impl OutputterGroup {
     /// Record information for the provided `LineagesData` for the given replicate and transfer in
     /// all of the managed `LineageOutputter`s
-    pub fn record_lineages(&mut self, replicate: u32, transfer: u32, lineages: &LineagesData) -> Result<()> {
+    pub fn record_lineages(
+        &mut self,
+        replicate: u32,
+        transfer: u32,
+        lineages: &LineagesData,
+    ) -> Result<()> {
         if transfer % self.lineage_sampling_frequency == 0 {
             for outputter in &mut self.lineages_outputters {
                 outputter.record_lineages(replicate, transfer, lineages)?;
@@ -53,7 +60,11 @@ impl OutputterGroup {
     /// replicate and transfer in all of the managed `MutationsOutputter`s
     ///
     /// Pruned mutations should be recorded at each transfer to avoid missing any
-    pub fn record_pruned_mutations(&mut self, replicate: u32, mutations: &MutationsData) -> Result<()> {
+    pub fn record_pruned_mutations(
+        &mut self,
+        replicate: u32,
+        mutations: &MutationsData,
+    ) -> Result<()> {
         for outputter in &mut self.mutations_outputters {
             outputter.record_pruned_mutations(replicate, mutations)?;
         }
@@ -65,7 +76,11 @@ impl OutputterGroup {
     ///
     /// Active mutations may eventually become pruned, and should probably only be recorded at the
     /// end of a replicate to avoid duplicate recording
-    pub fn record_active_mutations(&mut self, replicate: u32, mutations: &MutationsData) -> Result<()> {
+    pub fn record_active_mutations(
+        &mut self,
+        replicate: u32,
+        mutations: &MutationsData,
+    ) -> Result<()> {
         for outputter in &mut self.mutations_outputters {
             outputter.record_active_mutations(replicate, mutations)?;
         }
@@ -80,7 +95,12 @@ impl OutputterGroup {
 /// An outputter that can record the data for `LineagesData`
 pub trait LineagesOutputter {
     /// Record the data in `lineages`, at a specific replicate and transfer
-    fn record_lineages(&mut self, replicate: u32, transfer: u32, lineages: &LineagesData) -> Result<()>;
+    fn record_lineages(
+        &mut self,
+        replicate: u32,
+        transfer: u32,
+        lineages: &LineagesData,
+    ) -> Result<()>;
 }
 
 /// And outputter that can record the data for `MutationsData`
@@ -93,7 +113,11 @@ impl dyn MutationsOutputter {
     /// Record all pruned mutations in some `MutationsData`
     ///
     /// Pruned mutations should be recorded at each transfer to avoid missing any
-    pub fn record_pruned_mutations(&mut self, replicate: u32, mutations: &MutationsData) -> Result<()> {
+    pub fn record_pruned_mutations(
+        &mut self,
+        replicate: u32,
+        mutations: &MutationsData,
+    ) -> Result<()> {
         for mutation in &mutations.pruned_muts {
             self.record_mutation(replicate, mutation)?;
         }
@@ -104,7 +128,11 @@ impl dyn MutationsOutputter {
     ///
     /// Active mutations may eventually become pruned, and should probably only be recorded at the
     /// end of a replicate to avoid duplicate recording
-    pub fn record_active_mutations(&mut self, replicate: u32, mutations: &MutationsData) -> Result<()> {
+    pub fn record_active_mutations(
+        &mut self,
+        replicate: u32,
+        mutations: &MutationsData,
+    ) -> Result<()> {
         for mutation in mutations.muts.values() {
             self.record_mutation(replicate, mutation)?;
         }
