@@ -2,7 +2,7 @@
 
 use hashbrown::HashMap;
 use serde::{Deserialize, Serialize};
-use serde_tuple::*;
+use serde_tuple::{Deserialize_tuple, Serialize_tuple};
 
 use crate::sim::InternalSimConfig;
 

@@ -35,7 +35,7 @@ fn extract_headers<R: Read>(source: R) -> Result<ExtractedHeaders<R>> {
 
     if metadata.version != get_current_version_str() {
         return Err(MetadataError::IncompatibleVersion {
-            version: (&metadata.version).to_owned(),
+            version: metadata.version,
         }
         .into());
     }
