@@ -1,8 +1,8 @@
-use structopt::StructOpt;
+use clap::Parser;
 
 mod cli;
 
 fn main() {
-    let cfg = cli::CliConfig::from_args();
+    let cfg = cli::CliConfig::parse();
     cli::run_cli_config(cfg);
 }

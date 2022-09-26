@@ -13,7 +13,7 @@ use itertools::{izip, Itertools};
 use steps::cfg::SimConfig;
 use steps::sim::{SimulationHandler, SimulationState};
 
-use cfg::{CliOutputConfig, ReproduceConfig, Subcommand};
+use cfg::{CliCommand, CliOutputConfig, ReproduceConfig};
 use io::{extract_sim_config_from_path, outputter_group_for_cli};
 
 mod cfg;
@@ -23,11 +23,11 @@ pub use cfg::CliConfig;
 
 /// Run the CLI as specified by some `CliConfig`
 pub fn run_cli_config(cfg: CliConfig) {
-    match cfg.subcommand {
-        Subcommand::Simulate(sim_cli_cfg) => {
+    match cfg.command {
+        CliCommand::Simulate(sim_cli_cfg) => {
             run_simulations(&sim_cli_cfg.output_cfg, sim_cli_cfg.sim_cfg)
         }
-        Subcommand::Reproduce(reproduce_cfg) => reproduce_simulations(&reproduce_cfg),
+        CliCommand::Reproduce(reproduce_cfg) => reproduce_simulations(&reproduce_cfg),
     }
 }
 
