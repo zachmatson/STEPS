@@ -16,8 +16,8 @@ pub fn grow_lineages_inplace(lineages: &mut LineagesData, delta_t: f64) {
     assert_eq!(lineages.N.len(), lineages.W.len());
 
     let delta_t_scaled = delta_t * 2f64.ln();
-    slices_dispatch_wide!(4, |lineages.N => original_W mut: f64, lineages.W => W: f64| {
-        original_W *= W.mul(delta_t_scaled).exp();
+    slices_dispatch_wide!(4, |lineages.N => original_N mut: f64, lineages.W => W: f64| {
+        original_N *= W.mul(delta_t_scaled).exp();
     });
 }
 
@@ -46,3 +46,4 @@ pub fn expected_mutation_counts(lineages: &LineagesData, eligible_N: &[f64]) -> 
         .map(|(u, n)| u * n)
         .collect()
 }
+
