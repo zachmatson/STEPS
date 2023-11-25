@@ -37,13 +37,10 @@ export class App extends React.Component<{}, AppState> {
     super(props);
 
     // Load from URL
-    let activeConfigStringy: PortalRunConfigStringy = fp.cloneDeep(
-      defaultPortalRunConfig
-    );
     const suppliedConfig = decodeConfigFromURL();
-    if (suppliedConfig.success) {
-      activeConfigStringy = suppliedConfig.data;
-    }
+    const activeConfigStringy = suppliedConfig.success
+      ? suppliedConfig.data
+      : fp.cloneDeep(defaultPortalRunConfig);
 
     this.simLink.observables().outcome$.subscribe((outcome) =>
       this.setState({
@@ -63,39 +60,31 @@ export class App extends React.Component<{}, AppState> {
     };
   }
 
-  triggerFormSubmit = () => {
-    this.formRef.current?.submit();
-  };
-
   setConfigIsDirty = (isDirty: boolean) => {
     this.setState({
       configIsDirty: isDirty,
     });
   };
 
-  startOrRestartSim = () => {
-    const configStringy = fp.cloneDeep(this.formRef.current?.getValues());
-    if (!configStringy) return;
-    const config = portalRunConfigSchema.parse(configStringy);
+  triggerFormSubmit = () => {
+    this.formRef.current?.submit();
+  };
 
+  handleFormSubmit = (
+    config: PortalRunConfig,
+    configStringy: PortalRunConfigStringy
+  ) => {
     this.simLink.startOrRestart(config);
 
-    this.setState(
-      {
-        status: "running",
-        activeConfigs: {
-          numeric: config,
-          stringy: configStringy,
-        },
-        configIsDirty: false,
-        csvDownloadUrl: null,
+    this.setState({
+      status: "running",
+      activeConfigs: {
+        numeric: config,
+        stringy: configStringy,
       },
-      () => {
-        this.formRef.current?.reset(configStringy, {
-          keepValues: true,
-        });
-      }
-    );
+      configIsDirty: false,
+      csvDownloadUrl: null,
+    });
   };
 
   pauseSim = () => {
@@ -119,7 +108,7 @@ export class App extends React.Component<{}, AppState> {
           <Form
             ref={this.formRef}
             defaultValues={this.state.activeConfigs.stringy}
-            onSubmit={this.startOrRestartSim}
+            onSubmit={this.handleFormSubmit}
             onDirtinessChange={this.setConfigIsDirty}
           />
         }

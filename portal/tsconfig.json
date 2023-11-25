@@ -16,5 +16,5 @@
   "include": [
     "src/**/*"
   ],
-  "exclude": ["node_modules", "dist", "relltee_adapter"]
+  "exclude": ["node_modules", "dist", "steps_adapter"]
 }

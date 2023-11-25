@@ -1,12 +1,6 @@
 import React, { useCallback, useEffect, useImperativeHandle } from "react";
 
-import {
-  FieldErrors,
-  useForm,
-  UseFormGetValues,
-  UseFormHandleSubmit,
-  UseFormReset,
-} from "react-hook-form";
+import { FieldErrors, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import fp from "lodash/fp";
 import { useMatchRefsToVals } from "../../utils/reactUtils";
@@ -20,6 +14,7 @@ import {
   simParamsFormFields,
 } from "../../config/formFields";
 import {
+  PortalRunConfig,
   portalRunConfigSchema,
   PortalRunConfigStringy,
 } from "../../config/PortalRunConfig";
@@ -28,14 +23,15 @@ import { DataCollectionGroup } from "./DataCollectionGroup";
 
 export type FormProps = {
   defaultValues: PortalRunConfigStringy;
-  onSubmit: (data: PortalRunConfigStringy) => void;
+  onSubmit: (
+    config: PortalRunConfig,
+    configStringy: PortalRunConfigStringy
+  ) => void;
   onDirtinessChange: (isDirty: boolean) => void;
 };
 
 export type FormHandle = {
-  getValues: UseFormGetValues<PortalRunConfigStringy>;
-  reset: UseFormReset<PortalRunConfigStringy>;
-  submit: ReturnType<UseFormHandleSubmit<PortalRunConfigStringy>>;
+  submit: () => unknown;
 };
 
 export const Form = React.forwardRef(
@@ -50,20 +46,33 @@ export const Form = React.forwardRef(
       defaultValues: props.defaultValues,
       resolver: zodResolver(portalRunConfigSchema),
     });
+
     const errors = useMatchRefsToVals(errorsRaw);
 
-    const handledOnSubmit = useCallback(handleSubmit(props.onSubmit), [
-      handleSubmit,
-      props.onSubmit,
-    ]);
+    const handledOnSubmit = useCallback(
+      // handleSubmit takes care of validation, which we want, but it only gives
+      // us the parsed config, when we also want the raw "stringy" one
+      handleSubmit((_config) => {
+        const configStringy = fp.cloneDeep(getValues());
+        const config = portalRunConfigSchema.parse(configStringy);
+        // This is necessary for dirtiness updates to work, because the form's
+        // defaultValues are cached and only get updated when reset is called
+        //
+        // We want the most recently submitted values to be the "defaults" for
+        // dirtiness evaluation.
+        reset(configStringy, {
+          keepValues: true,
+        });
+        props.onSubmit(config, configStringy);
+      }),
+      [handleSubmit, getValues, props.onSubmit]
+    );
 
     useEffect(() => {
       props.onDirtinessChange(isDirty);
     }, [isDirty]);
 
     useImperativeHandle(ref, () => ({
-      getValues,
-      reset,
       submit: handledOnSubmit,
     }));
 
