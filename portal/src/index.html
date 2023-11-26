@@ -1,8 +1,20 @@
 <!DOCTYPE html>
 <html>
+
   <head>
     <title>STEPS Portal</title>
+
+    <!-- Registering service worker for caching -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js');
+        });
+      }
+    </script>
+
   </head>
+
   <body>
     <noscript>
       This experience requires JavaScript and WebAssembly support.
@@ -10,4 +22,5 @@
     <!-- Root element for React -->
     <div id="root"></div>
   </body>
+
 </html>
