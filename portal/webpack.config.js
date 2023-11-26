@@ -46,17 +46,6 @@ module.exports = (env, argv) => {
     },
 
     plugins: [
-      ...(isProduction
-        ? [
-            new GenerateSW(),
-            new CompressionPlugin({
-              algorithm: "brotliCompress",
-              test: /\.(js|css|html|svg|wasm)$/,
-              threshold: 10240,
-              minRatio: 0.8,
-            }),
-          ]
-        : []),
       new HtmlWebpackPlugin({
         inject: true,
         template: path.join(appPath, "index.html"),
@@ -70,6 +59,19 @@ module.exports = (env, argv) => {
         exclude: ["node_modules", "steps_adapter"],
       }),
       new ForkTsCheckerWebpackPlugin(),
+      ...(isProduction
+        ? [
+            new CompressionPlugin({
+              algorithm: "brotliCompress",
+              test: /\.(js|css|html|svg|wasm)$/,
+              threshold: 10240,
+              minRatio: 0.8,
+            }),
+            new GenerateSW({
+              skipWaiting: true,
+            }),
+          ]
+        : []),
     ],
 
     devServer: {
