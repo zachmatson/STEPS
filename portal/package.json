@@ -41,7 +41,7 @@
     "@wasm-tool/wasm-pack-plugin": "^1.6.0",
     "autoprefixer": "^10.4.7",
     "babel-loader": "^8.2.3",
-    "brotli-webpack-plugin": "^1.1.0",
+    "compression-webpack-plugin": "^10.0.0",
     "css-loader": "^6.5.1",
     "eslint": "^8.5.0",
     "eslint-config-prettier": "^8.3.0",

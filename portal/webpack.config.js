@@ -1,5 +1,5 @@
 const path = require("path");
-const BrotliPlugin = require("brotli-webpack-plugin");
+const CompressionPlugin = require("compression-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin");
@@ -49,8 +49,8 @@ module.exports = (env, argv) => {
       ...(isProduction
         ? [
             new GenerateSW(),
-            new BrotliPlugin({
-              asset: "[path].br[query]",
+            new CompressionPlugin({
+              algorithm: "brotliCompress",
               test: /\.(js|css|html|svg|wasm)$/,
               threshold: 10240,
               minRatio: 0.8,
