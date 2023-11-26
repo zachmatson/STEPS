@@ -1,7 +1,12 @@
-import { FieldErrors, FieldPath } from "react-hook-form";
+import {
+  FieldError,
+  FieldErrors,
+  FieldPath,
+  FieldValues,
+} from "react-hook-form";
 import lodash from "lodash";
 
-export const extractError = <T>(
+export const extractError = <T extends FieldValues>(
   errors: FieldErrors<T>,
   configPath: FieldPath<T>
-) => lodash.get(errors, configPath);
+) => lodash.get(errors, configPath) as unknown as FieldError;

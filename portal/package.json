@@ -13,7 +13,7 @@
     "clipboardy": "^3.0.0",
     "js-base64": "^3.7.2",
     "lodash": "^4.17.21",
-    "npm": "^8.19.1",
+    "npm": "^10.2.4",
     "react": "^18",
     "react-dom": "^18",
     "react-hook-form": "^7.31.1",
@@ -22,6 +22,7 @@
     "rxjs": "^7.5.5",
     "sortablejs": "^1.15.0",
     "uuid": "^8.3.2",
+    "workbox-webpack-plugin": "^7.0.0",
     "zod": "^3.16.0"
   },
   "devDependencies": {

@@ -4,6 +4,7 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const WasmPackPlugin = require("@wasm-tool/wasm-pack-plugin");
 const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin");
 const EslintWebpackPlugin = require("eslint-webpack-plugin");
+const { GenerateSW } = require("workbox-webpack-plugin");
 
 module.exports = (env, argv) => {
   const appPath = path.resolve(__dirname, "src");
@@ -17,7 +18,7 @@ module.exports = (env, argv) => {
     entry: appPath,
 
     output: {
-      filename: "bundle.js",
+      filename: "bundle.[hash].js",
       path: outputPath,
     },
 
@@ -47,6 +48,7 @@ module.exports = (env, argv) => {
     plugins: [
       ...(isProduction
         ? [
+            new GenerateSW(),
             new BrotliPlugin({
               asset: "[path].br[query]",
               test: /\.(js|css|html|svg|wasm)$/,
