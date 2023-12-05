@@ -72,6 +72,8 @@ summary_lineages_outputter_create_stats_helpers! {
     max_W,
     stdev_accumulated_muts,
     max_accumulated_muts,
+    mean_accumulated_muts,
+    min_accumulated_muts,
     genotype_count,
     shannon_diversity,
 }

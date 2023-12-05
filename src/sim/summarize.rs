@@ -106,6 +106,29 @@ pub fn max_accumulated_muts(lineages: &LineagesData) -> u32 {
         .unwrap()
 }
 
+/// Mean number of mutations away from the ancestor of any lineage in the population
+pub fn mean_accumulated_muts(lineages: &LineagesData) -> f64 {
+    let mut sum_N = 0.0;
+    let mut sum_M = 0.0;
+
+    for (&n, secondary) in izip!(&lineages.N, &lineages.secondary) {
+        sum_N += n;
+        sum_M += (secondary.accumulated_muts - 1) as f64 * n;
+    }
+
+    sum_M / sum_N
+}
+
+/// Minimum number of mutations away from the ancestor of any lineage in the population
+pub fn min_accumulated_muts(lineages: &LineagesData) -> u32 {
+    lineages
+        .secondary
+        .iter()
+        .map(|s| s.accumulated_muts - 1)
+        .min()
+        .unwrap()
+}
+
 /// Number of lineages/genotypes in the population
 pub fn genotype_count(lineages: &LineagesData) -> usize {
     // Can happen when all members of a lineage are replaced with new mutants

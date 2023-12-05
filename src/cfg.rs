@@ -29,6 +29,12 @@ pub struct SummaryOutputConfig {
     /// Output the maximum number of mutations accumulated since the ancestor
     #[clap(long)]
     pub max_accumulated_muts: bool,
+    /// Output the mean number of mutations accumulated since the ancestor
+    #[clap(long)]
+    pub mean_accumulated_muts: bool,
+    /// Output the minimum number of mutations accumulated since the ancestor
+    #[clap(long)]
+    pub min_accumulated_muts: bool,
     /// Output the number of genotypes present in the population
     #[clap(long)]
     pub genotype_count: bool,
