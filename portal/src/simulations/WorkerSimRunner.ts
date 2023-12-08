@@ -49,8 +49,6 @@ export class WorkerSimRunner {
         WorkerSimRunner.#minimumPostInterval
       );
 
-      console.log(results);
-
       if (results) {
         this.#ctx.postMessage({ type: "results", results });
       } else {

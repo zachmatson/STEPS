@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { AxisScale, ChartScales } from "../../config/chartConfig";
+import { AxisScale, ChartScales, XAxisUnits } from "../../config/chartConfig";
 import {
   HorizontalRadioGroup,
   RadioGroupItem,
@@ -16,22 +16,34 @@ const scaleRadioItems: RadioGroupItem<AxisScale>[] = [
   },
 ];
 
+const xAxisUnitRadioItems: RadioGroupItem<XAxisUnits>[] = [
+  {
+    label: "Generations",
+    value: "generations",
+  },
+  {
+    label: "Transfers",
+    value: "transfers",
+  },
+];
+
 export type ScalesSelectorProps = {
   value: ChartScales;
   onChange?: (value: ChartScales) => void;
 };
 
 export const ScalesSelector = ({ value, onChange }: ScalesSelectorProps) => {
-  const [onSelectY, onSelectX] = (["y", "x"] as (keyof ChartScales)[]).map(
-    (field) =>
-      useCallback(
-        (newValue: AxisScale) => {
-          if (newValue != value[field]) {
-            onChange?.({ ...value, [field]: newValue });
-          }
-        },
-        [value, onChange]
-      )
+  const [onSelectYScale, onSelectXScale, onSelectXUnits] = (
+    ["yScale", "xScale", "xUnits"] as (keyof ChartScales)[]
+  ).map((field) =>
+    useCallback(
+      (newValue: string) => {
+        if (newValue != value[field]) {
+          onChange?.({ ...value, [field]: newValue });
+        }
+      },
+      [value, onChange]
+    )
   );
 
   return (
@@ -39,14 +51,20 @@ export const ScalesSelector = ({ value, onChange }: ScalesSelectorProps) => {
       <HorizontalRadioGroup
         title={"Y Scale"}
         items={scaleRadioItems}
-        selected={value.y}
-        onSelect={onSelectY}
+        selected={value.yScale}
+        onSelect={onSelectYScale}
       />
       <HorizontalRadioGroup
         title={"X Scale"}
         items={scaleRadioItems}
-        selected={value.x}
-        onSelect={onSelectX}
+        selected={value.xScale}
+        onSelect={onSelectXScale}
+      />
+      <HorizontalRadioGroup
+        title={"X Units"}
+        items={xAxisUnitRadioItems}
+        selected={value.xUnits}
+        onSelect={onSelectXUnits}
       />
     </div>
   );

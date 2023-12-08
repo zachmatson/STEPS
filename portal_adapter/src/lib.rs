@@ -84,6 +84,7 @@ impl JsSimulationHandler {
                     };
 
                     fragment.points.push(make_data_point(
+                        transfer,
                         transfer_to_generation(transfer, self.cfg.simParams.dilutionFactor),
                         &self.cfg.dataConfig.trackedStatistics,
                         lineages,
@@ -133,11 +134,13 @@ macro_rules! impl_make_data_point {
         /// Create a data point corresponding to some `LineagesData` at a generation by computing
         /// the requested statistics
         fn make_data_point(
+            transfer: u32,
             generation: f64,
             tracked_statistics: &TrackedStatistics,
             lineages: &LineagesData,
         ) -> SimDataPoint {
             SimDataPoint {
+                transfer,
                 generation,
                 $(
                     $config_name: tracked_statistics
