@@ -48,5 +48,5 @@ pub fn update_sizes(sequencing_data: &mut MutationsData, population_data: &Linea
     };
     sequencing_data
         .pruned_muts
-        .extend(map.drain_filter(prunable).map(|(_, v)| v));
+        .extend(map.extract_if(prunable).map(|(_, v)| v));
 }

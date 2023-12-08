@@ -46,4 +46,3 @@ pub fn expected_mutation_counts(lineages: &LineagesData, eligible_N: &[f64]) -> 
         .map(|(u, n)| u * n)
         .collect()
 }
-

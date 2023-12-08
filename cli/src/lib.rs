@@ -111,9 +111,12 @@ fn report_error(message: &str, error: Error) {
 
 /// Get `ProgressBar` with style options and a custom prefix set to use for displaying progress
 fn styled_bar(len: u64, prefix: &str) -> ProgressBar {
-    let bar = ProgressBar::with_draw_target(len, ProgressDrawTarget::stderr_nohz())
-        .with_style(ProgressStyle::default_bar().template("{prefix} {wide_bar} [{pos}/{len}]"));
-    bar.set_prefix(prefix);
+    let bar = ProgressBar::with_draw_target(Some(len), ProgressDrawTarget::stderr()).with_style(
+        ProgressStyle::default_bar()
+            .template("{prefix} {wide_bar} [{pos}/{len}]")
+            .unwrap(),
+    );
+    bar.set_prefix(prefix.to_string());
 
     bar
 }

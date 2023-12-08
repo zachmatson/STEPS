@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use steps_cli::{CliConfig, run_cli_config};
+use steps_cli::{run_cli_config, CliConfig};
 
 /// Entry-point for the main "steps" command-line executable
 fn main() {
