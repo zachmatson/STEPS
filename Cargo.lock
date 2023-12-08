@@ -147,12 +147,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cty"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b365fabc795046672053e29c954733ec3b05e4be654ab130fe8f1f94d7051f35"
-
-[[package]]
 name = "darling"
 version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -584,17 +578,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "steps"
+name = "steps_cli"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "indicatif",
+ "itertools",
+ "steps_core",
+]
+
+[[package]]
+name = "steps_core"
 version = "1.0.0"
 dependencies = [
  "anyhow",
  "approx",
  "clap",
  "csv",
- "cty",
  "derive_builder",
  "hashbrown 0.9.1",
- "indicatif",
  "itertools",
  "rand",
  "rand_distr",

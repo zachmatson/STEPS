@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use clap::{AppSettings, Parser, Subcommand};
 
-use steps::cfg::{SimConfig, SummaryOutputConfig};
+use steps_core::cfg::{SimConfig, SummaryOutputConfig};
 
 /// Configuration options for STEPS command line app subcommands
 #[derive(Parser)]

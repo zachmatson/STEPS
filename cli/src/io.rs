@@ -6,13 +6,13 @@ use std::path::Path;
 
 use anyhow::Result;
 
-use steps::cfg::SimConfig;
-use steps::io::{
+use steps_core::cfg::SimConfig;
+use steps_core::io::{
     extract_sim_config, MutationSummaryOutputter, OutputterGroup, OutputterGroupBuilder,
     RawOutputter, SequencingOutputter, SummaryOutputter,
 };
 
-use crate::cli::cfg::CliOutputConfig;
+use crate::cfg::CliOutputConfig;
 
 /// Get an `OutputterGroup` to generate output corresponding to the provided configs
 pub fn outputter_group_for_cli(

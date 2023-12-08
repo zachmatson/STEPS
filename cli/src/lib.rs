@@ -10,8 +10,8 @@ use anyhow::{Error, Result};
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use itertools::{izip, Itertools};
 
-use steps::cfg::SimConfig;
-use steps::sim::{SimulationHandler, SimulationState};
+use steps_core::cfg::SimConfig;
+use steps_core::sim::{SimulationHandler, SimulationState};
 
 use cfg::{CliCommand, CliOutputConfig, ReproduceConfig};
 use io::{extract_sim_config_from_path, outputter_group_for_cli};
