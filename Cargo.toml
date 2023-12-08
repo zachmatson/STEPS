@@ -1,6 +1,6 @@
 [workspace]
 # The portal is not part of the overall Cargo workspace
-members = ["core", "cli"]
+members = ["core", "cli", "portal_adapter"]
 default-members = ["core", "cli"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
