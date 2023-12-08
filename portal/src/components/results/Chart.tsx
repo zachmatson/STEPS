@@ -13,7 +13,11 @@ import { Observable, Subscription } from "rxjs";
 
 import {
   adaptNameForAxisScale,
+  axisNameForXAxisUnits,
   mapValueToAxisScale,
+  selectForXAxisUnits,
+  xAxisKeyForScaleAndUnit,
+  yAxisKeyForScaleAndStat,
 } from "../../charts/scaleUtils";
 import { SimChartDatasets } from "../../charts/SimChartDatasets";
 import { ChartScales } from "../../config/chartConfig";
@@ -74,7 +78,8 @@ export class Chart extends React.PureComponent<ChartProps> {
       config: { simParams },
       stat,
     } = this.props;
-    const generations = transfersToGenerations(simParams.transfers, simParams);
+    const { transfers } = simParams;
+    const generations = transfersToGenerations(transfers, simParams);
 
     // TODO: Custom tooltip
     this.chart?.destroy();
@@ -109,10 +114,20 @@ export class Chart extends React.PureComponent<ChartProps> {
             type: "linear",
             title: {
               display: true,
-              text: adaptNameForAxisScale("Generation", this.props.scales.x),
+              text: adaptNameForAxisScale(
+                axisNameForXAxisUnits(this.props.scales.xUnits),
+                this.props.scales.xScale
+              ),
             },
             min: 0,
-            max: mapValueToAxisScale(generations, this.props.scales.x),
+            max: mapValueToAxisScale(
+              selectForXAxisUnits(
+                transfers,
+                generations,
+                this.props.scales.xUnits
+              ),
+              this.props.scales.xScale
+            ),
             ticks: {
               includeBounds: false,
             },
@@ -123,14 +138,17 @@ export class Chart extends React.PureComponent<ChartProps> {
               display: true,
               text: adaptNameForAxisScale(
                 statFormattedNames[stat],
-                this.props.scales.y
+                this.props.scales.yScale
               ),
             },
           },
         },
         parsing: {
-          xAxisKey: `${this.props.scales.x}.generation`,
-          yAxisKey: `${this.props.scales.y}.${stat}`,
+          xAxisKey: xAxisKeyForScaleAndUnit(
+            this.props.scales.xScale,
+            this.props.scales.xUnits
+          ),
+          yAxisKey: yAxisKeyForScaleAndStat(this.props.scales.yScale, stat),
         },
       },
     });

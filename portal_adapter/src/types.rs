@@ -49,6 +49,7 @@ create_typescript_interface! {
     }
 
     SimDataPoint {
+        transfer: (u32, number),
         generation: (f64, number),
         avgW?: (f64, number),
         marker1Ratio?: (f64, number),

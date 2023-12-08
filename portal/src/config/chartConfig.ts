@@ -2,9 +2,12 @@ import { DataCollectionConfig } from "./PortalRunConfig";
 
 export type AxisScale = "linear" | "log2";
 
+export type XAxisUnits = "generations" | "transfers";
+
 export type ChartScales = {
-  x: AxisScale;
-  y: AxisScale;
+  xScale: AxisScale;
+  xUnits: XAxisUnits;
+  yScale: AxisScale;
 };
 
 export type ChartScaleConfig = {
@@ -13,43 +16,53 @@ export type ChartScaleConfig = {
 
 export const defaultChartScaleConfig: ChartScaleConfig = {
   avgW: {
-    x: "linear",
-    y: "linear",
+    xScale: "linear",
+    xUnits: "generations",
+    yScale: "linear",
   },
   stdevW: {
-    x: "linear",
-    y: "linear",
+    xScale: "linear",
+    xUnits: "generations",
+    yScale: "linear",
   },
   maxW: {
-    x: "linear",
-    y: "linear",
+    xScale: "linear",
+    xUnits: "generations",
+    yScale: "linear",
   },
   marker1Ratio: {
-    x: "linear",
-    y: "log2",
+    xScale: "linear",
+    xUnits: "generations",
+    yScale: "log2",
   },
   stdevAccumulatedMuts: {
-    x: "linear",
-    y: "linear",
+    xScale: "linear",
+    xUnits: "generations",
+    yScale: "linear",
   },
   maxAccumulatedMuts: {
-    x: "linear",
-    y: "linear",
+    xScale: "linear",
+    xUnits: "generations",
+    yScale: "linear",
   },
   meanAccumulatedMuts: {
-    x: "linear",
-    y: "linear",
+    xScale: "linear",
+    xUnits: "generations",
+    yScale: "linear",
   },
   minAccumulatedMuts: {
-    x: "linear",
-    y: "linear",
+    xScale: "linear",
+    xUnits: "generations",
+    yScale: "linear",
   },
   genotypeCount: {
-    x: "linear",
-    y: "linear",
+    xScale: "linear",
+    xUnits: "generations",
+    yScale: "linear",
   },
   shannonDiversity: {
-    x: "linear",
-    y: "linear",
+    xScale: "linear",
+    xUnits: "generations",
+    yScale: "linear",
   },
 };

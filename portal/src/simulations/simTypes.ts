@@ -1,6 +1,7 @@
 import { DataCollectionConfig } from "../config/PortalRunConfig";
 
 export type SimDataPoint = {
+  transfer: number;
   generation: number;
 } & {
   [key in keyof DataCollectionConfig["trackedStatistics"]]?: number;
