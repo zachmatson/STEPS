@@ -2,8 +2,8 @@ use std::ops::Deref;
 
 use wasm_bindgen::prelude::*;
 
-use steps::io::{LineagesOutputter, SummaryOutputter};
-use steps::sim::{summarize, LineagesData, SimulationHandler, SimulationState};
+use steps_core::io::{LineagesOutputter, SummaryOutputter};
+use steps_core::sim::{summarize, LineagesData, SimulationHandler, SimulationState};
 
 use types::*;
 
@@ -100,7 +100,7 @@ impl JsSimulationHandler {
             }
         }
 
-        Some(JsValue::from_serde(&results).unwrap().into())
+        Some(serde_wasm_bindgen::to_value(&results).unwrap().into())
     }
 
     /// Consume the handler, rendering it unusable, and return a string corresponding to the URL
@@ -156,6 +156,8 @@ impl_make_data_point! {
     maxW => max_W,
     stdevAccumulatedMuts => stdev_accumulated_muts,
     maxAccumulatedMuts => max_accumulated_muts,
+    meanAccumulatedMuts => mean_accumulated_muts,
+    minAccumulatedMuts => min_accumulated_muts,
     genotypeCount => genotype_count,
     shannonDiversity => shannon_diversity,
 }

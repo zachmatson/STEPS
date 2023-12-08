@@ -8,7 +8,7 @@ const { GenerateSW } = require("workbox-webpack-plugin");
 
 module.exports = (env, argv) => {
   const appPath = path.resolve(__dirname, "src");
-  const outputPath = path.resolve(__dirname, "dist");
+  const outputPath = path.resolve(__dirname, "build/dist");
 
   const isProduction = argv.mode == "production";
 
@@ -18,7 +18,7 @@ module.exports = (env, argv) => {
     entry: appPath,
 
     output: {
-      filename: "bundle.[hash].js",
+      filename: "bundle.[fullhash].js",
       path: outputPath,
     },
 
@@ -51,12 +51,12 @@ module.exports = (env, argv) => {
         template: path.join(appPath, "index.html"),
       }),
       new WasmPackPlugin({
-        crateDirectory: path.resolve(__dirname, "steps_adapter"),
-        outDir: path.resolve(__dirname, "steps_adapter/pkg"),
+        crateDirectory: path.resolve(__dirname, "../portal_adapter"),
+        outDir: path.resolve(__dirname, "./build/adapter_pkg"),
         forceMode: "production",
       }),
       new EslintWebpackPlugin({
-        exclude: ["node_modules", "steps_adapter"],
+        exclude: ["node_modules", "build"],
       }),
       new ForkTsCheckerWebpackPlugin(),
       ...(isProduction

@@ -36,6 +36,14 @@ export const defaultChartScaleConfig: ChartScaleConfig = {
     x: "linear",
     y: "linear",
   },
+  meanAccumulatedMuts: {
+    x: "linear",
+    y: "linear",
+  },
+  minAccumulatedMuts: {
+    x: "linear",
+    y: "linear",
+  },
   genotypeCount: {
     x: "linear",
     y: "linear",

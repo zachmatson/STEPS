@@ -93,6 +93,14 @@ export const trackedStatisticsFormFields: FormFieldSet = [
     configPath: "dataConfig.trackedStatistics.maxAccumulatedMuts",
   },
   {
+    label: "Accumulated Mutations Mean",
+    configPath: "dataConfig.trackedStatistics.meanAccumulatedMuts",
+  },
+  {
+    label: "Accumulated Mutations Min",
+    configPath: "dataConfig.trackedStatistics.minAccumulatedMuts",
+  },
+  {
     label: "Genotype Count",
     configPath: "dataConfig.trackedStatistics.genotypeCount",
   },

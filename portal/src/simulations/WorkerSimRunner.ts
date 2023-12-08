@@ -1,4 +1,4 @@
-import { JsSimulationHandler } from "../../steps_adapter/pkg";
+import { JsSimulationHandler } from "../../build/adapter_pkg";
 
 import { PortalRunConfig } from "../config/PortalRunConfig";
 import { SimWorkerCtx } from "./workerInterface";
@@ -48,6 +48,8 @@ export class WorkerSimRunner {
       const results = this.#handler.next_fragment(
         WorkerSimRunner.#minimumPostInterval
       );
+
+      console.log(results);
 
       if (results) {
         this.#ctx.postMessage({ type: "results", results });

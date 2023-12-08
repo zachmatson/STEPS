@@ -2,7 +2,7 @@
 
 use wasm_bindgen::prelude::*;
 
-use steps::cfg::{SimConfig, SummaryOutputConfig};
+use steps_core::cfg::{SimConfig, SummaryOutputConfig};
 
 use create_typescript_interface::create_typescript_interface;
 
@@ -42,6 +42,8 @@ create_typescript_interface! {
         maxW: (bool, boolean),
         stdevAccumulatedMuts: (bool, boolean),
         maxAccumulatedMuts: (bool, boolean),
+        meanAccumulatedMuts: (bool, boolean),
+        minAccumulatedMuts: (bool, boolean),
         genotypeCount: (bool, boolean),
         shannonDiversity: (bool, boolean),
     }
@@ -54,6 +56,8 @@ create_typescript_interface! {
         maxW?: (f64, number),
         stdevAccumulatedMuts?: (f64, number),
         maxAccumulatedMuts?: (u32, number),
+        meanAccumulatedMuts?: (f64, number),
+        minAccumulatedMuts?: (u32, number),
         genotypeCount?: (usize, number),
         shannonDiversity?: (f64, number),
     }
@@ -99,6 +103,8 @@ pub fn extract_summary_output_config(cfg: &PortalRunConfig) -> SummaryOutputConf
         max_W: tracked_statistics.maxW,
         stdev_accumulated_muts: tracked_statistics.stdevAccumulatedMuts,
         max_accumulated_muts: tracked_statistics.maxAccumulatedMuts,
+        mean_accumulated_muts: tracked_statistics.meanAccumulatedMuts,
+        min_accumulated_muts: tracked_statistics.minAccumulatedMuts,
         genotype_count: tracked_statistics.genotypeCount,
         shannon_diversity: tracked_statistics.shannonDiversity,
     }

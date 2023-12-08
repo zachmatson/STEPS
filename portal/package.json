@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "Web portal for STEPS simulations of evolutionary population dynamics",
   "scripts": {
-    "build": "rimraf dist && webpack --progress --mode=production",
+    "build": "rimraf build/dist && webpack --progress --mode=production",
     "start": "webpack s --mode=development",
-    "start:prod": "npm run build && http-server dist -p 9999 -o"
+    "start:prod": "npm run build && http-server build/dist -p 9999 -o"
   },
   "dependencies": {
     "@hookform/resolvers": "^2.8.9",
