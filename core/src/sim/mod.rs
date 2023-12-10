@@ -136,7 +136,7 @@ impl SimulationHandler {
 
     /// Perform a transfer on the underlying lineages and update mutations if applicable
     fn perform_transfer(&mut self) {
-        for _ in 1..self.cfg.phase_1_doublings {
+        for _ in 0..self.cfg.phase_1_doublings {
             growth_phase_1(
                 &self.cfg,
                 &mut self.lineages,

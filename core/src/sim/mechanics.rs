@@ -18,7 +18,15 @@ use crate::sim::InternalSimConfig;
 /// Get the number of phase 1 doublings that must take place before phase 2, given the dilution
 /// factor in `cfg`
 pub fn phase_1_doublings_required(cfg: &SimConfig) -> usize {
-    cfg.dilution_factor.log2().floor() as usize - 1
+    assert!(cfg.dilution_factor >= 2.0);
+
+    let total_doublings = cfg.dilution_factor.log2();
+    // We want at least 0.5 Phase2 doublings
+    if total_doublings.fract() < 0.5 {
+        total_doublings.floor() as usize - 1
+    } else {
+        total_doublings.floor() as usize
+    }
 }
 
 /// Perform a single Phase 1 doubling on the `lineages` in place
