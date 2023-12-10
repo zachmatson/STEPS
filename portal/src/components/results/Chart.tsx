@@ -2,6 +2,7 @@ import React from "react";
 
 import {
   Chart as ChartJSChart,
+  ChartType,
   LinearScale,
   LineController,
   LineElement,
@@ -88,6 +89,20 @@ export class Chart extends React.PureComponent<ChartProps> {
       data: {
         datasets: [],
       },
+      plugins: [
+        {
+          id: "colorScheme",
+          beforeDatasetUpdate(
+            chart: ChartJSChart<ChartType>,
+            args: { index: number }
+          ) {
+            const dataset = chart.data.datasets[args.index];
+            const color = COLOR_SCHEME[args.index % COLOR_SCHEME.length];
+            dataset.borderColor = color;
+            dataset.backgroundColor = color;
+          },
+        },
+      ],
       options: {
         animation: false,
         maintainAspectRatio: false,
@@ -175,3 +190,18 @@ export class Chart extends React.PureComponent<ChartProps> {
     this.dataSubscription = undefined;
   }
 }
+
+// Colorblind friendly scheme from
+// https://github.com/nagix/chartjs-plugin-colorschemes/blob/d96a01846626881aa4bec56828c333af81050906/src/colorschemes/colorschemes.tableau.js#L8
+const COLOR_SCHEME = [
+  "#1170aa",
+  "#fc7d0b",
+  "#a3acb9",
+  "#57606c",
+  "#5fa2ce",
+  "#c85200",
+  "#7b848f",
+  "#a3cce9",
+  "#ffbc79",
+  "#c8d0d9",
+];
