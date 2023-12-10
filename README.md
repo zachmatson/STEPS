@@ -15,3 +15,17 @@
 - On a single personal computer, use `RUSTFLAGS="-C target-cpu=native" cargo build --release`
 - For more portable libraries when compiling for Linux, the `crt-static` feature can be used
     - `RUSTFLAGS="[...] -C target-feature=+crt-static" cargo build [...] --target=x86_64-unknown-linux-gnu`
+
+### Building/running the Portal
+
+To test changes to the Portal while developing:
+```sh
+# in portal subdirectory
+$ npm run start
+```
+
+To test the production Portal build before pushing Portal changes:
+```sh
+# in portal subdirectory
+$ npm run start:prod
+```
