@@ -11,6 +11,7 @@ module.exports = (env, argv) => {
   const outputPath = path.resolve(__dirname, "build/dist");
 
   const isProduction = argv.mode == "production";
+  console.log("Production?", isProduction);
 
   return {
     mode: argv.mode,
@@ -18,7 +19,7 @@ module.exports = (env, argv) => {
     entry: appPath,
 
     output: {
-      filename: "bundle.[fullhash].js",
+      filename: isProduction ? "bundle.[fullhash].js" : "bundle.js",
       path: outputPath,
     },
 
@@ -67,8 +68,31 @@ module.exports = (env, argv) => {
               threshold: 10240,
               minRatio: 0.8,
             }),
+            // This will cache JS/WASM assets for the production build, using a service worker
+            //
+            // This is especially helpful to start preloading the web worker and WASM files before the simulations are
+            // actually run, and to prevent us from having to go to the network for those files every time the
+            // simulations are re-run.
             new GenerateSW({
               skipWaiting: true,
+              runtimeCaching: [
+                // NetworkFirst for index.html to ensure we always get the latest version.
+                {
+                  urlPattern: /.*index.html$/,
+                  handler: "NetworkFirst",
+                },
+                // For other assets, we can rely on the versioned naming for freshness instead.
+                {
+                  urlPattern: /.*/,
+                  handler: "CacheFirst",
+                  options: {
+                    cacheName: "mainCache",
+                    expiration: {
+                      maxAgeSeconds: 24 * 60 * 60, // 1 day
+                    },
+                  },
+                },
+              ],
             }),
           ]
         : []),

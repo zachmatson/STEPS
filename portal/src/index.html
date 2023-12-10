@@ -7,11 +7,16 @@
     <!-- Registering service worker for caching -->
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
           try {
-            navigator.serviceWorker.register('/service-worker.js');
+            console.log("Trying to register service worker");
+            await navigator.serviceWorker.register('/service-worker.js');
           } catch (error) {
-            console.log(error);
+            // Deregister the old service worker when we can't load service-worker.js
+            // This is a slightly hacky way to avoid using the service worker during local development
+            console.log("Failed to load service worker: ", error);
+            console.log("Deregistering old worker");
+            (await navigator.serviceWorker.getRegistrations()).forEach(registration => registration.unregister());
           }
         });
       }
