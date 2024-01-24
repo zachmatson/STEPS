@@ -43,6 +43,6 @@ pub fn expected_mutation_counts(lineages: &LineagesData, eligible_N: &[f64]) -> 
     assert_eq!(lineages.U.len(), eligible_N.len());
 
     izip!(&lineages.U, eligible_N.iter())
-        .map(|(u, n)| u * n)
+        .map(|(u, n)| u * n * 2.0)
         .collect()
 }
