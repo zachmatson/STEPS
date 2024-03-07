@@ -1,6 +1,6 @@
 {
   "name": "portal",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Web portal for STEPS simulations of evolutionary population dynamics",
   "scripts": {
     "build": "rimraf build/dist && webpack --progress --mode=production",
