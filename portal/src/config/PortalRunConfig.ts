@@ -51,19 +51,19 @@ export const simParamsStringySchema = z.object({
 export type SimParamsStringy = z.infer<typeof simParamsStringySchema>;
 
 export const defaultSimParams: SimParamsStringy = {
-  replicates: "4",
-  transfers: "800",
+  replicates: "12",
+  transfers: "1500",
   maxPopSize: "5e8",
   dilutionFactor: "100",
-  markers: "2",
+  markers: "1",
   beneficialMutationRate: "1.7e-6",
   deleteriousMutationRate: "0",
   mutationRateMutationRate: "0",
   neutralMutationRate: "0",
-  initialBeneficialMutationSize: "0.01587",
+  initialBeneficialMutationSize: "0.012",
   deleteriousMutationSizeFactor: "1",
   mutationRateMutationSizeFactor: "1",
-  diminishingReturnsEpistasisStrength: "6.0217",
+  diminishingReturnsEpistasisStrength: "6.0",
   seed: "",
 };
 
