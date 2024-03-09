@@ -1,0 +1,25 @@
+[package]
+name = "steps_core"
+version = "1.0.3"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+itertools = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+serde = { workspace = true }
+serde_tuple = { workspace = true }
+serde_json = { workspace = true }
+csv = { workspace = true }
+hashbrown = { workspace = true }
+rand = { workspace = true }
+rand_pcg = { workspace = true }
+rand_distr = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+slices_dispatch_wide = { workspace = true }
+derive_builder = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

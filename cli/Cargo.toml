@@ -1,0 +1,16 @@
+[package]
+name = "steps_cli"
+version = "1.0.3"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "steps"
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+indicatif = { workspace = true }
+itertools = { workspace = true }
+steps_core = { path = "../core" }
