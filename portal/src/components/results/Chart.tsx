@@ -138,13 +138,13 @@ export class Chart extends React.PureComponent<ChartProps> {
             max: mapValueToAxisScale(
               selectForXAxisUnits(
                 transfers,
-                generations,
+                Math.ceil(generations),
                 this.props.scales.xUnits
               ),
               this.props.scales.xScale
             ),
             ticks: {
-              includeBounds: false,
+              includeBounds: true,
             },
           },
           y: {

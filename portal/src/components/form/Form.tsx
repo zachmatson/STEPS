@@ -92,7 +92,7 @@ export const Form = React.forwardRef(
           />
         </Collapsible>
         <Collapsible
-          title="Advanced Simulation Parameters"
+          title="Advanced Settings"
           problem={sectionHasErrors(errors, advSimParamFormFields)}
         >
           <TextInputGroup

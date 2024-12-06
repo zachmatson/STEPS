@@ -11,11 +11,11 @@ export type FormFieldSet = {
 
 export const simParamsFormFields: FormFieldSet = [
   {
-    label: "Replicates",
+    label: "Replicate Populations",
     configPath: "simParams.replicates",
   },
   {
-    label: "Transfers",
+    label: "Number of Transfers",
     configPath: "simParams.transfers",
   },
   {
@@ -27,11 +27,11 @@ export const simParamsFormFields: FormFieldSet = [
     configPath: "simParams.dilutionFactor",
   },
   {
-    label: "Beneficial Mutation Rate",
+    label: "Rate of Beneficial Mutations",
     configPath: "simParams.beneficialMutationRate",
   },
   {
-    label: "Beneficial Mutation Size",
+    label: "Average Beneficial Mutation Effect Size",
     configPath: "simParams.initialBeneficialMutationSize",
   },
   {
@@ -43,16 +43,25 @@ export const simParamsFormFields: FormFieldSet = [
 
 export const advSimParamFormFields: FormFieldSet = [
   {
-    label: "Markers",
-    configPath: "simParams.markers",
-  },
-  {
-    label: "Neutral Mutation Rate",
+    label: "Rate of Neutral Mutations",
     configPath: "simParams.neutralMutationRate",
   },
   {
-    label: "Diminishing Returns Epistasis Strength",
+    label: "Rate of Deleterious Mutations",
+    configPath: "simParams.deleteriousMutationRate",
+  },
+  {
+    label: "Strength of Epistasis",
     configPath: "simParams.diminishingReturnsEpistasisStrength",
+  },
+  {
+    label: "Number of Initial Markers",
+    configPath: "simParams.markers",
+  },
+  {
+    label: "Randomization Seed",
+    placeholder: "Automatic Seed",
+    configPath: "simParams.seed",
   },
 ];
 
@@ -69,45 +78,45 @@ export const dataResolutionFormField: FormFieldSet[0] = {
 
 export const trackedStatisticsFormFields: FormFieldSet = [
   {
-    label: "Fitness Mean",
+    label: "Average Fitness",
     configPath: "dataConfig.trackedStatistics.avgW",
   },
   {
-    label: "Fitness Stdev",
-    configPath: "dataConfig.trackedStatistics.stdevW",
-  },
-  {
-    label: "Fitness Max",
-    configPath: "dataConfig.trackedStatistics.maxW",
-  },
-  {
-    label: "Marker 1 Ratio",
-    configPath: "dataConfig.trackedStatistics.marker1Ratio",
-  },
-  {
-    label: "Accumulated Mutations Stdev",
-    configPath: "dataConfig.trackedStatistics.stdevAccumulatedMuts",
-  },
-  {
-    label: "Accumulated Mutations Max",
-    configPath: "dataConfig.trackedStatistics.maxAccumulatedMuts",
-  },
-  {
-    label: "Accumulated Mutations Mean",
+    label: "Average Accumulated Mutations",
     configPath: "dataConfig.trackedStatistics.meanAccumulatedMuts",
   },
   {
-    label: "Accumulated Mutations Min",
-    configPath: "dataConfig.trackedStatistics.minAccumulatedMuts",
+    label: "Fitness Standard Deviation",
+    configPath: "dataConfig.trackedStatistics.stdevW",
   },
   {
-    label: "Genotype Count",
+    label: "Shannon Genetic Diversity",
+    configPath: "dataConfig.trackedStatistics.shannonDiversity",
+  },
+  {
+    label: "Number of Genotypes",
     configPath: "dataConfig.trackedStatistics.genotypeCount",
   },
   {
-    label: "Shannon Diversity",
-    configPath: "dataConfig.trackedStatistics.shannonDiversity",
+    label: "Marker 1 Ratio (log2)",
+    configPath: "dataConfig.trackedStatistics.marker1Ratio",
   },
+  // {
+  //   label: "Fitness Max",
+  //   configPath: "dataConfig.trackedStatistics.maxW",
+  // },
+  // {
+  //   label: "Accumulated Mutations Stdev",
+  //   configPath: "dataConfig.trackedStatistics.stdevAccumulatedMuts",
+  // },
+  // {
+  //   label: "Accumulated Mutations Max",
+  //   configPath: "dataConfig.trackedStatistics.maxAccumulatedMuts",
+  // },
+  // {
+  //   label: "Accumulated Mutations Min",
+  //   configPath: "dataConfig.trackedStatistics.minAccumulatedMuts",
+  // },
 ];
 
 export const dataCollectionFormFields: FormFieldSet = [
