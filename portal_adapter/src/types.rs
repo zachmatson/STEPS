@@ -23,7 +23,6 @@ create_typescript_interface! {
         deleteriousMutationRate: (f64, number),
         mutationRateMutationRate: (f64, number),
         initialBeneficialMutationSize: (f64, number),
-
         mutationRateMutationSizeFactor: (f64, number),
         diminishingReturnsEpistasisStrength: (f64, number),
         seed: (u64, BigInt),

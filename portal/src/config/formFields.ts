@@ -34,11 +34,6 @@ export const simParamsFormFields: FormFieldSet = [
     label: "Average Beneficial Mutation Effect Size",
     configPath: "simParams.initialBeneficialMutationSize",
   },
-  {
-    label: "Seed",
-    placeholder: "Automatic Seed",
-    configPath: "simParams.seed",
-  },
 ];
 
 export const advSimParamFormFields: FormFieldSet = [
