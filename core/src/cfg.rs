@@ -51,7 +51,7 @@ pub struct SimConfig {
     #[clap(short, long, default_value = "1")]
     pub replicates: u32,
     /// Number of transfers to run the experiment for in each replicate
-    #[clap(short, long, default_value = "1000")]
+    #[clap(short, long, default_value = "300")]
     pub transfers: u32,
     /// Number of neutral markers to include in the experiment
     #[clap(short, long, default_value = "2")]
@@ -74,9 +74,6 @@ pub struct SimConfig {
     /// Initial mean beneficial mutation size
     #[clap(long = "Sb", default_value = "0.015873")]
     pub initial_beneficial_mutation_size: f64,
-    /// Initial deleterious mutation size as multiple of initial beneficial mutation size
-    #[clap(long = "Sd", default_value = "0.0")]
-    pub deleterious_mutation_size_factor: f64,
     /// Initial mutation rate mutation size as multiple of initial beneficial mutation size
     #[clap(long = "Sm", default_value = "0.0")]
     pub mutation_rate_mutation_size_factor: f64,

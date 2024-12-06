@@ -23,7 +23,6 @@ export const simParamsSchema = z.object({
   deleteriousMutationRate: zNonNegNumber(),
   mutationRateMutationRate: zNonNegNumber(),
   initialBeneficialMutationSize: zPosNumber(),
-  deleteriousMutationSizeFactor: zPosNumber(),
   mutationRateMutationSizeFactor: zPosNumber(),
   diminishingReturnsEpistasisStrength: zNonNegNumber(),
   seed: zSeed,
@@ -42,7 +41,6 @@ export const simParamsStringySchema = z.object({
   deleteriousMutationRate: zString,
   mutationRateMutationRate: zString,
   initialBeneficialMutationSize: zString,
-  deleteriousMutationSizeFactor: zString,
   mutationRateMutationSizeFactor: zString,
   diminishingReturnsEpistasisStrength: zString,
   seed: zString.default(""),
@@ -52,7 +50,7 @@ export type SimParamsStringy = z.infer<typeof simParamsStringySchema>;
 
 export const defaultSimParams: SimParamsStringy = {
   replicates: "12",
-  transfers: "1500",
+  transfers: "300",
   maxPopSize: "5e8",
   dilutionFactor: "100",
   markers: "1",
@@ -61,7 +59,6 @@ export const defaultSimParams: SimParamsStringy = {
   mutationRateMutationRate: "0",
   neutralMutationRate: "0",
   initialBeneficialMutationSize: "0.012",
-  deleteriousMutationSizeFactor: "1",
   mutationRateMutationSizeFactor: "1",
   diminishingReturnsEpistasisStrength: "6.0",
   seed: "",
