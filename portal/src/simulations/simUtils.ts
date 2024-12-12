@@ -3,4 +3,11 @@ import { SimParams } from "../config/PortalRunConfig";
 export const transfersToGenerations = (
   transfers: number,
   simParams: SimParams
-): number => transfers * Math.log2(simParams.dilutionFactor);
+): number => {
+  let dilution = simParams.dilutionFactor as unknown;
+  if (dilution != 100) {
+    return transfers * Math.log2(simParams.dilutionFactor);
+  } else {
+    return transfers * 20.0 / 3.0;
+  }
+};

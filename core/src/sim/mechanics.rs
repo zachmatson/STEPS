@@ -257,8 +257,14 @@ fn apply_beneficial_mutation<R: Rng>(lineage: &mut Lineage, cfg: &InternalSimCon
 /// Applies a deleterious mutation to `lineage` in-place
 #[allow(unused_variables)]
 fn apply_deleterious_mutation<R: Rng>(lineage: &mut Lineage, cfg: &InternalSimConfig, rng: &mut R) {
-    let size = rand_distr::Uniform::new(0.0,1.0)
-    .sample(rng);
+    let mut size = cfg.inner.fixed_deleterious_mutation_size;
+    if size == 0.0 { // If default hasn't been changed, draws from distribution
+        size = rand_distr::Uniform::new(0.0,1.0)
+        .sample(rng);
+    } else { // If the default has been changed, use fixed size mutations
+        size = cfg.inner.fixed_deleterious_mutation_size;
+    }
+    
     lineage.W *= 1.0 - size;
     let G = cfg.inner.diminishing_returns_epistasis_strength * (size + 1.0) - size;
     lineage.secondary.lambda *= 1.0 + G * size;
