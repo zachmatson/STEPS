@@ -61,7 +61,7 @@ export const defaultSimParams: SimParamsStringy = {
   mutationRateMutationRate: "0",
   neutralMutationRate: "0",
   initialBeneficialMutationSize: "0.012",
-  fixedDeleteriousMutationSize: "0.00",
+  fixedDeleteriousMutationSize: "2.0",
   mutationRateMutationSizeFactor: "1",
   diminishingReturnsEpistasisStrength: "6.0",
   seed: "",
