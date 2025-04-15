@@ -48,19 +48,19 @@ pub struct SummaryOutputConfig {
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
 pub struct SimConfig {
     /// Number of replicates to perform
-    #[clap(short, long, default_value = "1")]
+    #[clap(short, long, default_value = "12")]
     pub replicates: u32,
     /// Number of transfers to run the experiment for in each replicate
     #[clap(short, long, default_value = "300")]
     pub transfers: u32,
     /// Number of neutral markers to include in the experiment
-    #[clap(short, long, default_value = "2")]
+    #[clap(short, long, default_value = "1")]
     pub markers: u16,
     /// The dilution factor
     #[clap(short = 'D', long, default_value = "100")]
     pub dilution_factor: f64,
     /// Beneficial mutation rate
-    #[clap(long = "Ub", default_value = "0.0")]
+    #[clap(long = "Ub", default_value = "1.7E-6")]
     pub beneficial_mutation_rate: f64,
     /// Neutral mutation rate
     #[clap(long = "Un", default_value = "0.0")]
@@ -72,16 +72,16 @@ pub struct SimConfig {
     #[clap(long = "Um", default_value = "0.0")]
     pub mutation_rate_mutation_rate: f64,
     /// Initial mean beneficial mutation size
-    #[clap(long = "Sb", default_value = "0.015873")]
+    #[clap(long = "Sb", default_value = "0.012")]
     pub initial_beneficial_mutation_size: f64,
     /// Fixed deleterious mutation size
-    #[clap(long = "Sd", default_value = "0.0")]
+    #[clap(long = "Sd", default_value = "2.0")]
     pub fixed_deleterious_mutation_size: f64,
     /// Initial mutation rate mutation size as multiple of initial beneficial mutation size
     #[clap(long = "Sm", default_value = "0.0")]
     pub mutation_rate_mutation_size_factor: f64,
     /// Diminishing returns epistasis strength
-    #[clap(short = 'g', default_value = "1.0")]
+    #[clap(short = 'g', default_value = "6.0")]
     pub diminishing_returns_epistasis_strength: f64,
     /// Seed for the RNG
     #[clap(long)]

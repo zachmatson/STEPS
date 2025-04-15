@@ -258,10 +258,11 @@ fn apply_beneficial_mutation<R: Rng>(lineage: &mut Lineage, cfg: &InternalSimCon
 #[allow(unused_variables)]
 fn apply_deleterious_mutation<R: Rng>(lineage: &mut Lineage, cfg: &InternalSimConfig, rng: &mut R) {
     let mut size = cfg.inner.fixed_deleterious_mutation_size;
-    if size == 0.0 { // If default hasn't been changed, draws from distribution
-        size = rand_distr::Uniform::new(0.0,1.0)
-        .sample(rng);
-    } else { // If the default has been changed, use fixed size mutations
+    if size == 2.0 {
+        // If default hasn't been changed, draws from distribution
+        size = rand_distr::Uniform::new(0.0, 1.0).sample(rng);
+    } else {
+        // If the default has been changed, use fixed size mutations
         size = cfg.inner.fixed_deleterious_mutation_size;
     }
     
