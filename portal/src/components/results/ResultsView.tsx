@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 
 import fp from "lodash/fp";
 import { Observable } from "rxjs";
@@ -12,15 +12,16 @@ import { statFormattedNames } from "../../config/statNameMap";
 import { Collapsible } from "../general/Collapsible";
 import { SortableMappedList } from "../general/SortableMappedList";
 import { Chart } from "./Chart";
-import { SimChartDatasets } from "../../charts/SimChartDatasets";
 import { ChartSettingsMenu } from "./ChartSettingsMenu";
+import { SimEvent } from "../../simulations/SimLink";
+import { simChartDatasetsObservable } from "../../charts/simChartDatasetsObservable";
 
 export type ResultsViewProps = {
   config: PortalRunConfig;
-  dataObservable: Observable<SimChartDatasets>;
+  simEvent$: Observable<SimEvent>;
 };
 
-export const ResultsView = ({ config, dataObservable }: ResultsViewProps) => {
+export const ResultsView = ({ config, simEvent$ }: ResultsViewProps) => {
   // TODO: Move this state up into the app to save it in the URL
   const [scaleConfig, setScaleConfig] = useState(() =>
     fp.cloneDeep(defaultChartScaleConfig)
@@ -30,6 +31,11 @@ export const ResultsView = ({ config, dataObservable }: ResultsViewProps) => {
     fp.pickBy(fp.identity),
     fp.keys
   )(config.dataConfig.trackedStatistics);
+
+  const dataObservable = useMemo(
+    () => simChartDatasetsObservable(simEvent$),
+    [simEvent$]
+  );
 
   return (
     <SortableMappedList keys={enabledStats} handle>

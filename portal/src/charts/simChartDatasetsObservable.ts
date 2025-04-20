@@ -1,38 +1,33 @@
-import {
-  asyncScheduler,
-  BehaviorSubject,
-  concat,
-  Observable,
-  observeOn,
-  of,
-  scan,
-  switchMap,
-} from "rxjs";
-import { SimResultsFragments } from "../simulations/simTypes";
+import { asyncScheduler, Observable, observeOn, scan, shareReplay } from "rxjs";
 
-import { toSubscribedSubject } from "../utils/rxjsUtils";
 import {
   mergeFragmentsIntoDatasetsInPlace,
   SimChartDatasets,
 } from "./SimChartDatasets";
+import { SimEvent } from "../simulations/SimLink";
 
-export interface DatasetsSourceObservables {
-  start$: Observable<unknown>;
-  results$: Observable<SimResultsFragments>;
-}
-
+/**
+ * Converts stream of simulation events into a stream of chart datasets
+ */
 export const simChartDatasetsObservable = (
-  sources: DatasetsSourceObservables
+  source: Observable<SimEvent>
 ): Observable<SimChartDatasets> =>
-  sources.start$.pipe(
-    switchMap(() =>
-      concat(of<SimResultsFragments>([]), sources.results$).pipe(
-        scan<SimResultsFragments, SimChartDatasets>(
-          mergeFragmentsIntoDatasetsInPlace,
-          []
-        )
-      )
-    ),
-    toSubscribedSubject(() => new BehaviorSubject<SimChartDatasets>([])),
+  source.pipe(
+    scan<SimEvent, SimChartDatasets>((datasets, event) => {
+      switch (event.type) {
+        case "started":
+          // Reset data when a new simulation run starts
+          return [];
+        case "results":
+          // Merge results into existing datasets for the current run
+          return mergeFragmentsIntoDatasetsInPlace(datasets, event.results);
+        default:
+          // Ignore other event types
+          return datasets;
+      }
+    }, []),
+    // Make sure all charts get latest state of the data when they subscribe
+    shareReplay(1),
+    // Perform chart updates asynchronously
     observeOn(asyncScheduler)
   );

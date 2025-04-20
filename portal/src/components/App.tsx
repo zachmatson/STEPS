@@ -15,8 +15,8 @@ import {
   SimStatus,
 } from "../config/PortalRunConfig";
 import { ResultsView } from "./results/ResultsView";
-import { simChartDatasetsObservable } from "../charts/simChartDatasetsObservable";
 import { SimLink } from "../simulations/SimLink";
+import { bufferUntilSubscribed } from "../utils/rxjsUtils";
 
 type AppState = {
   status: SimStatus;
@@ -31,7 +31,11 @@ type AppState = {
 export class App extends React.Component<{}, AppState> {
   formRef = React.createRef<FormHandle>();
   simLink = new SimLink();
-  chartDatasets$ = simChartDatasetsObservable(this.simLink.observables());
+  // Create an observable that will be buffered until the ResultsView starts to read from it.
+  // This is out of extreme caution, the results view should be able to subscribe before simulations can be started.
+  simLinkEventsForResultsView$ = bufferUntilSubscribed(
+    this.simLink.eventsObservable()
+  );
 
   constructor(props: {}) {
     super(props);
@@ -42,12 +46,14 @@ export class App extends React.Component<{}, AppState> {
       ? suppliedConfig.data
       : fp.cloneDeep(defaultPortalRunConfig);
 
-    this.simLink.observables().outcome$.subscribe((outcome) =>
-      this.setState({
-        status: "finished",
-        csvDownloadUrl: outcome.csvDownloadUrl ?? null,
-      })
-    );
+    this.simLink.eventsObservable().subscribe((event) => {
+      if (event.type == "done") {
+        this.setState({
+          status: "finished",
+          csvDownloadUrl: event.outcome.csvDownloadUrl ?? null,
+        });
+      }
+    });
 
     this.state = {
       status: "notStarted",
@@ -118,7 +124,7 @@ export class App extends React.Component<{}, AppState> {
           ) : (
             <ResultsView
               config={this.state.activeConfigs.numeric}
-              dataObservable={this.chartDatasets$}
+              simEvent$={this.simLinkEventsForResultsView$}
             />
           )
         }
