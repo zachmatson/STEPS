@@ -4,7 +4,7 @@
 
 #![allow(clippy::needless_range_loop)]
 
-use rand::distributions::{Distribution, Uniform};
+use rand::distributions::{Distribution, Standard, Uniform};
 use rand::Rng;
 
 use crate::cfg::SimConfig;
@@ -254,22 +254,25 @@ fn apply_beneficial_mutation<R: Rng>(lineage: &mut Lineage, cfg: &InternalSimCon
     lineage.secondary.lambda *= 1.0 + cfg.inner.diminishing_returns_epistasis_strength * size;
 }
 
+/// Default distribution for deleterious mutation size, when a fixed size is not specified
+///
+/// This is a uniform distribution over [0.0, 1.0)
+const DEFAULT_DELETERIOUS_MUTATION_SIZE_DISTRIBUTION: Standard = Standard;
+
 /// Applies a deleterious mutation to `lineage` in-place
 #[allow(unused_variables)]
 fn apply_deleterious_mutation<R: Rng>(lineage: &mut Lineage, cfg: &InternalSimConfig, rng: &mut R) {
-    let mut size = cfg.inner.fixed_deleterious_mutation_size;
-    if size == 2.0 {
-        // If default hasn't been changed, draws from distribution
-        size = rand_distr::Uniform::new(0.0, 1.0).sample(rng);
-    } else {
-        // If the default has been changed, use fixed size mutations
-        size = cfg.inner.fixed_deleterious_mutation_size;
-    }
-    
+    let size = match cfg.inner.fixed_deleterious_mutation_size {
+        // If a fixed size is provided, we will always use that
+        Some(size) => size,
+        // Otherwise, sample from [0.0, 1.0)
+        None => DEFAULT_DELETERIOUS_MUTATION_SIZE_DISTRIBUTION.sample(rng),
+    };
+
     lineage.W *= 1.0 - size;
     let G = cfg.inner.diminishing_returns_epistasis_strength * (size + 1.0) - size;
     lineage.secondary.lambda *= 1.0 + G * size;
-} 
+}
 
 /// Applies a mutation rate mutation to `lineage` in-place
 #[allow(unused_variables)]
