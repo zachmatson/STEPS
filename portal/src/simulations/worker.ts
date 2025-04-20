@@ -1,6 +1,11 @@
 import { WorkerSimRunner } from "./WorkerSimRunner";
 import { SimWorkerCtx } from "./workerInterface";
 
+/**
+ * This file is the actual script that gets run when the web worker is launched
+ * It serves as scaffolding between the raw worker message interface and the WorkerSimRunner
+ */
+
 const ctx = self as unknown as SimWorkerCtx;
 let runner: WorkerSimRunner | null = null;
 
