@@ -96,22 +96,6 @@ export const trackedStatisticsFormFields: FormFieldSet = [
     label: "Marker 1 Ratio (log2)",
     configPath: "dataConfig.trackedStatistics.marker1Ratio",
   },
-  // {
-  //   label: "Fitness Max",
-  //   configPath: "dataConfig.trackedStatistics.maxW",
-  // },
-  // {
-  //   label: "Accumulated Mutations Stdev",
-  //   configPath: "dataConfig.trackedStatistics.stdevAccumulatedMuts",
-  // },
-  // {
-  //   label: "Accumulated Mutations Max",
-  //   configPath: "dataConfig.trackedStatistics.maxAccumulatedMuts",
-  // },
-  // {
-  //   label: "Accumulated Mutations Min",
-  //   configPath: "dataConfig.trackedStatistics.minAccumulatedMuts",
-  // },
 ];
 
 export const dataCollectionFormFields: FormFieldSet = [
