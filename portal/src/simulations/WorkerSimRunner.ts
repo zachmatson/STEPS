@@ -5,6 +5,11 @@ import { SimWorkerCtx } from "./workerInterface";
 
 const yieldToEventLoop = () => new Promise((res) => setTimeout(res, 0));
 
+/**
+ * WorkerSimRunner is responsible for running the WASM code inside the web worker and reporting back results
+ *
+ * This is the main logic on the worker side
+ */
 export class WorkerSimRunner {
   static readonly #minimumPostInterval = 100;
 
