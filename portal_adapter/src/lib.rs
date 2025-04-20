@@ -85,7 +85,6 @@ impl JsSimulationHandler {
 
                     fragment.points.push(make_data_point(
                         transfer,
-                        transfer_to_generation(transfer, self.cfg.simParams.dilutionFactor),
                         &self.cfg.dataConfig.trackedStatistics,
                         lineages,
                     ));
@@ -119,11 +118,6 @@ impl JsSimulationHandler {
     }
 }
 
-/// Get the generation corresponding to a transfer number
-fn transfer_to_generation(transfer: u32, dilution_factor: f64) -> f64 {
-    transfer as f64 * dilution_factor.log2()
-}
-
 /// Automate the repetitive process of generating the `make_data_point` function
 ///
 /// Macro should be provided with a series of mappings between the name of the flag in
@@ -135,13 +129,11 @@ macro_rules! impl_make_data_point {
         /// the requested statistics
         fn make_data_point(
             transfer: u32,
-            generation: f64,
             tracked_statistics: &TrackedStatistics,
             lineages: &LineagesData,
         ) -> SimDataPoint {
             SimDataPoint {
                 transfer,
-                generation,
                 $(
                     $config_name: tracked_statistics
                         .$config_name
