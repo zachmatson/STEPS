@@ -6,21 +6,16 @@ import {
   SafeParseResult,
 } from "../utils/safeParse";
 import {
-  PortalRunConfig,
   PortalRunConfigStringy,
   portalRunConfigStringySchema,
 } from "./PortalRunConfig";
 
 export const encodeConfigInURL = (
-  config: PortalRunConfig | PortalRunConfigStringy,
+  config: PortalRunConfigStringy,
   baseHref = window.location.href
 ): string => {
   const url = new URL(baseHref);
-  const stringyConfig = portalRunConfigStringySchema.parse(config);
-  url.searchParams.set(
-    "runConfig",
-    Base64.encode(JSON.stringify(stringyConfig))
-  );
+  url.searchParams.set("runConfig", Base64.encode(JSON.stringify(config)));
   return url.toString();
 };
 

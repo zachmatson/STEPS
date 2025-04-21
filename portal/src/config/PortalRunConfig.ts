@@ -4,6 +4,7 @@ import {
   zBoolean,
   zGe1Number,
   zNonNegNumber,
+  zOptional,
   zPosInt,
   zPosNumber,
   zSeed,
@@ -12,22 +13,25 @@ import {
 
 export type SimStatus = "notStarted" | "running" | "paused" | "finished";
 
+/*
+  For all sections of the simulation config, we need both a numerical schema, which is used by the simulations,
+  and a "stringy" schema which losslessly stores the actual user input
+ */
+
 export const simParamsSchema = z.object({
-  replicates: zPosInt(),
-  transfers: zPosInt(),
-  maxPopSize: zPosNumber(),
-  dilutionFactor: zGe1Number(),
-  markers: zPosInt(),
-  beneficialMutationRate: zNonNegNumber(),
-  neutralMutationRate: zNonNegNumber(),
-  deleteriousMutationRate: zNonNegNumber(),
-  mutationRateMutationRate: zNonNegNumber(),
-  initialBeneficialMutationSize: zPosNumber(),
-  fixedDeleteriousMutationSize: zNonNegNumber({
-    optional: true,
-  }) as unknown as z.ZodOptional<z.ZodNumber>,
-  mutationRateMutationSizeFactor: zPosNumber(),
-  diminishingReturnsEpistasisStrength: zNonNegNumber(),
+  replicates: zPosInt,
+  transfers: zPosInt,
+  maxPopSize: zPosNumber,
+  dilutionFactor: zGe1Number,
+  markers: zPosInt,
+  beneficialMutationRate: zNonNegNumber,
+  neutralMutationRate: zNonNegNumber,
+  deleteriousMutationRate: zNonNegNumber,
+  mutationRateMutationRate: zNonNegNumber,
+  initialBeneficialMutationSize: zPosNumber,
+  fixedDeleteriousMutationSize: zOptional(zNonNegNumber),
+  mutationRateMutationSizeFactor: zPosNumber,
+  diminishingReturnsEpistasisStrength: zNonNegNumber,
   seed: zSeed,
 });
 
@@ -44,10 +48,10 @@ export const simParamsStringySchema = z.object({
   deleteriousMutationRate: zString,
   mutationRateMutationRate: zString,
   initialBeneficialMutationSize: zString,
-  fixedDeleteriousMutationSize: zString.default(""),
+  fixedDeleteriousMutationSize: zOptional(zString),
   mutationRateMutationSizeFactor: zString,
   diminishingReturnsEpistasisStrength: zString,
-  seed: zString.default(""),
+  seed: zOptional(zString),
 });
 
 export type SimParamsStringy = z.infer<typeof simParamsStringySchema>;
@@ -63,10 +67,10 @@ export const defaultSimParams: SimParamsStringy = {
   mutationRateMutationRate: "0",
   neutralMutationRate: "0",
   initialBeneficialMutationSize: "0.012",
-  fixedDeleteriousMutationSize: "",
+  fixedDeleteriousMutationSize: undefined,
   mutationRateMutationSizeFactor: "1",
   diminishingReturnsEpistasisStrength: "6.0",
-  seed: "",
+  seed: undefined,
 };
 
 export const dataCollectionConfigSchema = z.object({
@@ -83,10 +87,7 @@ export const dataCollectionConfigSchema = z.object({
     genotypeCount: zBoolean,
     shannonDiversity: zBoolean,
   }),
-  // TODO: See if we can use fancier type signatures in the underlying methods instead of this
-  dataResolution: zPosInt({
-    optional: true,
-  }) as unknown as z.ZodOptional<z.ZodNumber>,
+  dataResolution: zOptional(zPosInt),
 });
 
 export type DataCollectionConfig = z.infer<typeof dataCollectionConfigSchema>;
@@ -105,7 +106,7 @@ export const dataCollectionConfigStringySchema = z.object({
     genotypeCount: zBoolean,
     shannonDiversity: zBoolean,
   }),
-  dataResolution: zString.default(""),
+  dataResolution: zOptional(zString),
 });
 
 export type DataCollectionConfigStringy = z.infer<
@@ -126,7 +127,7 @@ export const defaultDataCollectionConfig: DataCollectionConfigStringy = {
     genotypeCount: false,
     shannonDiversity: false,
   },
-  dataResolution: "",
+  dataResolution: undefined,
 };
 
 export const portalRunConfigSchema = z.object({
