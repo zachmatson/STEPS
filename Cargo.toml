@@ -1,8 +1,12 @@
 [workspace]
-# The portal is not part of the overall Cargo workspace
-members = ["core", "cli", "portal_adapter"]
+# Don't include portal packages by default
 default-members = ["core", "cli"]
+members = ["core", "cli", "portal_adapter", "portal_adapter/create_typescript_interface"]
 resolver = "2"
+
+[workspace.package]
+edition = "2021"
+version = "1.0.3"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

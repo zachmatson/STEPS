@@ -1,7 +1,7 @@
 [package]
 name = "create_typescript_interface"
-version = "1.0.3"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 
 [lib]
 proc-macro = true
