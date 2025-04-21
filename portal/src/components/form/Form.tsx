@@ -44,16 +44,15 @@ export const Form = React.forwardRef(
       formState: { errors: errorsRaw, isDirty },
     } = useForm<PortalRunConfigStringy>({
       defaultValues: props.defaultValues,
-      resolver: zodResolver(portalRunConfigSchema),
+      resolver: zodResolver(portalRunConfigSchema, undefined, {
+        rawValues: true, // We want to get the stringy config in handleSubmit, not the parsed version
+      }),
     });
 
     const errors = useMatchRefsToVals(errorsRaw);
 
     const handledOnSubmit = useCallback(
-      // handleSubmit takes care of validation, which we want, but it only gives
-      // us the parsed config, when we also want the raw "stringy" one
-      handleSubmit((_config) => {
-        const configStringy = fp.cloneDeep(getValues());
+      handleSubmit((configStringy: PortalRunConfigStringy) => {
         const config = portalRunConfigSchema.parse(configStringy);
         // This is necessary for dirtiness updates to work, because the form's
         // defaultValues are cached and only get updated when reset is called
