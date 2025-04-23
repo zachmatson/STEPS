@@ -93,7 +93,7 @@ export const trackedStatisticsFormFields: FormFieldSet = [
     configPath: "dataConfig.trackedStatistics.genotypeCount",
   },
   {
-    label: "Marker 1 Ratio (log2)",
+    label: "Marker 1 Ratio",
     configPath: "dataConfig.trackedStatistics.marker1Ratio",
   },
 ];

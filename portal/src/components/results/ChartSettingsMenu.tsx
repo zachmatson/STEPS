@@ -2,18 +2,20 @@ import React, { useRef } from "react";
 
 import Popup from "reactjs-popup";
 
-import { ChartScales } from "../../config/chartConfig";
+import { AvailableScales, ChartScales } from "../../config/chartConfig";
 import * as icons from "../icons/Icons";
 import { ScalesSelector } from "./ScalesSelector";
 
 export type ChartSettingsMenuProps = {
   scalesValue: ChartScales;
   onScalesChange: (value: ChartScales) => void;
+  availableScales: AvailableScales;
 };
 
 export const ChartSettingsMenu = ({
   scalesValue,
   onScalesChange,
+  availableScales,
 }: ChartSettingsMenuProps) => {
   const emptyDivRef = useRef<HTMLDivElement>(null);
 
@@ -34,7 +36,11 @@ export const ChartSettingsMenu = ({
           this empty div can be used to quietly take the focus instead
         */}
         <div className="h-0 w-0 m-0 p-0" tabIndex={-1} ref={emptyDivRef} />
-        <ScalesSelector value={scalesValue} onChange={onScalesChange} />
+        <ScalesSelector
+          value={scalesValue}
+          onChange={onScalesChange}
+          availableScales={availableScales}
+        />
       </Popup>
     </div>
   );

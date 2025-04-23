@@ -6,6 +6,7 @@ import {
   LinearScale,
   LineController,
   LineElement,
+  LogarithmicScale,
   PointElement,
   Title,
   Tooltip,
@@ -31,6 +32,7 @@ import { transfersToGenerations } from "../../simulations/simUtils";
 
 ChartJSChart.register(
   LinearScale,
+  LogarithmicScale,
   LineController,
   PointElement,
   LineElement,
@@ -126,7 +128,7 @@ export class Chart extends React.PureComponent<ChartProps> {
         },
         scales: {
           x: {
-            type: "linear",
+            type: this.props.scales.xScale === "log" ? "logarithmic" : "linear",
             title: {
               display: true,
               text: adaptNameForAxisScale(
@@ -148,7 +150,7 @@ export class Chart extends React.PureComponent<ChartProps> {
             },
           },
           y: {
-            type: "linear",
+            type: this.props.scales.yScale === "log" ? "logarithmic" : "linear",
             title: {
               display: true,
               text: adaptNameForAxisScale(
