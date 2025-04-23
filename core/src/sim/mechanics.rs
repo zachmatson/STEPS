@@ -204,7 +204,7 @@ fn add_mutants<R: Rng>(
                 }
 
                 let mutant = new_mutant(lineage, mutant_order, cfg, rng);
-                lineages.push_child(mutant, lineage, mutations);
+                lineages.push_child(mutant, lineage, mutant_order, mutations);
                 // N still includes the mutants that come from the lineage up until this point
                 // No need to update lineage because its N field is not used here
                 lineages.N[i] = (lineages.N[i] - 1.0).max(0.0);
