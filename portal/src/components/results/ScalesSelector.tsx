@@ -1,5 +1,10 @@
 import React, { useCallback } from "react";
-import { AxisScale, ChartScales, XAxisUnits } from "../../config/chartConfig";
+import {
+  AvailableScales,
+  AxisScale,
+  ChartScales,
+  XAxisUnits,
+} from "../../config/chartConfig";
 import {
   HorizontalRadioGroup,
   RadioGroupItem,
@@ -11,8 +16,12 @@ const scaleRadioItems: RadioGroupItem<AxisScale>[] = [
     value: "linear",
   },
   {
+    label: "Log",
+    value: "log",
+  },
+  {
     label: "Log2",
-    value: "log2",
+    value: "log2-transform",
   },
 ];
 
@@ -30,9 +39,14 @@ const xAxisUnitRadioItems: RadioGroupItem<XAxisUnits>[] = [
 export type ScalesSelectorProps = {
   value: ChartScales;
   onChange?: (value: ChartScales) => void;
+  availableScales: AvailableScales;
 };
 
-export const ScalesSelector = ({ value, onChange }: ScalesSelectorProps) => {
+export const ScalesSelector = ({
+  value,
+  onChange,
+  availableScales,
+}: ScalesSelectorProps) => {
   const [onSelectYScale, onSelectXScale, onSelectXUnits] = (
     ["yScale", "xScale", "xUnits"] as (keyof ChartScales)[]
   ).map((field) =>
@@ -46,17 +60,24 @@ export const ScalesSelector = ({ value, onChange }: ScalesSelectorProps) => {
     )
   );
 
+  const yScaleItems = scaleRadioItems.filter((scale) =>
+    availableScales.yScales.includes(scale.value)
+  );
+  const xScaleItems = scaleRadioItems.filter((scale) =>
+    availableScales.xScales.includes(scale.value)
+  );
+
   return (
     <div className="p-3 bg-gray-50 rounded shadow-lg">
       <HorizontalRadioGroup
         title={"Y Scale"}
-        items={scaleRadioItems}
+        items={yScaleItems}
         selected={value.yScale}
         onSelect={onSelectYScale}
       />
       <HorizontalRadioGroup
         title={"X Scale"}
-        items={scaleRadioItems}
+        items={xScaleItems}
         selected={value.xScale}
         onSelect={onSelectXScale}
       />

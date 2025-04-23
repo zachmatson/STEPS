@@ -3,7 +3,10 @@ import React, { useMemo, useState } from "react";
 import fp from "lodash/fp";
 import { Observable } from "rxjs";
 
-import { defaultChartScaleConfig } from "../../config/chartConfig";
+import {
+  availableScalesByStat,
+  defaultChartScaleConfig,
+} from "../../config/chartConfig";
 import {
   DataCollectionConfig,
   PortalRunConfig,
@@ -42,6 +45,7 @@ export const ResultsView = ({ config, simEvent$ }: ResultsViewProps) => {
       {({ key, handleClassname }) => {
         const stat = key as keyof DataCollectionConfig["trackedStatistics"];
         const statName = statFormattedNames[stat];
+        const availableScales = availableScalesByStat[stat];
 
         return (
           <Collapsible
@@ -55,6 +59,7 @@ export const ResultsView = ({ config, simEvent$ }: ResultsViewProps) => {
                 onScalesChange={(value) =>
                   setScaleConfig((config) => ({ ...config, [stat]: value }))
                 }
+                availableScales={availableScales}
               />
             }
           >

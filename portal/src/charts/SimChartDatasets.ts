@@ -8,7 +8,7 @@ export type SimChartDataPoint = SimDataPoint & { generation: number };
 
 export type ScaledSimChartDataPoint = {
   linear: SimChartDataPoint;
-  log2: SimChartDataPoint;
+  "log2-transform": SimChartDataPoint;
 };
 
 export type ScaledSimChartDataPoints = ScaledSimChartDataPoint[];
@@ -37,7 +37,9 @@ const simDataPointToChartDataPoint = (
   };
   return {
     linear: chartDataPoint,
-    log2: fp.mapValues(Math.log2)(chartDataPoint) as SimChartDataPoint,
+    "log2-transform": fp.mapValues(Math.log2)(
+      chartDataPoint
+    ) as SimChartDataPoint,
   };
 };
 

@@ -1,6 +1,6 @@
 import { DataCollectionConfig } from "./PortalRunConfig";
 
-export type AxisScale = "linear" | "log2";
+export type AxisScale = "linear" | "log" | "log2-transform";
 
 export type XAxisUnits = "generations" | "transfers";
 
@@ -33,7 +33,7 @@ export const defaultChartScaleConfig: ChartScaleConfig = {
   marker1Ratio: {
     xScale: "linear",
     xUnits: "generations",
-    yScale: "log2",
+    yScale: "log2-transform",
   },
   stdevAccumulatedMuts: {
     xScale: "linear",
@@ -64,5 +64,57 @@ export const defaultChartScaleConfig: ChartScaleConfig = {
     xScale: "linear",
     xUnits: "generations",
     yScale: "linear",
+  },
+};
+
+export type AvailableScales = {
+  yScales: readonly AxisScale[];
+  xScales: readonly AxisScale[];
+};
+
+export type AvailableScalesByStat = {
+  [k in keyof DataCollectionConfig["trackedStatistics"]]: AvailableScales;
+};
+
+export const availableScalesByStat: AvailableScalesByStat = {
+  avgW: {
+    yScales: ["linear", "log"],
+    xScales: ["linear", "log"],
+  },
+  stdevW: {
+    yScales: ["linear", "log"],
+    xScales: ["linear", "log"],
+  },
+  maxW: {
+    yScales: ["linear", "log"],
+    xScales: ["linear", "log"],
+  },
+  marker1Ratio: {
+    yScales: ["linear", "log2-transform"],
+    xScales: ["linear", "log"],
+  },
+  stdevAccumulatedMuts: {
+    yScales: ["linear", "log"],
+    xScales: ["linear", "log"],
+  },
+  maxAccumulatedMuts: {
+    yScales: ["linear", "log"],
+    xScales: ["linear", "log"],
+  },
+  meanAccumulatedMuts: {
+    yScales: ["linear", "log"],
+    xScales: ["linear", "log"],
+  },
+  minAccumulatedMuts: {
+    yScales: ["linear", "log"],
+    xScales: ["linear", "log"],
+  },
+  genotypeCount: {
+    yScales: ["linear", "log"],
+    xScales: ["linear", "log"],
+  },
+  shannonDiversity: {
+    yScales: ["linear", "log"],
+    xScales: ["linear", "log"],
   },
 };
