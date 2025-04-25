@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, memo, useCallback, useEffect } from "react";
 
 import {
   Chart as ChartJSChart,
@@ -11,7 +11,7 @@ import {
   Title,
   Tooltip,
 } from "chart.js";
-import { Observable, Subscription } from "rxjs";
+import { Observable } from "rxjs";
 
 import {
   adaptNameForAxisScale,
@@ -29,6 +29,7 @@ import {
 } from "../../config/PortalRunConfig";
 import { statFormattedNames } from "../../config/statNameMap";
 import { transfersToGenerations } from "../../simulations/simUtils";
+import { useSubscription } from "../../utils/reactUtils";
 
 ChartJSChart.register(
   LinearScale,
@@ -43,155 +44,154 @@ ChartJSChart.register(
 export type ChartProps = {
   config: PortalRunConfig;
   stat: keyof DataCollectionConfig["trackedStatistics"];
-  dataObservable: Observable<SimChartDatasets>;
   scales: ChartScales;
+  dataObservable: Observable<SimChartDatasets>;
 };
 
-export class Chart extends React.PureComponent<ChartProps> {
-  ref = React.createRef<HTMLCanvasElement>();
-  chart: ChartJSChart | undefined;
-  dataSubscription: Subscription | undefined;
+export const Chart = memo(function Chart(props: ChartProps) {
+  const { config, stat, scales, dataObservable } = props;
 
-  render() {
-    return (
-      <div className="px-10 h-[22rem]">
-        <canvas ref={this.ref} />
-      </div>
-    );
-  }
+  const { canvasRef, updateData } = useChart(config, stat, scales);
+  useSubscription(dataObservable, updateData);
 
-  componentDidMount() {
-    this.componentDidUpdate();
-  }
+  return (
+    <div className="px-10 h-[22rem]">
+      <canvas ref={canvasRef} />
+    </div>
+  );
+});
 
-  componentWillUnmount() {
-    this.destroyChart();
-    this.unsubscribeFromData();
-  }
+const useChart = (
+  config: PortalRunConfig,
+  stat: keyof DataCollectionConfig["trackedStatistics"],
+  scales: ChartScales
+) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Use a separate ref for data so that we can pass it back in when we replace the chart
+  const dataRef = useRef<SimChartDatasets>([]);
+  const chartRef = useRef<ChartJSChart | null>(null);
 
-  componentDidUpdate() {
-    this.refreshChart();
-    this.subscribeToData();
-  }
+  const updateData = useCallback((data: SimChartDatasets) => {
+    dataRef.current = data;
+    if (chartRef.current) {
+      chartRef.current.data.datasets = data;
+      chartRef.current.update();
+    }
+  }, []);
 
-  refreshChart() {
-    this.destroyChart();
+  useEffect(() => {
+    if (canvasRef.current) {
+      chartRef.current = createChart(
+        canvasRef.current,
+        config,
+        stat,
+        scales,
+        dataRef.current
+      );
+    }
 
-    const {
-      config: { simParams },
-      stat,
-    } = this.props;
-    const { transfers } = simParams;
-    const generations = transfersToGenerations(transfers, simParams);
+    // Destroy chart on cleanup
+    return () => {
+      chartRef.current?.destroy();
+      chartRef.current = null;
+    };
+  }, [config, scales, stat]);
 
-    // TODO: Custom tooltip
-    this.chart?.destroy();
-    this.chart = new ChartJSChart(this.ref.current!, {
-      type: "line",
-      data: {
-        datasets: [],
+  return { canvasRef, updateData };
+};
+
+const createChart = (
+  canvas: HTMLCanvasElement,
+  config: PortalRunConfig,
+  stat: keyof DataCollectionConfig["trackedStatistics"],
+  scales: ChartScales,
+  initialData: SimChartDatasets
+): ChartJSChart => {
+  const { simParams } = config;
+  const { transfers } = simParams;
+  const generations = transfersToGenerations(transfers, simParams);
+
+  return new ChartJSChart(canvas, {
+    type: "line",
+    data: {
+      datasets: initialData,
+    },
+    plugins: [
+      {
+        id: "colorScheme",
+        beforeDatasetUpdate(
+          chart: ChartJSChart<ChartType>,
+          args: { index: number }
+        ) {
+          const dataset = chart.data.datasets[args.index];
+          const color = COLOR_SCHEME[args.index % COLOR_SCHEME.length];
+          dataset.borderColor = color;
+          dataset.backgroundColor = color;
+        },
       },
-      plugins: [
-        {
-          id: "colorScheme",
-          beforeDatasetUpdate(
-            chart: ChartJSChart<ChartType>,
-            args: { index: number }
-          ) {
-            const dataset = chart.data.datasets[args.index];
-            const color = COLOR_SCHEME[args.index % COLOR_SCHEME.length];
-            dataset.borderColor = color;
-            dataset.backgroundColor = color;
-          },
-        },
-      ],
-      options: {
-        animation: false,
-        maintainAspectRatio: false,
-        plugins: {
-          tooltip: {
-            mode: "index",
-            position: "average",
-            intersect: false,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-          },
-        },
-        hover: {
-          intersect: false,
+    ],
+    options: {
+      animation: false,
+      maintainAspectRatio: false,
+      plugins: {
+        tooltip: {
           mode: "index",
-        },
-        elements: {
-          point: {
-            radius: 0,
-            hoverRadius: 4,
-          },
-        },
-        scales: {
-          x: {
-            type: this.props.scales.xScale === "log" ? "logarithmic" : "linear",
-            title: {
-              display: true,
-              text: adaptNameForAxisScale(
-                axisNameForXAxisUnits(this.props.scales.xUnits),
-                this.props.scales.xScale
-              ),
-            },
-            min: 0,
-            max: mapValueToAxisScale(
-              selectForXAxisUnits(
-                transfers,
-                Math.ceil(generations),
-                this.props.scales.xUnits
-              ),
-              this.props.scales.xScale
-            ),
-            ticks: {
-              includeBounds: true,
-            },
-          },
-          y: {
-            type: this.props.scales.yScale === "log" ? "logarithmic" : "linear",
-            title: {
-              display: true,
-              text: adaptNameForAxisScale(
-                statFormattedNames[stat],
-                this.props.scales.yScale
-              ),
-            },
-          },
-        },
-        parsing: {
-          xAxisKey: xAxisKeyForScaleAndUnit(
-            this.props.scales.xScale,
-            this.props.scales.xUnits
-          ),
-          yAxisKey: yAxisKeyForScaleAndStat(this.props.scales.yScale, stat),
+          position: "average",
+          intersect: false,
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
         },
       },
-    });
-  }
-
-  destroyChart() {
-    this.chart?.destroy();
-    this.chart = undefined;
-  }
-
-  subscribeToData() {
-    this.unsubscribeFromData();
-
-    this.dataSubscription = this.props.dataObservable.subscribe((datasets) => {
-      if (this.chart) {
-        this.chart.data.datasets = datasets;
-        this.chart.update();
-      }
-    });
-  }
-
-  unsubscribeFromData() {
-    this.dataSubscription?.unsubscribe();
-    this.dataSubscription = undefined;
-  }
-}
+      hover: {
+        intersect: false,
+        mode: "index",
+      },
+      elements: {
+        point: {
+          radius: 0,
+          hoverRadius: 4,
+        },
+      },
+      scales: {
+        x: {
+          type: scales.xScale === "log" ? "logarithmic" : "linear",
+          title: {
+            display: true,
+            text: adaptNameForAxisScale(
+              axisNameForXAxisUnits(scales.xUnits),
+              scales.xScale
+            ),
+          },
+          min: 0,
+          max: mapValueToAxisScale(
+            selectForXAxisUnits(
+              transfers,
+              Math.ceil(generations),
+              scales.xUnits
+            ),
+            scales.xScale
+          ),
+          ticks: {
+            includeBounds: true,
+          },
+        },
+        y: {
+          type: scales.yScale === "log" ? "logarithmic" : "linear",
+          title: {
+            display: true,
+            text: adaptNameForAxisScale(
+              statFormattedNames[stat],
+              scales.yScale
+            ),
+          },
+        },
+      },
+      parsing: {
+        xAxisKey: xAxisKeyForScaleAndUnit(scales.xScale, scales.xUnits),
+        yAxisKey: yAxisKeyForScaleAndStat(scales.yScale, stat),
+      },
+    },
+  });
+};
 
 // Colorblind friendly scheme from
 // https://github.com/nagix/chartjs-plugin-colorschemes/blob/d96a01846626881aa4bec56828c333af81050906/src/colorschemes/colorschemes.tableau.js#L8
