@@ -3,18 +3,20 @@ import React from "react";
 import Sortable from "sortablejs";
 import { v4 as uuidv4 } from "uuid";
 
-export type SortableMappedListRenderInput = {
-  key: string;
+export type SortableMappedListRenderInput<K> = {
+  key: K;
   handleClassname?: string;
 };
 
-export type SortableMappedListProps = {
-  keys: string[];
+export type SortableMappedListProps<K> = {
+  keys: K[];
   handle?: boolean;
-  children: (key: SortableMappedListRenderInput) => React.ReactNode;
+  children: (elementProps: SortableMappedListRenderInput<K>) => React.ReactNode;
 };
 
-export class SortableMappedList extends React.Component<SortableMappedListProps> {
+export class SortableMappedList<K> extends React.Component<
+  SortableMappedListProps<K>
+> {
   sortable: Sortable | null = null;
   containerRef = React.createRef<HTMLDivElement>();
   handleClassname = "handle-" + uuidv4(); // Classname must start with letter

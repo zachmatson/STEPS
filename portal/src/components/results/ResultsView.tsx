@@ -7,17 +7,14 @@ import {
   availableScalesByStat,
   defaultChartScaleConfig,
 } from "../../config/chartConfig";
-import {
-  DataCollectionConfig,
-  PortalRunConfig,
-} from "../../config/PortalRunConfig";
-import { statFormattedNames } from "../../config/statNameMap";
+import { PortalRunConfig } from "../../config/PortalRunConfig";
 import { Collapsible } from "../general/Collapsible";
 import { SortableMappedList } from "../general/SortableMappedList";
 import { Chart } from "./Chart";
 import { ChartSettingsMenu } from "./ChartSettingsMenu";
 import { SimEvent } from "../../simulations/SimLink";
 import { simChartDatasetsObservable } from "../../charts/simChartDatasetsObservable";
+import { trackedStatisticsFormFields } from "../../config/formFields";
 
 export type ResultsViewProps = {
   config: PortalRunConfig;
@@ -30,10 +27,9 @@ export const ResultsView = ({ config, simEvent$ }: ResultsViewProps) => {
     fp.cloneDeep(defaultChartScaleConfig)
   );
 
-  const enabledStats = fp.pipe(
-    fp.pickBy(fp.identity),
-    fp.keys
-  )(config.dataConfig.trackedStatistics);
+  const enabledStats = trackedStatisticsFormFields.filter(
+    ({ stat }) => config.dataConfig.trackedStatistics[stat]
+  );
 
   const dataObservable = useMemo(
     () => simChartDatasetsObservable(simEvent$),
@@ -43,8 +39,7 @@ export const ResultsView = ({ config, simEvent$ }: ResultsViewProps) => {
   return (
     <SortableMappedList keys={enabledStats} handle>
       {({ key, handleClassname }) => {
-        const stat = key as keyof DataCollectionConfig["trackedStatistics"];
-        const statName = statFormattedNames[stat];
+        const { stat, label: statName } = key;
         const availableScales = availableScalesByStat[stat];
 
         return (
