@@ -237,7 +237,7 @@ fn new_mutant<R: Rng>(
             Beneficial => apply_beneficial_mutation(&mut mutant, cfg, rng),
             Neutral => (),
             Deleterious => apply_deleterious_mutation(&mut mutant, cfg, rng),
-            MutationRate => apply_mutation_rate_mutation(&mut mutant, cfg, rng),
+            // MutationRate => apply_mutation_rate_mutation(&mut mutant, cfg, rng),
         }
     }
 
@@ -275,14 +275,14 @@ fn apply_deleterious_mutation<R: Rng>(lineage: &mut Lineage, cfg: &InternalSimCo
 }
 
 /// Applies a mutation rate mutation to `lineage` in-place
-#[allow(unused_variables)]
-fn apply_mutation_rate_mutation<R: Rng>(
-    lineage: &mut Lineage,
-    cfg: &InternalSimConfig,
-    rng: &mut R,
-) {
-    todo!("Mutation rate mutations not yet supported")
-}
+// #[allow(unused_variables)]
+// fn apply_mutation_rate_mutation<R: Rng>(
+//     lineage: &mut Lineage,
+//     cfg: &InternalSimConfig,
+//     rng: &mut R,
+// ) {
+//     todo!("Mutation rate mutations not yet supported")
+// }
 
 /// Get next float for finite floats
 ///

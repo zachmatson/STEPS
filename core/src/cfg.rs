@@ -30,7 +30,7 @@ pub struct SummaryOutputConfig {
     #[clap(long)]
     pub max_accumulated_muts: bool,
     /// Output the mean number of mutations accumulated since the ancestor
-    #[clap(long)]
+    #[clap(skip = true)]
     pub mean_accumulated_muts: bool,
     /// Output the minimum number of mutations accumulated since the ancestor
     #[clap(long)]
@@ -69,8 +69,8 @@ pub struct SimConfig {
     #[clap(long = "Ud", default_value = "0.0")]
     pub deleterious_mutation_rate: f64,
     /// Mutation rate of the mutation rate
-    #[clap(long = "Um", default_value = "0.0")]
-    pub mutation_rate_mutation_rate: f64,
+    /// #[clap(long = "Um", default_value = "0.0")]
+    /// pub mutation_rate_mutation_rate: f64,
     /// Initial mean beneficial mutation size
     #[clap(long = "Sb", default_value = "0.012")]
     pub initial_beneficial_mutation_size: f64,
@@ -78,8 +78,8 @@ pub struct SimConfig {
     #[clap(long = "Sd")]
     pub fixed_deleterious_mutation_size: Option<f64>,
     /// Initial mutation rate mutation size as multiple of initial beneficial mutation size
-    #[clap(long = "Sm", default_value = "0.0")]
-    pub mutation_rate_mutation_size_factor: f64,
+    /// #[clap(long = "Sm", default_value = "0.0")]
+    /// pub mutation_rate_mutation_size_factor: f64,
     /// Diminishing returns epistasis strength
     #[clap(short = 'g', default_value = "6.0")]
     pub diminishing_returns_epistasis_strength: f64,

@@ -193,8 +193,8 @@ impl InternalSimConfig {
     pub fn new(cfg: SimConfig) -> Self {
         let total_mutation_rate = cfg.beneficial_mutation_rate
             + cfg.neutral_mutation_rate
-            + cfg.deleterious_mutation_rate
-            + cfg.mutation_rate_mutation_rate;
+            + cfg.deleterious_mutation_rate;
+        // + cfg.mutation_rate_mutation_rate;
 
         Self {
             total_mutation_rate,
@@ -206,7 +206,7 @@ impl InternalSimConfig {
                         cfg.beneficial_mutation_rate,
                         cfg.neutral_mutation_rate,
                         cfg.deleterious_mutation_rate,
-                        cfg.mutation_rate_mutation_rate,
+                        // cfg.mutation_rate_mutation_rate,
                     ])
                     .unwrap(),
                 )
@@ -218,11 +218,11 @@ impl InternalSimConfig {
     }
 
     /// Available mutation types, in same order as the mutation type index distribution
-    const MUTATION_TYPES: [MutationType; 4] = [
+    const MUTATION_TYPES: [MutationType; 3] = [
         MutationType::Beneficial,
         MutationType::Neutral,
         MutationType::Deleterious,
-        MutationType::MutationRate,
+        // MutationType::MutationRate,
     ];
 
     /// Randomly pick a mutation type weighted by the mutation rates selected  
