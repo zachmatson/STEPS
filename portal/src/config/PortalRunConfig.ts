@@ -122,7 +122,7 @@ export const defaultDataCollectionConfig: DataCollectionConfigStringy = {
     marker1Ratio: false,
     stdevAccumulatedMuts: false,
     maxAccumulatedMuts: false,
-    meanAccumulatedMuts: false,
+    meanAccumulatedMuts: true,
     minAccumulatedMuts: false,
     genotypeCount: false,
     shannonDiversity: false,
