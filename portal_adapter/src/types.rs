@@ -21,10 +21,8 @@ create_typescript_interface! {
         beneficialMutationRate: (f64, number),
         neutralMutationRate: (f64, number),
         deleteriousMutationRate: (f64, number),
-        mutationRateMutationRate: (f64, number),
         initialBeneficialMutationSize: (f64, number),
         fixedDeleteriousMutationSize?: (f64, number),
-        // mutationRateMutationSizeFactor: (f64, number),
         diminishingReturnsEpistasisStrength: (f64, number),
         seed: (u64, BigInt),
     }
@@ -85,10 +83,8 @@ pub fn extract_sim_config(cfg: &PortalRunConfig) -> SimConfig {
         beneficial_mutation_rate: sim_params.beneficialMutationRate,
         neutral_mutation_rate: sim_params.neutralMutationRate,
         deleterious_mutation_rate: sim_params.deleteriousMutationRate,
-        // mutation_rate_mutation_rate: sim_params.mutationRateMutationRate,
         initial_beneficial_mutation_size: sim_params.initialBeneficialMutationSize,
         fixed_deleterious_mutation_size: sim_params.fixedDeleteriousMutationSize,
-        // mutation_rate_mutation_size_factor: sim_params.mutationRateMutationSizeFactor,
         diminishing_returns_epistasis_strength: sim_params.diminishingReturnsEpistasisStrength,
         seed: Some(sim_params.seed),
     }

@@ -205,8 +205,6 @@ pub enum MutationType {
     Neutral,
     /// A mutation decreasing fitness
     Deleterious,
-    // A mutation which alters the mutation rate
-    // MutationRate,
 }
 
 /// Data on a set of `Mutation`s being sequenced  
