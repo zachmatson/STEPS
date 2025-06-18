@@ -27,10 +27,8 @@ export const simParamsSchema = z.object({
   beneficialMutationRate: zNonNegNumber,
   neutralMutationRate: zNonNegNumber,
   deleteriousMutationRate: zNonNegNumber,
-  mutationRateMutationRate: zNonNegNumber,
   initialBeneficialMutationSize: zPosNumber,
   fixedDeleteriousMutationSize: zOptional(zNonNegNumber),
-  mutationRateMutationSizeFactor: zPosNumber,
   diminishingReturnsEpistasisStrength: zNonNegNumber,
   seed: zSeed,
 });
@@ -46,10 +44,8 @@ export const simParamsStringySchema = z.object({
   beneficialMutationRate: zString,
   neutralMutationRate: zString,
   deleteriousMutationRate: zString,
-  mutationRateMutationRate: zString,
   initialBeneficialMutationSize: zString,
   fixedDeleteriousMutationSize: zOptional(zString),
-  mutationRateMutationSizeFactor: zString,
   diminishingReturnsEpistasisStrength: zString,
   seed: zOptional(zString),
 });
@@ -64,11 +60,9 @@ export const defaultSimParams: SimParamsStringy = {
   markers: "1",
   beneficialMutationRate: "1.7e-6",
   deleteriousMutationRate: "0",
-  mutationRateMutationRate: "0",
   neutralMutationRate: "0",
   initialBeneficialMutationSize: "0.012",
   fixedDeleteriousMutationSize: undefined,
-  mutationRateMutationSizeFactor: "1",
   diminishingReturnsEpistasisStrength: "6.0",
   seed: undefined,
 };
