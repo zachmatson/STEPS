@@ -269,8 +269,8 @@ fn apply_deleterious_mutation<R: Rng>(lineage: &mut Lineage, cfg: &InternalSimCo
     };
 
     lineage.W *= 1.0 - size;
-    let G = cfg.inner.diminishing_returns_epistasis_strength / (size * (1.0 - cfg.inner.diminishing_returns_epistasis_strength) + 1.0);
-    lineage.secondary.lambda *= 1.0 + G * size;
+    let G = cfg.inner.diminishing_returns_epistasis_strength / (size * (cfg.inner.diminishing_returns_epistasis_strength - 1.0) + 1.0);
+    lineage.secondary.lambda *= 1.0 - G * size;
 }
 
 /// Get next float for finite floats
