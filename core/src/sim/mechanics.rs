@@ -184,11 +184,10 @@ fn add_mutants<R: Rng>(
                 // Upper bound (exclusive) corresponding to the same new individual mutant in the lineage
                 let individual_max_cutoff = {
                     // Find start + (j+1)*U explained at top of 'outer
-                    // given cutoff = start + (j+ε)*U for ε in [0, 1),
-                    // without knowing j
+                    // given cutoff = start + (j+ε)*U for ε in [0, 1).
                     // Min with expected_mutations_cumsum for fractional case
-                    let tmp = cutoff - prev_cumsum;
-                    tmp - tmp % lineage.U + lineage.U + prev_cumsum
+                    let j = ((cutoff - prev_cumsum) / lineage.U).floor();
+                    prev_cumsum + (j + 1.0) * lineage.U
                 }
                 .clamp(next_float(cutoff), expected_mutations_cumsum);
                 // Above clamp guarantees individual_max_cutoff ∈ (cutoff, expected_mutations_cumsum]
@@ -269,7 +268,8 @@ fn apply_deleterious_mutation<R: Rng>(lineage: &mut Lineage, cfg: &InternalSimCo
     };
 
     lineage.W *= 1.0 - size;
-    let G = cfg.inner.diminishing_returns_epistasis_strength / (size * (cfg.inner.diminishing_returns_epistasis_strength - 1.0) + 1.0);
+    let G = cfg.inner.diminishing_returns_epistasis_strength
+        / (size * (cfg.inner.diminishing_returns_epistasis_strength - 1.0) + 1.0);
     lineage.secondary.lambda *= 1.0 - G * size;
 }
 
