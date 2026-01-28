@@ -106,7 +106,7 @@ impl LineagesData {
                 ..ancestor
             };
 
-            output.push_child(marker_mutant, ancestor, mutations);
+            output.push_child(marker_mutant, ancestor, 1, mutations);
         }
 
         output
@@ -149,6 +149,7 @@ impl LineagesData {
         &mut self,
         mut child: Lineage,
         parent: Lineage,
+        mutation_order: u32,
         mutations: &mut Option<MutationsData>,
     ) {
         // Appropriate parent_id must be assigned
@@ -159,13 +160,12 @@ impl LineagesData {
         // so must increment *before* using the ID
         self.unique_id_counter += 1;
         child.secondary.id = self.unique_id_counter;
-        // Child has one more mutation than its parent
-        child.secondary.accumulated_muts = parent.secondary.accumulated_muts + 1;
+        child.secondary.accumulated_muts = parent.secondary.accumulated_muts + mutation_order;
 
         self.push(child);
 
         if let Some(mutations) = mutations {
-            mutations.register(child, parent);
+            mutations.register(child, parent, mutation_order);
         }
     }
 
@@ -205,8 +205,6 @@ pub enum MutationType {
     Neutral,
     /// A mutation decreasing fitness
     Deleterious,
-    /// A mutation which alters the mutation rate
-    MutationRate,
 }
 
 /// Data on a set of `Mutation`s being sequenced  
@@ -242,15 +240,16 @@ impl MutationsData {
     }
 
     /// Register a new `child` `Lineage` by calculating the `Mutation` from its `parent`
-    pub(super) fn register(&mut self, child: Lineage, parent: Lineage) {
+    pub(super) fn register(&mut self, child: Lineage, parent: Lineage, mutation_order: u32) {
         let mutation = Mutation {
             id: child.secondary.id,
             background_id: parent.secondary.id,
             delta_W: (child.W / parent.W) - 1.0,
             delta_U: 0.0,
             first_transfer: self.on_transfer,
-            just_updated: false,
             N: Vec::with_capacity(0),
+            order: mutation_order,
+            just_updated: false,
         };
 
         self.muts.insert(child.secondary.id, mutation);
@@ -278,6 +277,8 @@ pub struct Mutation {
     pub first_transfer: u32,
     /// Vector of population sizes for each transfer tracked starting from `self.first_transfer`
     pub N: Vec<f64>,
+    /// Number of mutations this record represents
+    pub order: u32,
     /// Was the mutation just updated in the last round of updating sizes?
     #[serde(skip)]
     pub(super) just_updated: bool,
