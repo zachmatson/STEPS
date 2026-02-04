@@ -154,7 +154,7 @@ dependencies = [
 
 [[package]]
 name = "create_typescript_interface"
-version = "1.0.3"
+version = "2.0.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -652,7 +652,7 @@ dependencies = [
 
 [[package]]
 name = "steps_adapter"
-version = "1.0.3"
+version = "2.0.1"
 dependencies = [
  "console_error_panic_hook",
  "create_typescript_interface",
@@ -666,7 +666,7 @@ dependencies = [
 
 [[package]]
 name = "steps_cli"
-version = "1.0.3"
+version = "2.0.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -677,7 +677,7 @@ dependencies = [
 
 [[package]]
 name = "steps_core"
-version = "1.0.3"
+version = "2.0.1"
 dependencies = [
  "anyhow",
  "approx",
