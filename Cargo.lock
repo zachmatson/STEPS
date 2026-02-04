@@ -601,7 +601,7 @@ dependencies = [
 
 [[package]]
 name = "steps_cli"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -612,7 +612,7 @@ dependencies = [
 
 [[package]]
 name = "steps_core"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "anyhow",
  "approx",
