@@ -68,6 +68,9 @@ pub struct SimConfig {
     /// Deleterious mutation rate
     #[clap(long = "Ud", default_value = "0.0")]
     pub deleterious_mutation_rate: f64,
+    /// Mutation rate mutation rate
+    #[clap(long = "Um", default_value = "0.0")]
+    pub mutrate_mutation_rate: f64,
     /// Initial mean beneficial mutation size
     #[clap(long = "Sb", default_value = "0.012")]
     pub initial_beneficial_mutation_size: f64,

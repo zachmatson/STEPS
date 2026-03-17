@@ -236,6 +236,7 @@ fn new_mutant<R: Rng>(
             Beneficial => apply_beneficial_mutation(&mut mutant, cfg, rng),
             Neutral => (),
             Deleterious => apply_deleterious_mutation(&mut mutant, cfg, rng),
+            Mutrate => apply_mutrate_mutation(&mut mutant, cfg, rng),
         }
     }
 
@@ -250,6 +251,7 @@ fn apply_beneficial_mutation<R: Rng>(lineage: &mut Lineage, cfg: &InternalSimCon
 
     lineage.W *= 1.0 + size;
     lineage.secondary.lambda *= 1.0 + cfg.inner.diminishing_returns_epistasis_strength * size;
+    lineage.secondary.accumulated_muts_beneficial += 1;
 }
 
 /// Default distribution for deleterious mutation size, when a fixed size is not specified
@@ -271,6 +273,16 @@ fn apply_deleterious_mutation<R: Rng>(lineage: &mut Lineage, cfg: &InternalSimCo
     let G = cfg.inner.diminishing_returns_epistasis_strength
         / (size * (cfg.inner.diminishing_returns_epistasis_strength - 1.0) + 1.0);
     lineage.secondary.lambda *= 1.0 - G * size;
+    lineage.secondary.accumulated_muts_deleterious += 1;
+}
+
+/// Applies a mutrate mutation to `lineage` in-place
+#[allow(unused_variables)]
+fn apply_mutrate_mutation<R: Rng>(lineage: &mut Lineage, cfg: &InternalSimConfig, rng: &mut R) {
+    let k_scaled = lineage.K * 100f64.ln();
+    lineage.U *= k_scaled.exp();
+    lineage.K *= -1.0;
+    lineage.secondary.accumulated_muts_mutrate += 1;
 }
 
 /// Get next float for finite floats

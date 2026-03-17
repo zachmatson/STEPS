@@ -17,6 +17,8 @@ pub struct LineagesData {
     ///
     /// Defer to `SimConfig` for relative rates of specific mutation types
     pub(super) U: Vec<f64>,
+    /// Modifiers for mutation rate
+    pub(super) K: Vec<f64>,
     /// Additional data in AoS format
     pub(super) secondary: Vec<SecondaryLineageData>,
 
@@ -34,6 +36,8 @@ pub struct Lineage {
     pub W: f64,
     /// Mutation rate
     pub U: f64,
+    /// Modifier for mutation rate
+    pub K: f64,
     /// Additional data
     pub secondary: SecondaryLineageData,
 }
@@ -57,6 +61,14 @@ pub struct SecondaryLineageData {
     pub marker: u16,
     /// Number of accumulated mutations relative to the ancestor mutation (each marker starts at 1)
     pub accumulated_muts: u32,
+    /// Number of accumulated beneficial mutations relative to the ancestor mutation (each marker starts at 1)
+    pub accumulated_muts_beneficial: u32,
+    /// Number of accumulated neutral mutations relative to the ancestor mutation (each marker starts at 1)
+    pub accumulated_muts_neutral: u32,
+    /// Number of accumulated deleterious mutations relative to the ancestor mutation (each marker starts at 1)
+    pub accumulated_muts_deleterious: u32,
+    /// Number of accumulated mutation rate mutations relative to the ancestor mutation (each marker starts at 1)
+    pub accumulated_muts_mutrate: u32,
 }
 
 impl LineagesData {
@@ -76,6 +88,7 @@ impl LineagesData {
             // W and U may be used for comparison to the markers in the case of mutation tracking
             W: 1.0,
             U: cfg.total_mutation_rate,
+            K: 1.0,
             secondary: SecondaryLineageData {
                 // Lambda will be carried over to the children
                 lambda: cfg.inner.initial_beneficial_mutation_size.recip(),
@@ -84,6 +97,14 @@ impl LineagesData {
                 marker: 0,
                 // accumulated_muts is incremented for each child
                 accumulated_muts: 0,
+                // accumulated_muts is incremented for each child
+                accumulated_muts_beneficial: 0,
+                // accumulated_muts is incremented for each child
+                accumulated_muts_neutral: 0,
+                // accumulated_muts is incremented for each child
+                accumulated_muts_deleterious: 0,
+                // accumulated_muts is incremented for each child
+                accumulated_muts_mutrate: 0,
             },
         };
 
@@ -117,6 +138,7 @@ impl LineagesData {
         self.N.reserve(additional);
         self.W.reserve(additional);
         self.U.reserve(additional);
+        self.K.reserve(additional);
         self.secondary.reserve(additional);
     }
 
@@ -140,6 +162,7 @@ impl LineagesData {
         self.N.push(data.N);
         self.W.push(data.W);
         self.U.push(data.U);
+        self.K.push(data.K);
         self.secondary.push(data.secondary);
     }
 
@@ -180,6 +203,7 @@ impl LineagesData {
             N: *self.N.get_unchecked(index),
             W: *self.W.get_unchecked(index),
             U: *self.U.get_unchecked(index),
+            K: *self.K.get_unchecked(index),
             secondary: *self.secondary.get_unchecked(index),
         }
     }
@@ -192,6 +216,7 @@ impl LineagesData {
         assert_eq!(self.N.len(), len);
         assert_eq!(self.W.len(), len);
         assert_eq!(self.U.len(), len);
+        assert_eq!(self.K.len(), len);
         assert_eq!(self.secondary.len(), len);
     }
 }
@@ -205,6 +230,8 @@ pub enum MutationType {
     Neutral,
     /// A mutation decreasing fitness
     Deleterious,
+    /// A mutation changing overal mutation rates
+    Mutrate,
 }
 
 /// Data on a set of `Mutation`s being sequenced  
