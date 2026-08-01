@@ -2,6 +2,10 @@
 name = "steps_cli"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "CLI for STEPS (Serially Transferred Evolving Population Simulator)"
+keywords.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
