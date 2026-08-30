@@ -63,7 +63,10 @@ mod tests {
         let sum: f64 = (0..n).map(|_| poisson(lambda, &mut rng) as f64).sum();
         let mean = sum / n as f64;
         // Mean should be close to lambda (within ~5% for 10k samples)
-        assert!((mean - lambda).abs() < 0.15, "mean={mean}, expected≈{lambda}");
+        assert!(
+            (mean - lambda).abs() < 0.15,
+            "mean={mean}, expected≈{lambda}"
+        );
     }
 
     #[test]
@@ -73,7 +76,10 @@ mod tests {
         let n = 10_000;
         let sum: f64 = (0..n).map(|_| poisson(lambda, &mut rng) as f64).sum();
         let mean = sum / n as f64;
-        assert!((mean - lambda).abs() < 1.5, "mean={mean}, expected≈{lambda}");
+        assert!(
+            (mean - lambda).abs() < 1.5,
+            "mean={mean}, expected≈{lambda}"
+        );
     }
 
     #[test]
@@ -85,7 +91,10 @@ mod tests {
         let mean = samples.iter().sum::<f64>() / n as f64;
         let variance = samples.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n as f64;
         // For Poisson, variance = mean = lambda
-        assert!((variance - lambda).abs() < 0.5, "variance={variance}, expected≈{lambda}");
+        assert!(
+            (variance - lambda).abs() < 0.5,
+            "variance={variance}, expected≈{lambda}"
+        );
     }
 
     #[test]
@@ -102,9 +111,14 @@ mod tests {
         let mut rng = seeded_rng();
         let lambda = 2.0;
         let n = 10_000;
-        let sum: f64 = (0..n).map(|_| direct_poisson(lambda, &mut rng) as f64).sum();
+        let sum: f64 = (0..n)
+            .map(|_| direct_poisson(lambda, &mut rng) as f64)
+            .sum();
         let mean = sum / n as f64;
-        assert!((mean - lambda).abs() < 0.15, "mean={mean}, expected≈{lambda}");
+        assert!(
+            (mean - lambda).abs() < 0.15,
+            "mean={mean}, expected≈{lambda}"
+        );
     }
 
     #[test]
@@ -122,7 +136,10 @@ mod tests {
         let n = 10_000;
         let sum: f64 = (0..n).map(|_| poisson(lambda, &mut rng) as f64).sum();
         let mean = sum / n as f64;
-        assert!((mean - lambda).abs() < 0.5, "mean={mean}, expected≈{lambda}");
+        assert!(
+            (mean - lambda).abs() < 0.5,
+            "mean={mean}, expected≈{lambda}"
+        );
     }
 
     #[test]
@@ -133,6 +150,9 @@ mod tests {
         let n = 10_000;
         let sum: f64 = (0..n).map(|_| poisson(lambda, &mut rng) as f64).sum();
         let mean = sum / n as f64;
-        assert!((mean - lambda).abs() < 0.5, "mean={mean}, expected≈{lambda}");
+        assert!(
+            (mean - lambda).abs() < 0.5,
+            "mean={mean}, expected≈{lambda}"
+        );
     }
 }
