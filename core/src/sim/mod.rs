@@ -236,12 +236,223 @@ impl InternalSimConfig {
 /// Will be a type that implements the `Rng` trait from `rand`   
 type SimRng = Pcg64;
 
-/// Instantiate RNG to use for the simulations  
+/// Instantiate RNG to use for the simulations
 ///
-/// Uses seed if one is given, otherwise seeds from system entropy  
+/// Uses seed if one is given, otherwise seeds from system entropy
 fn default_sim_rng(cfg: &SimConfig) -> SimRng {
     match cfg.seed {
         Some(seed) => SimRng::seed_from_u64(seed),
         None => SimRng::from_entropy(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn default_cfg() -> SimConfig {
+        SimConfig {
+            replicates: 2,
+            transfers: 3,
+            markers: 1,
+            dilution_factor: 100.0,
+            beneficial_mutation_rate: 1.7e-6,
+            neutral_mutation_rate: 0.0,
+            deleterious_mutation_rate: 0.0,
+            initial_beneficial_mutation_size: 0.012,
+            fixed_deleterious_mutation_size: None,
+            diminishing_returns_epistasis_strength: 6.0,
+            seed: Some(42),
+            max_pop_size: 5e8,
+        }
+    }
+
+    #[test]
+    fn test_handler_initial_state_is_none() {
+        let handler = SimulationHandler::new(default_cfg(), false);
+        assert!(handler.current_state().is_none());
+    }
+
+    #[test]
+    fn test_handler_not_finished_at_start() {
+        let handler = SimulationHandler::new(default_cfg(), false);
+        assert!(!handler.is_finished());
+    }
+
+    #[test]
+    fn test_handler_first_next_state_is_transfer_0() {
+        let mut handler = SimulationHandler::new(default_cfg(), false);
+        let state = handler.next_state().unwrap();
+        assert_eq!(state.replicate, 1);
+        assert_eq!(state.transfer, 0);
+        assert!(!state.end_of_replicate);
+    }
+
+    #[test]
+    fn test_handler_iterates_through_all_states() {
+        let cfg = default_cfg(); // 2 replicates, 3 transfers
+        let mut handler = SimulationHandler::new(cfg, false);
+        let mut count = 0;
+        while handler.next_state().is_some() {
+            count += 1;
+        }
+        // Each replicate: transfer 0 (init) + transfers 1,2,3 = 4 states
+        // 2 replicates × 4 = 8
+        assert_eq!(count, 8);
+    }
+
+    #[test]
+    fn test_handler_is_finished_after_all_states() {
+        let mut handler = SimulationHandler::new(default_cfg(), false);
+        while handler.next_state().is_some() {}
+        assert!(handler.is_finished());
+    }
+
+    #[test]
+    fn test_handler_returns_none_when_finished() {
+        let mut handler = SimulationHandler::new(default_cfg(), false);
+        while handler.next_state().is_some() {}
+        assert!(handler.next_state().is_none());
+        assert!(handler.next_state().is_none());
+    }
+
+    #[test]
+    fn test_handler_end_of_replicate_flag() {
+        let mut handler = SimulationHandler::new(default_cfg(), false);
+        let mut end_of_replicate_count = 0;
+        while let Some(state) = handler.next_state() {
+            if state.end_of_replicate {
+                end_of_replicate_count += 1;
+                assert_eq!(state.transfer, 3);
+            }
+        }
+        assert_eq!(end_of_replicate_count, 2); // one per replicate
+    }
+
+    #[test]
+    fn test_handler_zero_replicates() {
+        let mut cfg = default_cfg();
+        cfg.replicates = 0;
+        let mut handler = SimulationHandler::new(cfg, false);
+        assert!(handler.next_state().is_none());
+        assert!(handler.is_finished());
+    }
+
+    #[test]
+    fn test_handler_deterministic_with_seed() {
+        let cfg = default_cfg();
+        let mut handler1 = SimulationHandler::new(cfg.clone(), false);
+        let mut handler2 = SimulationHandler::new(cfg, false);
+
+        while let (Some(s1), Some(s2)) = (handler1.next_state(), handler2.next_state()) {
+            assert_eq!(s1.lineages.N, s2.lineages.N);
+            assert_eq!(s1.lineages.W, s2.lineages.W);
+        }
+    }
+
+    #[test]
+    fn test_handler_mutations_tracked_when_enabled() {
+        let mut handler = SimulationHandler::new(default_cfg(), true);
+        let state = handler.next_state().unwrap();
+        assert!(state.mutations.is_some());
+    }
+
+    #[test]
+    fn test_handler_mutations_none_when_disabled() {
+        let mut handler = SimulationHandler::new(default_cfg(), false);
+        let state = handler.next_state().unwrap();
+        assert!(state.mutations.is_none());
+    }
+
+    #[test]
+    fn test_handler_lineages_initialized_at_transfer_0() {
+        let cfg = default_cfg();
+        let mut handler = SimulationHandler::new(cfg, false);
+        let state = handler.next_state().unwrap();
+        // Should have `markers` lineages at start
+        assert_eq!(state.lineages.N.len(), 1);
+        // Initial population = Nmax / D / markers = 5e8 / 100 / 1 = 5e6
+        assert_eq!(state.lineages.N[0], 5_000_000.0);
+        assert_eq!(state.lineages.W[0], 1.0);
+    }
+
+    #[test]
+    fn test_handler_multiple_markers() {
+        let mut cfg = default_cfg();
+        cfg.markers = 3;
+        let mut handler = SimulationHandler::new(cfg, false);
+        let state = handler.next_state().unwrap();
+        assert_eq!(state.lineages.N.len(), 3);
+        // Each marker gets Nmax/D/markers = 5e8/100/3 ≈ 1666667
+        let expected_n = (5e8_f64 / 100.0 / 3.0).round();
+        for n in &state.lineages.N {
+            assert_eq!(*n, expected_n);
+        }
+    }
+
+    #[test]
+    fn test_internal_sim_config_total_mutation_rate() {
+        let mut cfg = default_cfg();
+        cfg.beneficial_mutation_rate = 0.001;
+        cfg.neutral_mutation_rate = 0.002;
+        cfg.deleterious_mutation_rate = 0.003;
+        let internal = InternalSimConfig::new(cfg);
+        assert!((internal.total_mutation_rate - 0.006).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_internal_sim_config_dilution_coefficient() {
+        let cfg = default_cfg(); // D=100
+        let internal = InternalSimConfig::new(cfg);
+        assert!((internal.dilution_coefficient - 0.01).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_sample_mutation_type_all_beneficial() {
+        let mut cfg = default_cfg();
+        cfg.beneficial_mutation_rate = 1.0;
+        cfg.neutral_mutation_rate = 0.0;
+        cfg.deleterious_mutation_rate = 0.0;
+        let internal = InternalSimConfig::new(cfg);
+        let mut rng = Pcg64::seed_from_u64(0);
+        for _ in 0..100 {
+            assert!(matches!(
+                internal.sample_mutation_type(&mut rng),
+                Some(types::MutationType::Beneficial)
+            ));
+        }
+    }
+
+    #[test]
+    fn test_sample_mutation_type_zero_rates_returns_none() {
+        let mut cfg = default_cfg();
+        cfg.beneficial_mutation_rate = 0.0;
+        cfg.neutral_mutation_rate = 0.0;
+        cfg.deleterious_mutation_rate = 0.0;
+        let internal = InternalSimConfig::new(cfg);
+        let mut rng = Pcg64::seed_from_u64(0);
+        assert!(internal.sample_mutation_type(&mut rng).is_none());
+    }
+
+    #[test]
+    fn test_default_sim_rng_seeded_is_deterministic() {
+        let cfg = default_cfg();
+        let mut rng1 = default_sim_rng(&cfg);
+        let mut rng2 = default_sim_rng(&cfg);
+        let v1: Vec<u64> = (0..10).map(|_| rng1.gen()).collect();
+        let v2: Vec<u64> = (0..10).map(|_| rng2.gen()).collect();
+        assert_eq!(v1, v2);
+    }
+
+    #[test]
+    fn test_default_sim_rng_no_seed_differs() {
+        let mut cfg = default_cfg();
+        cfg.seed = None;
+        let mut rng1 = default_sim_rng(&cfg);
+        let mut rng2 = default_sim_rng(&cfg);
+        let v1: Vec<u64> = (0..10).map(|_| rng1.gen()).collect();
+        let v2: Vec<u64> = (0..10).map(|_| rng2.gen()).collect();
+        // Astronomically unlikely to be equal from entropy
+        assert_ne!(v1, v2);
     }
 }
