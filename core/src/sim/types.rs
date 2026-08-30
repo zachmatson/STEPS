@@ -330,7 +330,7 @@ mod tests {
             U: 0.001,
             secondary: SecondaryLineageData {
                 lambda: 83.33,
-                id: 0, // will be overwritten
+                id: 0,        // will be overwritten
                 parent_id: 0, // will be overwritten
                 marker: 1,
                 accumulated_muts: 0, // will be overwritten
@@ -454,7 +454,10 @@ mod tests {
         let child = Lineage {
             N: 1.0,
             W: 1.1,
-            secondary: SecondaryLineageData { id: 5, ..parent.secondary },
+            secondary: SecondaryLineageData {
+                id: 5,
+                ..parent.secondary
+            },
             ..parent
         };
         mutations.register(child, parent, 1);
