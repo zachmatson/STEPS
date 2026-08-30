@@ -304,22 +304,14 @@ mod tests {
     #[test]
     fn test_shannon_diversity_three_equal() {
         // Three equal lineages → diversity = ln(3)
-        let lineages = make_lineages(&[
-            (100.0, 1.0, 1, 1),
-            (100.0, 1.0, 2, 1),
-            (100.0, 1.0, 3, 1),
-        ]);
+        let lineages = make_lineages(&[(100.0, 1.0, 1, 1), (100.0, 1.0, 2, 1), (100.0, 1.0, 3, 1)]);
         assert_relative_eq!(shannon_diversity(&lineages), 3.0_f64.ln(), epsilon = 1e-10);
     }
 
     #[test]
     fn test_shannon_diversity_skips_zero_n() {
         // Two lineages + one dead → diversity = ln(2)
-        let lineages = make_lineages(&[
-            (100.0, 1.0, 1, 1),
-            (0.0, 1.0, 2, 1),
-            (100.0, 1.0, 3, 1),
-        ]);
+        let lineages = make_lineages(&[(100.0, 1.0, 1, 1), (0.0, 1.0, 2, 1), (100.0, 1.0, 3, 1)]);
         assert_relative_eq!(shannon_diversity(&lineages), 2.0_f64.ln(), epsilon = 1e-10);
     }
 
