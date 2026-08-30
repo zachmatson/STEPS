@@ -282,3 +282,215 @@ fn next_float(x: f64) -> f64 {
     assert!(x.is_finite());
     f64::from_bits(x.to_bits() + 1)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::sim::types::SecondaryLineageData;
+    use approx::assert_relative_eq;
+    use rand::SeedableRng;
+    use rand_pcg::Pcg64;
+
+    fn seeded_rng() -> Pcg64 {
+        Pcg64::seed_from_u64(12345)
+    }
+
+    fn default_sim_config() -> SimConfig {
+        SimConfig {
+            replicates: 1,
+            transfers: 10,
+            markers: 1,
+            dilution_factor: 100.0,
+            beneficial_mutation_rate: 1.7e-6,
+            neutral_mutation_rate: 0.0,
+            deleterious_mutation_rate: 0.0,
+            initial_beneficial_mutation_size: 0.012,
+            fixed_deleterious_mutation_size: None,
+            diminishing_returns_epistasis_strength: 6.0,
+            seed: Some(42),
+            max_pop_size: 5e8,
+        }
+    }
+
+    #[test]
+    fn test_phase_1_doublings_d_100() {
+        // D=100 → log2(100) ≈ 6.64, fract=0.64 ≥ 0.5 → floor = 6
+        let cfg = default_sim_config();
+        assert_eq!(phase_1_doublings_required(&cfg), 6);
+    }
+
+    #[test]
+    fn test_phase_1_doublings_d_2() {
+        // D=2 → log2(2) = 1.0, fract=0.0 < 0.5 → floor-1 = 0
+        let mut cfg = default_sim_config();
+        cfg.dilution_factor = 2.0;
+        assert_eq!(phase_1_doublings_required(&cfg), 0);
+    }
+
+    #[test]
+    fn test_phase_1_doublings_d_4() {
+        // D=4 → log2(4) = 2.0, fract=0.0 < 0.5 → floor-1 = 1
+        let mut cfg = default_sim_config();
+        cfg.dilution_factor = 4.0;
+        assert_eq!(phase_1_doublings_required(&cfg), 1);
+    }
+
+    #[test]
+    fn test_phase_1_doublings_d_8() {
+        // D=8 → log2(8) = 3.0, fract=0.0 < 0.5 → floor-1 = 2
+        let mut cfg = default_sim_config();
+        cfg.dilution_factor = 8.0;
+        assert_eq!(phase_1_doublings_required(&cfg), 2);
+    }
+
+    #[test]
+    fn test_phase_1_doublings_d_50() {
+        // D=50 → log2(50) ≈ 5.64, fract=0.64 ≥ 0.5 → floor = 5
+        let mut cfg = default_sim_config();
+        cfg.dilution_factor = 50.0;
+        assert_eq!(phase_1_doublings_required(&cfg), 5);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_phase_1_doublings_d_less_than_2_panics() {
+        let mut cfg = default_sim_config();
+        cfg.dilution_factor = 1.5;
+        phase_1_doublings_required(&cfg);
+    }
+
+    #[test]
+    fn test_next_float_positive() {
+        let x = 1.0_f64;
+        let y = next_float(x);
+        assert!(y > x);
+        assert_eq!(y.to_bits(), x.to_bits() + 1);
+    }
+
+    #[test]
+    fn test_next_float_zero() {
+        let x = 0.0_f64;
+        let y = next_float(x);
+        assert!(y > x);
+        // Smallest positive subnormal
+        assert_eq!(y, f64::from_bits(1));
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_next_float_nan_panics() {
+        next_float(f64::NAN);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_next_float_infinity_panics() {
+        next_float(f64::INFINITY);
+    }
+
+    #[test]
+    fn test_apply_beneficial_mutation_increases_fitness() {
+        let cfg = InternalSimConfig::new(default_sim_config());
+        let mut rng = seeded_rng();
+        let mut lineage = Lineage {
+            N: 1.0,
+            W: 1.0,
+            U: cfg.total_mutation_rate,
+            secondary: SecondaryLineageData {
+                lambda: cfg.inner.initial_beneficial_mutation_size.recip(),
+                id: 1,
+                parent_id: 0,
+                marker: 1,
+                accumulated_muts: 1,
+            },
+        };
+        let original_w = lineage.W;
+        apply_beneficial_mutation(&mut lineage, &cfg, &mut rng);
+        assert!(lineage.W > original_w);
+    }
+
+    #[test]
+    fn test_apply_beneficial_mutation_increases_lambda() {
+        let cfg = InternalSimConfig::new(default_sim_config());
+        let mut rng = seeded_rng();
+        let mut lineage = Lineage {
+            N: 1.0,
+            W: 1.0,
+            U: cfg.total_mutation_rate,
+            secondary: SecondaryLineageData {
+                lambda: cfg.inner.initial_beneficial_mutation_size.recip(),
+                id: 1,
+                parent_id: 0,
+                marker: 1,
+                accumulated_muts: 1,
+            },
+        };
+        let original_lambda = lineage.secondary.lambda;
+        apply_beneficial_mutation(&mut lineage, &cfg, &mut rng);
+        // Diminishing returns: lambda should increase
+        assert!(lineage.secondary.lambda > original_lambda);
+    }
+
+    #[test]
+    fn test_apply_deleterious_mutation_decreases_fitness() {
+        let mut cfg = default_sim_config();
+        cfg.fixed_deleterious_mutation_size = Some(0.1);
+        let cfg = InternalSimConfig::new(cfg);
+        let mut rng = seeded_rng();
+        let mut lineage = Lineage {
+            N: 1.0,
+            W: 1.0,
+            U: cfg.total_mutation_rate,
+            secondary: SecondaryLineageData {
+                lambda: cfg.inner.initial_beneficial_mutation_size.recip(),
+                id: 1,
+                parent_id: 0,
+                marker: 1,
+                accumulated_muts: 1,
+            },
+        };
+        apply_deleterious_mutation(&mut lineage, &cfg, &mut rng);
+        // W *= (1 - 0.1) = 0.9
+        assert_relative_eq!(lineage.W, 0.9, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_apply_deleterious_fixed_size() {
+        let mut cfg = default_sim_config();
+        cfg.fixed_deleterious_mutation_size = Some(0.2);
+        let cfg = InternalSimConfig::new(cfg);
+        let mut rng = seeded_rng();
+        let mut lineage = Lineage {
+            N: 1.0,
+            W: 1.5,
+            U: cfg.total_mutation_rate,
+            secondary: SecondaryLineageData {
+                lambda: cfg.inner.initial_beneficial_mutation_size.recip(),
+                id: 1,
+                parent_id: 0,
+                marker: 1,
+                accumulated_muts: 1,
+            },
+        };
+        apply_deleterious_mutation(&mut lineage, &cfg, &mut rng);
+        assert_relative_eq!(lineage.W, 1.5 * 0.8, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_growth_phase_1_doubles_population() {
+        let sim_cfg = default_sim_config();
+        let cfg = InternalSimConfig::new(sim_cfg);
+        let mut rng = seeded_rng();
+
+        let mut lineages = LineagesData::default();
+        lineages.N.push(1000.0);
+        lineages.W.push(1.0);
+        lineages.U.push(0.0); // no mutations
+        lineages.secondary.push(SecondaryLineageData::default());
+
+        let n_before = lineages.N[0];
+        growth_phase_1(&cfg, &mut lineages, &mut None, &mut rng);
+        // With U=0 and W=1.0, population should approximately double
+        assert_relative_eq!(lineages.N[0], n_before * 2.0, epsilon = 1e-6);
+    }
+}
