@@ -84,3 +84,99 @@ pub struct SimConfig {
     #[clap(long = "Nmax", default_value = "5E8")]
     pub max_pop_size: f64,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+
+    #[derive(Parser)]
+    struct TestCli {
+        #[clap(flatten)]
+        sim: SimConfig,
+    }
+
+    #[test]
+    fn test_sim_config_defaults() {
+        let cli = TestCli::parse_from(["test"]);
+        assert_eq!(cli.sim.replicates, 12);
+        assert_eq!(cli.sim.transfers, 300);
+        assert_eq!(cli.sim.markers, 1);
+        assert_eq!(cli.sim.dilution_factor, 100.0);
+        assert_eq!(cli.sim.beneficial_mutation_rate, 1.7e-6);
+        assert_eq!(cli.sim.neutral_mutation_rate, 0.0);
+        assert_eq!(cli.sim.deleterious_mutation_rate, 0.0);
+        assert_eq!(cli.sim.initial_beneficial_mutation_size, 0.012);
+        assert_eq!(cli.sim.fixed_deleterious_mutation_size, None);
+        assert_eq!(cli.sim.diminishing_returns_epistasis_strength, 6.0);
+        assert_eq!(cli.sim.seed, None);
+        assert_eq!(cli.sim.max_pop_size, 5e8);
+    }
+
+    #[test]
+    fn test_sim_config_custom_args() {
+        let cli = TestCli::parse_from([
+            "test", "-r", "5", "-t", "50", "-m", "3", "-D", "200", "--Ub", "0.001", "--seed", "123",
+        ]);
+        assert_eq!(cli.sim.replicates, 5);
+        assert_eq!(cli.sim.transfers, 50);
+        assert_eq!(cli.sim.markers, 3);
+        assert_eq!(cli.sim.dilution_factor, 200.0);
+        assert_eq!(cli.sim.beneficial_mutation_rate, 0.001);
+        assert_eq!(cli.sim.seed, Some(123));
+    }
+
+    #[test]
+    fn test_sim_config_serialize_deserialize() {
+        let cfg = SimConfig {
+            replicates: 10,
+            transfers: 200,
+            markers: 2,
+            dilution_factor: 50.0,
+            beneficial_mutation_rate: 0.01,
+            neutral_mutation_rate: 0.005,
+            deleterious_mutation_rate: 0.002,
+            initial_beneficial_mutation_size: 0.05,
+            fixed_deleterious_mutation_size: Some(0.1),
+            diminishing_returns_epistasis_strength: 3.0,
+            seed: Some(999),
+            max_pop_size: 1e9,
+        };
+        let json = serde_json::to_string(&cfg).unwrap();
+        let deserialized: SimConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.replicates, 10);
+        assert_eq!(deserialized.transfers, 200);
+        assert_eq!(deserialized.markers, 2);
+        assert_eq!(deserialized.dilution_factor, 50.0);
+        assert_eq!(deserialized.beneficial_mutation_rate, 0.01);
+        assert_eq!(deserialized.neutral_mutation_rate, 0.005);
+        assert_eq!(deserialized.deleterious_mutation_rate, 0.002);
+        assert_eq!(deserialized.initial_beneficial_mutation_size, 0.05);
+        assert_eq!(deserialized.fixed_deleterious_mutation_size, Some(0.1));
+        assert_eq!(deserialized.diminishing_returns_epistasis_strength, 3.0);
+        assert_eq!(deserialized.seed, Some(999));
+        assert_eq!(deserialized.max_pop_size, 1e9);
+    }
+
+    #[test]
+    fn test_sim_config_no_seed_serialization() {
+        let cfg = SimConfig {
+            replicates: 1,
+            transfers: 1,
+            markers: 1,
+            dilution_factor: 2.0,
+            beneficial_mutation_rate: 0.0,
+            neutral_mutation_rate: 0.0,
+            deleterious_mutation_rate: 0.0,
+            initial_beneficial_mutation_size: 0.01,
+            fixed_deleterious_mutation_size: None,
+            diminishing_returns_epistasis_strength: 1.0,
+            seed: None,
+            max_pop_size: 1000.0,
+        };
+        let json = serde_json::to_string(&cfg).unwrap();
+        let deserialized: SimConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.seed, None);
+        assert_eq!(deserialized.fixed_deleterious_mutation_size, None);
+    }
+}
