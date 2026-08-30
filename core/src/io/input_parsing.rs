@@ -164,7 +164,8 @@ mod tests {
             "version": "0.0.0",
             "description": "test",
             "output_mode": "Summary"
-        })).unwrap();
+        }))
+        .unwrap();
         let cfg_json = serde_json::to_string(&default_sim_config()).unwrap();
         let header = format!("# {}\n# {}\n", meta_json, cfg_json);
         let cursor = Cursor::new(header);
