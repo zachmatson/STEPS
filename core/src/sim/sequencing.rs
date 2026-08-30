@@ -73,17 +73,25 @@ mod tests {
         lineages
     }
 
-    fn register_mutation(mutations: &mut MutationsData, id: u64, background_id: u64, transfer: u32) {
-        mutations.muts.insert(id, Mutation {
+    fn register_mutation(
+        mutations: &mut MutationsData,
+        id: u64,
+        background_id: u64,
+        transfer: u32,
+    ) {
+        mutations.muts.insert(
             id,
-            background_id,
-            delta_W: 0.05,
-            delta_U: 0.0,
-            first_transfer: transfer,
-            N: Vec::new(),
-            order: 1,
-            just_updated: false,
-        });
+            Mutation {
+                id,
+                background_id,
+                delta_W: 0.05,
+                delta_U: 0.0,
+                first_transfer: transfer,
+                N: Vec::new(),
+                order: 1,
+                just_updated: false,
+            },
+        );
     }
 
     #[test]
