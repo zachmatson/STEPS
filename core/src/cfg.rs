@@ -116,8 +116,7 @@ mod tests {
     #[test]
     fn test_sim_config_custom_args() {
         let cli = TestCli::parse_from([
-            "test", "-r", "5", "-t", "50", "-m", "3",
-            "-D", "200", "--Ub", "0.001", "--seed", "123",
+            "test", "-r", "5", "-t", "50", "-m", "3", "-D", "200", "--Ub", "0.001", "--seed", "123",
         ]);
         assert_eq!(cli.sim.replicates, 5);
         assert_eq!(cli.sim.transfers, 50);
