@@ -256,7 +256,7 @@ impl MutationsData {
     }
 }
 
-/// Data for one Mutation being tracked  
+/// Data for one Mutation being tracked
 #[derive(Debug, Serialize_tuple)]
 pub struct Mutation {
     /// ID of the `Mutation`
@@ -282,4 +282,185 @@ pub struct Mutation {
     /// Was the mutation just updated in the last round of updating sizes?
     #[serde(skip)]
     pub(super) just_updated: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_parent() -> Lineage {
+        Lineage {
+            N: 100.0,
+            W: 1.0,
+            U: 0.001,
+            secondary: SecondaryLineageData {
+                lambda: 83.33,
+                id: 1,
+                parent_id: 0,
+                marker: 1,
+                accumulated_muts: 1,
+            },
+        }
+    }
+
+    #[test]
+    fn test_lineages_data_push() {
+        let mut data = LineagesData::default();
+        let lineage = make_parent();
+        data.push(lineage);
+        assert_eq!(data.N.len(), 1);
+        assert_eq!(data.W.len(), 1);
+        assert_eq!(data.U.len(), 1);
+        assert_eq!(data.secondary.len(), 1);
+        assert_eq!(data.N[0], 100.0);
+        assert_eq!(data.W[0], 1.0);
+    }
+
+    #[test]
+    fn test_lineages_data_push_child_assigns_ids() {
+        let mut data = LineagesData::default();
+        let parent = make_parent();
+        data.push(parent);
+        // unique_id_counter is 0 after push (push doesn't increment it)
+        // push_child increments counter before assigning, so first child gets id=1
+
+        let child = Lineage {
+            N: 1.0,
+            W: 1.05,
+            U: 0.001,
+            secondary: SecondaryLineageData {
+                lambda: 83.33,
+                id: 0,        // will be overwritten
+                parent_id: 0, // will be overwritten
+                marker: 1,
+                accumulated_muts: 0, // will be overwritten
+            },
+        };
+
+        data.push_child(child, parent, 1, &mut None);
+
+        assert_eq!(data.secondary[1].parent_id, 1); // parent's id field
+        assert_eq!(data.secondary[1].id, 1); // counter was 0, incremented to 1
+        assert_eq!(data.secondary[1].accumulated_muts, 2); // parent's 1 + order 1
+    }
+
+    #[test]
+    fn test_lineages_data_push_child_increments_counter() {
+        let mut data = LineagesData::default();
+        let parent = make_parent();
+        data.push(parent);
+
+        let child1 = Lineage { N: 1.0, ..parent };
+        let child2 = Lineage { N: 1.0, ..parent };
+        data.push_child(child1, parent, 1, &mut None);
+        data.push_child(child2, parent, 1, &mut None);
+
+        assert_eq!(data.secondary[1].id, 1);
+        assert_eq!(data.secondary[2].id, 2);
+    }
+
+    #[test]
+    fn test_lineages_data_successor_preserves_counter() {
+        let mut data = LineagesData::default();
+        let parent = make_parent();
+        data.push(parent);
+        let child = Lineage { N: 1.0, ..parent };
+        data.push_child(child, parent, 1, &mut None);
+
+        let successor = LineagesData::successor(&data);
+        assert_eq!(successor.unique_id_counter, data.unique_id_counter);
+        assert_eq!(successor.N.len(), 0);
+    }
+
+    #[test]
+    fn test_lineages_data_default_empty() {
+        let data = LineagesData::default();
+        assert_eq!(data.N.len(), 0);
+        assert_eq!(data.W.len(), 0);
+        assert_eq!(data.U.len(), 0);
+        assert_eq!(data.secondary.len(), 0);
+        assert_eq!(data.unique_id_counter, 0);
+    }
+
+    #[test]
+    fn test_get_unchecked() {
+        let mut data = LineagesData::default();
+        data.push(Lineage {
+            N: 50.0,
+            W: 1.2,
+            U: 0.005,
+            secondary: SecondaryLineageData {
+                lambda: 10.0,
+                id: 7,
+                parent_id: 3,
+                marker: 2,
+                accumulated_muts: 4,
+            },
+        });
+        data.assert_len_eq(1);
+        let lineage = unsafe { data.get_unchecked(0) };
+        assert_eq!(lineage.N, 50.0);
+        assert_eq!(lineage.W, 1.2);
+        assert_eq!(lineage.U, 0.005);
+        assert_eq!(lineage.secondary.id, 7);
+        assert_eq!(lineage.secondary.marker, 2);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_assert_len_eq_panics_on_mismatch() {
+        let mut data = LineagesData::default();
+        data.N.push(1.0);
+        // Other vecs are empty
+        data.assert_len_eq(1);
+    }
+
+    #[test]
+    fn test_mutations_data_register() {
+        let mut mutations = MutationsData::new();
+        mutations.set_transfer(5);
+
+        let parent = make_parent();
+        let child = Lineage {
+            N: 1.0,
+            W: 1.05,
+            U: 0.001,
+            secondary: SecondaryLineageData {
+                lambda: 83.33,
+                id: 2,
+                parent_id: 1,
+                marker: 1,
+                accumulated_muts: 2,
+            },
+        };
+
+        mutations.register(child, parent, 1);
+        assert_eq!(mutations.muts.len(), 1);
+        let mutation = mutations.muts.get(&2).unwrap();
+        assert_eq!(mutation.id, 2);
+        assert_eq!(mutation.background_id, 1);
+        assert_eq!(mutation.first_transfer, 5);
+        assert_eq!(mutation.order, 1);
+        // delta_W = (1.05/1.0) - 1.0 = 0.05
+        assert!((mutation.delta_W - 0.05).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_mutations_data_set_transfer() {
+        let mut mutations = MutationsData::new();
+        mutations.set_transfer(10);
+
+        let parent = make_parent();
+        let child = Lineage {
+            N: 1.0,
+            W: 1.1,
+            secondary: SecondaryLineageData {
+                id: 5,
+                ..parent.secondary
+            },
+            ..parent
+        };
+        mutations.register(child, parent, 1);
+        assert_eq!(mutations.muts.get(&5).unwrap().first_transfer, 10);
+    }
 }
