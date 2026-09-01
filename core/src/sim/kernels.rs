@@ -43,7 +43,7 @@ pub fn expected_mutation_counts(lineages: &LineagesData, eligible_N: &[f64]) -> 
     assert_eq!(lineages.U.len(), eligible_N.len());
 
     izip!(&lineages.U, eligible_N.iter())
-        .map(|(u, n)| u * n * 2.0)
+        .map(|(u, n)| u * n)
         .collect()
 }
 
@@ -116,11 +116,20 @@ mod tests {
 
     #[test]
     fn test_expected_mutation_counts_basic() {
-        // U=0.001, eligible_N=1000 → expected = 0.001 * 1000 * 2 = 2.0
+        // U=0.001, eligible_N=1000, so expected = 0.001 * 1000 = 1.0
         let lineages = make_lineages(&[(0.0, 1.0, 0.001)]);
         let eligible = vec![1000.0];
         let counts = expected_mutation_counts(&lineages, &eligible);
-        assert_relative_eq!(counts[0], 2.0, epsilon = 1e-10);
+        assert_relative_eq!(counts[0], 1.0, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn test_expected_mutation_counts_figure_16_example() {
+        // D=8, Nmax=80: 10 doubles to 20, so 0.1 * 10 new cells = 1.0
+        let lineages = make_lineages(&[(20.0, 1.0, 0.1)]);
+        let eligible = vec![10.0];
+        let counts = expected_mutation_counts(&lineages, &eligible);
+        assert_relative_eq!(counts[0], 1.0, epsilon = 1e-10);
     }
 
     #[test]
@@ -136,10 +145,10 @@ mod tests {
         let lineages = make_lineages(&[(0.0, 1.0, 0.01), (0.0, 1.0, 0.02)]);
         let eligible = vec![100.0, 200.0];
         let counts = expected_mutation_counts(&lineages, &eligible);
-        // 0.01 * 100 * 2 = 2.0
-        assert_relative_eq!(counts[0], 2.0, epsilon = 1e-10);
-        // 0.02 * 200 * 2 = 8.0
-        assert_relative_eq!(counts[1], 8.0, epsilon = 1e-10);
+        // 0.01 * 100 = 1.0
+        assert_relative_eq!(counts[0], 1.0, epsilon = 1e-10);
+        // 0.02 * 200 = 4.0
+        assert_relative_eq!(counts[1], 4.0, epsilon = 1e-10);
     }
 
     #[test]
