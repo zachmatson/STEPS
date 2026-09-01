@@ -281,3 +281,198 @@ impl<W: Write> MutationsOutputter for SequencingOutputter<W> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::io::output::tests::{all_stats_disabled, mutation, sim_cfg, two_lineages};
+
+    /// Body lines of some output, with the two JSON header lines dropped
+    fn body(output: &[u8]) -> Vec<String> {
+        String::from_utf8(output.to_vec())
+            .unwrap()
+            .lines()
+            .skip(2)
+            .map(str::to_string)
+            .collect()
+    }
+
+    #[test]
+    fn test_summary_outputter_header_only_has_enabled_stats() {
+        let cfg = SummaryOutputConfig {
+            avg_W: true,
+            max_W: true,
+            genotype_count: true,
+            ..all_stats_disabled()
+        };
+        let outputter = SummaryOutputter::new(Vec::new(), cfg, &sim_cfg()).unwrap();
+
+        let output = outputter.into_inner().unwrap();
+        assert_eq!(
+            body(&output),
+            ["replicate,transfer,avg_W,max_W,genotype_count"]
+        );
+    }
+
+    #[test]
+    fn test_summary_outputter_header_stats_are_in_macro_order() {
+        // shannon_diversity is declared after genotype_count, so it must come second
+        let cfg = SummaryOutputConfig {
+            shannon_diversity: true,
+            genotype_count: true,
+            ..all_stats_disabled()
+        };
+        let outputter = SummaryOutputter::new(Vec::new(), cfg, &sim_cfg()).unwrap();
+
+        let output = outputter.into_inner().unwrap();
+        assert_eq!(
+            body(&output),
+            ["replicate,transfer,genotype_count,shannon_diversity"]
+        );
+    }
+
+    #[test]
+    fn test_summary_outputter_records_stat_values() {
+        let cfg = SummaryOutputConfig {
+            avg_W: true,
+            max_W: true,
+            genotype_count: true,
+            ..all_stats_disabled()
+        };
+        let mut outputter = SummaryOutputter::new(Vec::new(), cfg, &sim_cfg()).unwrap();
+
+        // N = [100, 100], W = [1.0, 2.0], so avg_W = 1.5, max_W = 2, genotype_count = 2
+        outputter.record_lineages(3, 7, &two_lineages()).unwrap();
+
+        let output = outputter.into_inner().unwrap();
+        assert_eq!(body(&output)[1], "3,7,1.5,2,2");
+    }
+
+    #[test]
+    fn test_summary_outputter_fields_match_header_count() {
+        let cfg = SummaryOutputConfig {
+            avg_W: true,
+            stdev_W: true,
+            max_W: true,
+            ..all_stats_disabled()
+        };
+        let mut outputter = SummaryOutputter::new(Vec::new(), cfg, &sim_cfg()).unwrap();
+        outputter.record_lineages(1, 0, &two_lineages()).unwrap();
+
+        let output = outputter.into_inner().unwrap();
+        let lines = body(&output);
+        let header_fields = lines[0].split(',').count();
+        let row_fields = lines[1].split(',').count();
+        assert_eq!(header_fields, row_fields);
+    }
+
+    #[test]
+    fn test_mutation_summary_outputter_writes_fixed_header() {
+        let outputter = MutationSummaryOutputter::new(Vec::new(), &sim_cfg()).unwrap();
+
+        let output = outputter.into_inner().unwrap();
+        assert_eq!(body(&output), ["replicate,transfer,ID,N"]);
+    }
+
+    #[test]
+    fn test_raw_outputter_writes_one_json_line_per_record() {
+        let mut outputter = RawOutputter::new(Vec::new(), &sim_cfg()).unwrap();
+
+        outputter.record_lineages(1, 0, &two_lineages()).unwrap();
+        outputter.record_lineages(1, 1, &two_lineages()).unwrap();
+
+        let output = outputter.into_inner();
+        let lines = body(&output);
+        assert_eq!(lines.len(), 2);
+
+        // Each record is serialized as the tuple [replicate, transfer, lineages]
+        for (line, expected_transfer) in lines.iter().zip([0, 1]) {
+            let record: serde_json::Value = serde_json::from_str(line).unwrap();
+            assert_eq!(record[0], 1);
+            assert_eq!(record[1], expected_transfer);
+            assert_eq!(record[2]["N"], serde_json::json!([100.0, 100.0]));
+        }
+    }
+
+    #[test]
+    fn test_raw_outputter_header_has_no_comment_prefix() {
+        let outputter = RawOutputter::new(Vec::new(), &sim_cfg()).unwrap();
+
+        let output = String::from_utf8(outputter.into_inner()).unwrap();
+        // ndjson output must stay parseable, so the header lines are bare JSON
+        for line in output.lines() {
+            serde_json::from_str::<serde_json::Value>(line).unwrap();
+        }
+    }
+
+    #[test]
+    fn test_mutation_summary_outputter_writes_one_row_per_transfer() {
+        let mut outputter = MutationSummaryOutputter::new(Vec::new(), &sim_cfg()).unwrap();
+
+        // N covers three transfers starting at first_transfer, so transfers run 2, 3, 4
+        outputter.record_mutation(1, &mutation(7, 2)).unwrap();
+
+        let output = outputter.into_inner().unwrap();
+        assert_eq!(
+            body(&output)[1..],
+            ["1,2,7,10.0", "1,3,7,20.0", "1,4,7,30.0"]
+        );
+    }
+
+    #[test]
+    fn test_mutation_summary_outputter_writes_nothing_for_empty_sizes() {
+        let mut outputter = MutationSummaryOutputter::new(Vec::new(), &sim_cfg()).unwrap();
+
+        let mut empty = mutation(7, 0);
+        empty.N.clear();
+        outputter.record_mutation(1, &empty).unwrap();
+
+        let output = outputter.into_inner().unwrap();
+        assert_eq!(body(&output).len(), 1, "only the header should be present");
+    }
+
+    #[test]
+    fn test_sequencing_outputter_writes_one_json_line_per_mutation() {
+        let mut outputter = SequencingOutputter::new(Vec::new(), &sim_cfg()).unwrap();
+
+        outputter.record_mutation(1, &mutation(4, 0)).unwrap();
+        outputter.record_mutation(1, &mutation(5, 0)).unwrap();
+
+        let output = outputter.into_inner();
+        let lines = body(&output);
+        assert_eq!(lines.len(), 2);
+
+        // Mutations are serialized as a tuple starting with the ID
+        for (line, expected_id) in lines.iter().zip([4, 5]) {
+            let record: serde_json::Value = serde_json::from_str(line).unwrap();
+            assert_eq!(record[0], expected_id);
+        }
+    }
+
+    #[test]
+    fn test_sequencing_outputter_delimits_replicates_with_a_blank_line() {
+        let mut outputter = SequencingOutputter::new(Vec::new(), &sim_cfg()).unwrap();
+
+        outputter.record_mutation(1, &mutation(4, 0)).unwrap();
+        outputter.record_mutation(2, &mutation(5, 0)).unwrap();
+
+        let output = outputter.into_inner();
+        let lines = body(&output);
+        assert_eq!(lines.len(), 3);
+        assert!(
+            lines[1].is_empty(),
+            "replicate change should insert a blank line"
+        );
+    }
+
+    #[test]
+    fn test_sequencing_outputter_does_not_delimit_within_a_replicate() {
+        // The first replicate is 1, so recording it must not emit a leading blank line
+        let mut outputter = SequencingOutputter::new(Vec::new(), &sim_cfg()).unwrap();
+
+        outputter.record_mutation(1, &mutation(4, 0)).unwrap();
+
+        let output = outputter.into_inner();
+        assert_eq!(body(&output).len(), 1);
+    }
+}

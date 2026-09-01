@@ -188,3 +188,230 @@ fn initialize_output_as_csv<W: Write>(
         .buffer_capacity(CSV_BUFFER_CAPACITY)
         .from_writer(writer))
 }
+
+#[cfg(test)]
+pub(super) mod tests {
+    use super::*;
+    use crate::cfg::SummaryOutputConfig;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    /// A `SimConfig` to write into output headers
+    pub(super) fn sim_cfg() -> SimConfig {
+        SimConfig {
+            replicates: 1,
+            transfers: 3,
+            markers: 1,
+            dilution_factor: 100.0,
+            beneficial_mutation_rate: 1.7e-6,
+            neutral_mutation_rate: 0.0,
+            deleterious_mutation_rate: 0.0,
+            initial_beneficial_mutation_size: 0.012,
+            fixed_deleterious_mutation_size: None,
+            diminishing_returns_epistasis_strength: 6.0,
+            seed: Some(42),
+            max_pop_size: 5e8,
+        }
+    }
+
+    /// A `SummaryOutputConfig` with every stat turned off, to be overridden per test
+    pub(super) fn all_stats_disabled() -> SummaryOutputConfig {
+        SummaryOutputConfig {
+            avg_W: false,
+            marker_1_ratio: false,
+            stdev_W: false,
+            max_W: false,
+            stdev_accumulated_muts: false,
+            max_accumulated_muts: false,
+            mean_accumulated_muts: false,
+            min_accumulated_muts: false,
+            genotype_count: false,
+            shannon_diversity: false,
+        }
+    }
+
+    /// Two equally sized lineages with fitnesses 1.0 and 2.0
+    ///
+    /// Built through `serde` because the fields of `LineagesData` are private to `sim`
+    pub(super) fn two_lineages() -> LineagesData {
+        serde_json::from_str(
+            r#"{"N":[100.0,100.0],"W":[1.0,2.0],"U":[0.0,0.0],
+                "secondary":[[0.0,1,0,1,1],[0.0,2,0,1,1]]}"#,
+        )
+        .unwrap()
+    }
+
+    /// A `Mutation` with `N` recorded over three consecutive transfers
+    pub(super) fn mutation(id: u64, first_transfer: u32) -> Mutation {
+        Mutation {
+            id,
+            background_id: 0,
+            delta_W: 0.05,
+            delta_U: 0.0,
+            first_transfer,
+            N: vec![10.0, 20.0, 30.0],
+            order: 1,
+            just_updated: false,
+        }
+    }
+
+    /// A `LineagesOutputter` which records the transfers it was called for
+    ///
+    /// The group takes ownership of its outputters, so the log is shared through an `Rc`
+    struct RecordingOutputter(Rc<RefCell<Vec<u32>>>);
+
+    impl LineagesOutputter for RecordingOutputter {
+        fn record_lineages(
+            &mut self,
+            _replicate: u32,
+            transfer: u32,
+            _lineages: &LineagesData,
+        ) -> Result<()> {
+            self.0.borrow_mut().push(transfer);
+            Ok(())
+        }
+    }
+
+    /// Record transfers `0..=6` into a group with the given sampling frequency
+    fn transfers_recorded_at_frequency(frequency: u32) -> Vec<u32> {
+        let log = Rc::new(RefCell::new(Vec::new()));
+        let mut group = OutputterGroupBuilder::default()
+            .lineage_sampling_frequency(frequency)
+            .lineage_outputter(Box::new(RecordingOutputter(Rc::clone(&log))))
+            .build()
+            .unwrap();
+
+        let lineages = two_lineages();
+        for transfer in 0..=6 {
+            group.record_lineages(1, transfer, &lineages).unwrap();
+        }
+
+        drop(group);
+        Rc::try_unwrap(log).unwrap().into_inner()
+    }
+
+    #[test]
+    fn test_initialize_output_writes_metadata_then_config() {
+        let mut output = Vec::new();
+        initialize_output(&mut output, &sim_cfg(), OutputMode::Summary, "").unwrap();
+
+        let output = String::from_utf8(output).unwrap();
+        let lines: Vec<&str> = output.lines().collect();
+        assert_eq!(lines.len(), 2);
+
+        let metadata: serde_json::Value = serde_json::from_str(lines[0]).unwrap();
+        assert_eq!(metadata["name"], "STEPS");
+        assert_eq!(metadata["output_mode"], "Summary");
+        assert_eq!(metadata["version"], env!("CARGO_PKG_VERSION"));
+
+        let cfg: serde_json::Value = serde_json::from_str(lines[1]).unwrap();
+        assert_eq!(cfg["replicates"], 1);
+        assert_eq!(cfg["transfers"], 3);
+        assert_eq!(cfg["seed"], 42);
+    }
+
+    #[test]
+    fn test_initialize_output_applies_header_prefix() {
+        let mut output = Vec::new();
+        initialize_output(&mut output, &sim_cfg(), OutputMode::Summary, "# ").unwrap();
+
+        let output = String::from_utf8(output).unwrap();
+        for line in output.lines() {
+            assert!(line.starts_with("# "), "line was not prefixed: {}", line);
+        }
+    }
+
+    #[test]
+    fn test_initialize_output_records_output_mode() {
+        let mut output = Vec::new();
+        initialize_output(&mut output, &sim_cfg(), OutputMode::Sequencing, "").unwrap();
+
+        let output = String::from_utf8(output).unwrap();
+        let metadata: serde_json::Value =
+            serde_json::from_str(output.lines().next().unwrap()).unwrap();
+        assert_eq!(metadata["output_mode"], "Sequencing");
+    }
+
+    #[test]
+    fn test_group_records_every_transfer_at_frequency_one() {
+        assert_eq!(transfers_recorded_at_frequency(1), [0, 1, 2, 3, 4, 5, 6]);
+    }
+
+    #[test]
+    fn test_group_skips_transfers_not_matching_frequency() {
+        assert_eq!(transfers_recorded_at_frequency(3), [0, 3, 6]);
+    }
+
+    #[test]
+    fn test_group_default_frequency_records_every_transfer() {
+        let mut group = OutputterGroupBuilder::default().build().unwrap();
+        // Default frequency is 1, so nothing is skipped and no outputters means no errors
+        assert!(group.record_lineages(1, 1, &two_lineages()).is_ok());
+    }
+
+    /// A `MutationsOutputter` which records the IDs of the mutations it was given
+    struct RecordingMutationsOutputter(Rc<RefCell<Vec<u64>>>);
+
+    impl MutationsOutputter for RecordingMutationsOutputter {
+        fn record_mutation(&mut self, _replicate: u32, mutation: &Mutation) -> Result<()> {
+            self.0.borrow_mut().push(mutation.id);
+            Ok(())
+        }
+    }
+
+    /// `MutationsData` holding one pruned mutation (ID 1) and one active mutation (ID 2)
+    fn one_pruned_one_active() -> MutationsData {
+        let mut mutations = MutationsData::default();
+        mutations.pruned_muts.push(mutation(1, 0));
+        mutations.muts.insert(2, mutation(2, 0));
+        mutations
+    }
+
+    /// IDs passed on by a group for pruned or active mutations, selected by `record`
+    fn ids_recorded_by_group(
+        record: impl Fn(&mut OutputterGroup, &MutationsData) -> Result<()>,
+    ) -> Vec<u64> {
+        let log = Rc::new(RefCell::new(Vec::new()));
+        let mut group = OutputterGroupBuilder::default()
+            .mutation_outputter(Box::new(RecordingMutationsOutputter(Rc::clone(&log))))
+            .build()
+            .unwrap();
+
+        record(&mut group, &one_pruned_one_active()).unwrap();
+
+        drop(group);
+        Rc::try_unwrap(log).unwrap().into_inner()
+    }
+
+    #[test]
+    fn test_group_records_only_pruned_mutations() {
+        let ids =
+            ids_recorded_by_group(|group, mutations| group.record_pruned_mutations(1, mutations));
+        assert_eq!(ids, [1]);
+    }
+
+    #[test]
+    fn test_group_records_only_active_mutations() {
+        let ids =
+            ids_recorded_by_group(|group, mutations| group.record_active_mutations(1, mutations));
+        assert_eq!(ids, [2]);
+    }
+
+    #[test]
+    fn test_group_ignores_sampling_frequency_for_mutations() {
+        // Sampling frequency only applies to lineage outputters
+        let log = Rc::new(RefCell::new(Vec::new()));
+        let mut group = OutputterGroupBuilder::default()
+            .lineage_sampling_frequency(100)
+            .mutation_outputter(Box::new(RecordingMutationsOutputter(Rc::clone(&log))))
+            .build()
+            .unwrap();
+
+        group
+            .record_pruned_mutations(1, &one_pruned_one_active())
+            .unwrap();
+
+        drop(group);
+        assert_eq!(Rc::try_unwrap(log).unwrap().into_inner(), [1]);
+    }
+}
