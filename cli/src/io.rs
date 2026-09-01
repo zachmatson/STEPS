@@ -72,3 +72,127 @@ pub fn extract_sim_config_from_path<P: AsRef<Path>>(path: P) -> Result<SimConfig
         .map_err(anyhow::Error::from)
         .and_then(extract_sim_config)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+    use tempfile::TempDir;
+
+    use crate::cfg::{CliCommand, CliConfig};
+
+    fn sim_cfg() -> SimConfig {
+        SimConfig {
+            replicates: 1,
+            transfers: 2,
+            markers: 1,
+            dilution_factor: 100.0,
+            beneficial_mutation_rate: 1.7e-6,
+            neutral_mutation_rate: 0.0,
+            deleterious_mutation_rate: 0.0,
+            initial_beneficial_mutation_size: 0.012,
+            fixed_deleterious_mutation_size: None,
+            diminishing_returns_epistasis_strength: 6.0,
+            seed: Some(42),
+            max_pop_size: 5e8,
+        }
+    }
+
+    /// Parse the output config out of a `simulate` command line
+    fn output_cfg_from(args: &[&str]) -> CliOutputConfig {
+        match CliConfig::try_parse_from(args).unwrap().command {
+            CliCommand::Simulate(simulate) => simulate.output_cfg,
+            CliCommand::Reproduce(_) => panic!("expected a simulate command"),
+        }
+    }
+
+    #[test]
+    fn test_group_creates_a_file_for_each_requested_output() {
+        let dir = TempDir::new().unwrap();
+        let paths = ["summary.csv", "raw.ndjson", "seq.ndjson", "muts.csv"]
+            .map(|name| dir.path().join(name));
+
+        let output_cfg = output_cfg_from(&[
+            "steps",
+            "simulate",
+            "--summary-output",
+            paths[0].to_str().unwrap(),
+            "--raw-output",
+            paths[1].to_str().unwrap(),
+            "--sequencing-output",
+            paths[2].to_str().unwrap(),
+            "--mutation-summary-output",
+            paths[3].to_str().unwrap(),
+        ]);
+
+        let group = outputter_group_for_cli(&output_cfg, &sim_cfg()).unwrap();
+        // Files are created eagerly when the outputters are built
+        drop(group);
+
+        for path in &paths {
+            assert!(path.exists(), "{} was not created", path.display());
+        }
+    }
+
+    #[test]
+    fn test_group_creates_no_files_when_no_outputs_requested() {
+        let dir = TempDir::new().unwrap();
+        let output_cfg = output_cfg_from(&["steps", "simulate"]);
+
+        outputter_group_for_cli(&output_cfg, &sim_cfg()).unwrap();
+
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn test_group_fails_for_an_unwritable_path() {
+        let dir = TempDir::new().unwrap();
+        // A path under a directory that does not exist cannot be created
+        let path = dir.path().join("missing").join("summary.csv");
+        let output_cfg = output_cfg_from(&[
+            "steps",
+            "simulate",
+            "--summary-output",
+            path.to_str().unwrap(),
+        ]);
+
+        assert!(outputter_group_for_cli(&output_cfg, &sim_cfg()).is_err());
+    }
+
+    #[test]
+    fn test_extract_sim_config_round_trips_through_an_output_file() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("summary.csv");
+        let output_cfg = output_cfg_from(&[
+            "steps",
+            "simulate",
+            "--summary-output",
+            path.to_str().unwrap(),
+        ]);
+
+        // Writing the outputter header is what records the config into the file
+        let cfg = sim_cfg();
+        drop(outputter_group_for_cli(&output_cfg, &cfg).unwrap());
+
+        let extracted = extract_sim_config_from_path(&path).unwrap();
+        assert_eq!(extracted.replicates, cfg.replicates);
+        assert_eq!(extracted.transfers, cfg.transfers);
+        assert_eq!(extracted.seed, cfg.seed);
+        assert_eq!(extracted.max_pop_size, cfg.max_pop_size);
+    }
+
+    #[test]
+    fn test_extract_sim_config_fails_for_a_missing_file() {
+        let dir = TempDir::new().unwrap();
+        assert!(extract_sim_config_from_path(dir.path().join("nope.csv")).is_err());
+    }
+
+    #[test]
+    fn test_extract_sim_config_fails_for_a_file_without_headers() {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("empty.csv");
+        std::fs::write(&path, "").unwrap();
+
+        assert!(extract_sim_config_from_path(&path).is_err());
+    }
+}
