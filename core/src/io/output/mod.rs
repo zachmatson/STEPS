@@ -241,6 +241,20 @@ pub(super) mod tests {
         .unwrap()
     }
 
+    /// A `Mutation` with `N` recorded over three consecutive transfers
+    pub(super) fn mutation(id: u64, first_transfer: u32) -> Mutation {
+        Mutation {
+            id,
+            background_id: 0,
+            delta_W: 0.05,
+            delta_U: 0.0,
+            first_transfer,
+            N: vec![10.0, 20.0, 30.0],
+            order: 1,
+            just_updated: false,
+        }
+    }
+
     /// A `LineagesOutputter` which records the transfers it was called for
     ///
     /// The group takes ownership of its outputters, so the log is shared through an `Rc`
@@ -333,5 +347,71 @@ pub(super) mod tests {
         let mut group = OutputterGroupBuilder::default().build().unwrap();
         // Default frequency is 1, so nothing is skipped and no outputters means no errors
         assert!(group.record_lineages(1, 1, &two_lineages()).is_ok());
+    }
+
+    /// A `MutationsOutputter` which records the IDs of the mutations it was given
+    struct RecordingMutationsOutputter(Rc<RefCell<Vec<u64>>>);
+
+    impl MutationsOutputter for RecordingMutationsOutputter {
+        fn record_mutation(&mut self, _replicate: u32, mutation: &Mutation) -> Result<()> {
+            self.0.borrow_mut().push(mutation.id);
+            Ok(())
+        }
+    }
+
+    /// `MutationsData` holding one pruned mutation (ID 1) and one active mutation (ID 2)
+    fn one_pruned_one_active() -> MutationsData {
+        let mut mutations = MutationsData::default();
+        mutations.pruned_muts.push(mutation(1, 0));
+        mutations.muts.insert(2, mutation(2, 0));
+        mutations
+    }
+
+    /// IDs passed on by a group for pruned or active mutations, selected by `record`
+    fn ids_recorded_by_group(
+        record: impl Fn(&mut OutputterGroup, &MutationsData) -> Result<()>,
+    ) -> Vec<u64> {
+        let log = Rc::new(RefCell::new(Vec::new()));
+        let mut group = OutputterGroupBuilder::default()
+            .mutation_outputter(Box::new(RecordingMutationsOutputter(Rc::clone(&log))))
+            .build()
+            .unwrap();
+
+        record(&mut group, &one_pruned_one_active()).unwrap();
+
+        drop(group);
+        Rc::try_unwrap(log).unwrap().into_inner()
+    }
+
+    #[test]
+    fn test_group_records_only_pruned_mutations() {
+        let ids =
+            ids_recorded_by_group(|group, mutations| group.record_pruned_mutations(1, mutations));
+        assert_eq!(ids, [1]);
+    }
+
+    #[test]
+    fn test_group_records_only_active_mutations() {
+        let ids =
+            ids_recorded_by_group(|group, mutations| group.record_active_mutations(1, mutations));
+        assert_eq!(ids, [2]);
+    }
+
+    #[test]
+    fn test_group_ignores_sampling_frequency_for_mutations() {
+        // Sampling frequency only applies to lineage outputters
+        let log = Rc::new(RefCell::new(Vec::new()));
+        let mut group = OutputterGroupBuilder::default()
+            .lineage_sampling_frequency(100)
+            .mutation_outputter(Box::new(RecordingMutationsOutputter(Rc::clone(&log))))
+            .build()
+            .unwrap();
+
+        group
+            .record_pruned_mutations(1, &one_pruned_one_active())
+            .unwrap();
+
+        drop(group);
+        assert_eq!(Rc::try_unwrap(log).unwrap().into_inner(), [1]);
     }
 }
