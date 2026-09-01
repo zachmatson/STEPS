@@ -1,6 +1,13 @@
 # STEPS
 
-Inspired by [The Long-Term Evolution Experiment](https://the-ltee.org), Serially Transferred Evolving Population Simulator (aka STEPS) models the dynamics of asexual populations as they grow and evolve throughout a serial transfer experiment. Information regarding how to install, compile, and run STEPS can all be found in the [User Manual](https://github.com/zachmatson/STEPS/blob/main/STEPS_User_Manual.pdf) file along with other helpful information such as: example runs and how to interpret them, core assumptions made by model, and a walk through of web-based version. Basic installation, run, and compilation instructions can also be found below.
+Inspired by [The Long-Term Evolution Experiment](https://the-ltee.org), Serially Transferred Evolving Population Simulator (aka STEPS) models the dynamics of asexual populations as they grow and evolve throughout a serial transfer experiment. Information regarding how to install, compile, and run STEPS can all be found in the [User Manual](https://github.com/zachmatson/STEPS/blob/main/STEPS_User_Manual.pdf) file along with other helpful information such as: example runs and how to interpret them, core assumptions made by model, and a walk through of [web-based version](https://steps-portal.pages.dev/). Basic installation, run, and compilation instructions can also be found below.
+
+
+## Web-based version
+
+STEPS can be run in a browser at the [STEPS Portal](https://steps-portal.pages.dev/), with no installation required. It plots average fitness and accumulated mutations as the simulation runs, and the results can be downloaded for later analysis. Chapter 2 of the [User Manual](https://github.com/zachmatson/STEPS/blob/main/STEPS_User_Manual.pdf) walks through it.
+
+Both versions share the same underlying simulation code. Some options are only available in the command-line version described below.
 
 
 ## Instructions to build and run:
