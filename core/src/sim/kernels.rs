@@ -39,6 +39,10 @@ pub fn old_N_to_delta_N<'a>(lineages: &LineagesData, old_N: &'a mut [f64]) -> &'
 /// Get the expected number of mutations for each lineage as a newly allocated
 /// `Vec`, given the `lineages` and a slice of the number of individuals in each lineage
 /// eligible to mutate
+///
+/// Counts two daughter cells per division, both of which are subject to new mutations, so
+/// `eligible_N` new cells give `2 * eligible_N` opportunities. Mutation rates are measured
+/// per progeny cell, so the rates passed in already assume this convention.
 pub fn expected_mutation_counts(lineages: &LineagesData, eligible_N: &[f64]) -> Vec<f64> {
     assert_eq!(lineages.U.len(), eligible_N.len());
 
