@@ -281,7 +281,7 @@ pub struct Mutation {
     pub order: u32,
     /// Was the mutation just updated in the last round of updating sizes?
     #[serde(skip)]
-    pub(super) just_updated: bool,
+    pub(crate) just_updated: bool,
 }
 
 #[cfg(test)]
