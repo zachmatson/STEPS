@@ -155,13 +155,15 @@ fn add_mutants<R: Rng>(
         // the half-open interval [0, expected_mutations)
         //
         // For each lineage i (zero-indexed),
-        // expected_mutation_counts[i] = delta_N[i] * data.U[i] =: Δ
+        // expected_mutation_counts[i] = 2 * delta_N[i] * data.U[i] =: Δ
+        // The factor of 2 is there because each division produces two daughter cells, both of
+        // which are subject to new mutations, so delta_N new cells means 2 * delta_N daughters
         //
         // The lineage will get an interval of cutoffs [start, start + Δ)
         // Where start = previous expected_mutations_cumsum
         // and start + Δ = new expected_mutations_cumsum
-        // Each new individual j (zero-indexed) in the lineage then gets an interval [start + j*U, start + (j+1)*U)
-        // If the individual is the fractional part of the population size, its interval will be [start + j*U, start + Δ)
+        // Each daughter cell j (zero-indexed) in the lineage then gets an interval [start + j*U, start + (j+1)*U)
+        // If the daughter is the fractional part of the population size, its interval will be [start + j*U, start + Δ)
 
         // If all cells of a lineage became mutants, it may persist in the vector
         // with size 0.0 until the next bottleneck
