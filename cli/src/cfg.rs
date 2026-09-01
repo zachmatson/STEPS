@@ -88,3 +88,111 @@ impl CliOutputConfig {
         self.sequencing_output_path.is_some() || self.mutation_summary_output_path.is_some()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Parse a `simulate` command line and return its output config
+    fn output_cfg_from(args: &[&str]) -> CliOutputConfig {
+        let cfg = CliConfig::try_parse_from(args).unwrap();
+        match cfg.command {
+            CliCommand::Simulate(simulate) => simulate.output_cfg,
+            CliCommand::Reproduce(_) => panic!("expected a simulate command"),
+        }
+    }
+
+    #[test]
+    fn test_output_config_defaults() {
+        let output_cfg = output_cfg_from(&["steps", "simulate"]);
+        assert_eq!(output_cfg.sampling_frequency, 1);
+        assert_eq!(output_cfg.summary_output_path, None);
+        assert_eq!(output_cfg.raw_output_path, None);
+        assert_eq!(output_cfg.sequencing_output_path, None);
+        assert_eq!(output_cfg.mutation_summary_output_path, None);
+    }
+
+    #[test]
+    fn test_output_config_parses_all_paths() {
+        let output_cfg = output_cfg_from(&[
+            "steps",
+            "simulate",
+            "-f",
+            "5",
+            "--summary-output",
+            "summary.csv",
+            "--raw-output",
+            "raw.ndjson",
+            "--sequencing-output",
+            "seq.ndjson",
+            "--mutation-summary-output",
+            "muts.csv",
+        ]);
+        assert_eq!(output_cfg.sampling_frequency, 5);
+        assert_eq!(
+            output_cfg.summary_output_path,
+            Some(PathBuf::from("summary.csv"))
+        );
+        assert_eq!(
+            output_cfg.raw_output_path,
+            Some(PathBuf::from("raw.ndjson"))
+        );
+        assert_eq!(
+            output_cfg.sequencing_output_path,
+            Some(PathBuf::from("seq.ndjson"))
+        );
+        assert_eq!(
+            output_cfg.mutation_summary_output_path,
+            Some(PathBuf::from("muts.csv"))
+        );
+    }
+
+    #[test]
+    fn test_output_config_passes_through_sim_options() {
+        let cfg =
+            CliConfig::try_parse_from(["steps", "simulate", "-r", "3", "--seed", "7"]).unwrap();
+        match cfg.command {
+            CliCommand::Simulate(simulate) => {
+                assert_eq!(simulate.sim_cfg.replicates, 3);
+                assert_eq!(simulate.sim_cfg.seed, Some(7));
+            }
+            CliCommand::Reproduce(_) => panic!("expected a simulate command"),
+        }
+    }
+
+    #[test]
+    fn test_reproduce_parses_input_path() {
+        let cfg = CliConfig::try_parse_from(["steps", "reproduce", "previous.csv"]).unwrap();
+        match cfg.command {
+            CliCommand::Reproduce(reproduce) => {
+                assert_eq!(reproduce.input_path, PathBuf::from("previous.csv"));
+            }
+            CliCommand::Simulate(_) => panic!("expected a reproduce command"),
+        }
+    }
+
+    #[test]
+    fn test_should_not_track_mutations_without_mutation_outputs() {
+        let output_cfg = output_cfg_from(&["steps", "simulate", "--summary-output", "summary.csv"]);
+        assert!(!output_cfg.should_track_mutations());
+    }
+
+    #[test]
+    fn test_should_track_mutations_for_sequencing_output() {
+        let output_cfg =
+            output_cfg_from(&["steps", "simulate", "--sequencing-output", "seq.ndjson"]);
+        assert!(output_cfg.should_track_mutations());
+    }
+
+    #[test]
+    fn test_should_track_mutations_for_mutation_summary_output() {
+        let output_cfg =
+            output_cfg_from(&["steps", "simulate", "--mutation-summary-output", "muts.csv"]);
+        assert!(output_cfg.should_track_mutations());
+    }
+
+    #[test]
+    fn test_subcommand_is_required() {
+        assert!(CliConfig::try_parse_from(["steps"]).is_err());
+    }
+}
