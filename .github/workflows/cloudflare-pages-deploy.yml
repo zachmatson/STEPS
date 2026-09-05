@@ -1,0 +1,33 @@
+name: Cloudflare Pages Deploy
+
+on:
+  push:
+    branches: [ "add-cloudflare-pages-deploy" ]
+  workflow_dispatch:
+
+jobs:
+  build_and_deploy:
+    name: Build and Deploy to Cloudflare Pages
+    runs-on: ubuntu-latest
+    environment: cloudflare-pages-deploy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: portal/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: jetli/wasm-pack-action@v0.4.0
+      - name: Build portal
+        run: |
+          cd portal
+          npm ci
+          npm run build
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          command: pages deploy portal/build/dist --project-name=steps-portal
