@@ -2,6 +2,9 @@
 name = "steps_adapter"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "WASM adapter exposing the STEPS simulation to the web portal"
 
 [lib]
 crate-type = ["cdylib"]

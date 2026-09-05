@@ -2,6 +2,9 @@
 name = "create_typescript_interface"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Proc macro generating TypeScript interface definitions for the STEPS portal adapter"
 
 [lib]
 proc-macro = true
