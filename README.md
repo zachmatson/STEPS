@@ -26,13 +26,13 @@ Inspired by [The Long-Term Evolution Experiment](https://the-ltee.org), Serially
 To test changes to the Portal while developing:
 ```sh
 # in portal subdirectory
-$ npm run start
+$ npm install && npm run start
 ```
 
 To test the production Portal build before pushing Portal changes:
 ```sh
 # in portal subdirectory
-$ npm run start:prod
+$ npm install && npm run start:prod
 ```
 
 ## Examples

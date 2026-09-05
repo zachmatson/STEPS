@@ -1,6 +1,4 @@
 [workspace]
-# Don't include portal packages by default
-default-members = ["core", "cli"]
 members = ["core", "cli", "portal_adapter", "portal_adapter/create_typescript_interface"]
 resolver = "2"
 
