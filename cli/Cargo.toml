@@ -18,3 +18,6 @@ clap = { workspace = true, features = ["derive"] }
 indicatif = { workspace = true }
 itertools = { workspace = true }
 steps_core = { path = "../core" }
+
+[dev-dependencies]
+tempfile = { workspace = true }
