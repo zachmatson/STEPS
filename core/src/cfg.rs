@@ -44,7 +44,7 @@ pub struct SummaryOutputConfig {
 }
 
 /// Options for STEPS simulations
-#[derive(Clone, Parser, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Parser, Serialize, Deserialize)]
 #[clap(setting = AppSettings::DeriveDisplayOrder)]
 pub struct SimConfig {
     /// Number of replicates to perform
