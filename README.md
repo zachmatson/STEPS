@@ -1,5 +1,11 @@
 # STEPS
 
+[![Rust tests badge](https://github.com/zachmatson/STEPS/actions/workflows/rust-tests.yml/badge.svg)](https://github.com/zachmatson/STEPS/actions/workflows/rust-tests.yml?query=branch%3Amain "Rust build and test status")
+[![Portal build badge](https://github.com/zachmatson/STEPS/actions/workflows/portal-build.yml/badge.svg)](https://github.com/zachmatson/STEPS/actions/workflows/portal-build.yml?query=branch%3Amain "Portal build status")
+[![JOSS status badge](https://joss.theoj.org/papers/b251b9106318eecd12b185b3e0971a6f/status.svg)](https://joss.theoj.org/papers/b251b9106318eecd12b185b3e0971a6f "Journal of Open Source Software review status")
+[![User Manual DOI badge](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.16690374-blue.svg)](https://doi.org/10.5281/zenodo.16690374 "STEPS User Manual on Zenodo")
+[![License badge](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0 "GNU General Public License v3.0")
+
 Inspired by [The Long-Term Evolution Experiment](https://the-ltee.org), Serially Transferred Evolving Population Simulator (aka STEPS) models the dynamics of asexual populations as they grow and evolve throughout a serial transfer experiment. Information regarding how to install, compile, and run STEPS can all be found in the [User Manual](https://github.com/zachmatson/STEPS/blob/main/STEPS_User_Manual.pdf) file along with other helpful information such as: example runs and how to interpret them, core assumptions made by model, and a walk through of web-based version. Basic installation, run, and compilation instructions can also be found below.
 
 
