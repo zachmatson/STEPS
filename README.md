@@ -49,6 +49,16 @@ Run one with `cargo run --release --example fitness_trajectory`, and redirect to
 cargo run --release --example fitness_trajectory > trajectory.csv
 ```
 
+## API Documentation
+
+STEPS can be used as a library as well as a command line program. To read the API documentation for the `steps_core` crate, run:
+
+```
+cargo doc --no-deps --open
+```
+
+The `core/examples` directory contains runnable programs that use the library, listed above.
+
 ## Building JOSS Paper
 
 To build the [paper submitted to JOSS regarding this project](https://github.com/openjournals/joss-reviews/issues/10300), run `./JOSS/generate_paper.sh` from the project root. This file is generated locally and not tracked. The latest generated version of this paper can be accessed as an artifact from the "Draft PDF" GitHub workflow in this repository.
