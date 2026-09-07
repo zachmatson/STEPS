@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it as below.
+title: "STEPS: Serially Transferred Evolving Population Simulator"
+abstract: >-
+  Simulates the dynamics of asexual populations as they grow and evolve through
+  a serial transfer experiment, with beneficial, neutral, and deleterious
+  mutations arising during growth and periodic bottlenecks imposing genetic
+  drift.
+type: software
+version: 2.0.1
+license: GPL-3.0-or-later
+repository-code: https://github.com/zachmatson/STEPS
+authors:
+  - given-names: Devin M.
+    family-names: Lake
+    orcid: https://orcid.org/0000-0002-9974-2367
+  - given-names: Zachary W. D.
+    family-names: Matson
+    orcid: https://orcid.org/0000-0002-8445-3618
+  - given-names: Minako
+    family-names: Izutsu
+    orcid: https://orcid.org/0000-0002-3291-3256
+  - given-names: Richard E.
+    family-names: Lenski
+    orcid: https://orcid.org/0000-0002-1064-8375
+  - given-names: Akash
+    family-names: Goel
+    orcid: https://orcid.org/0009-0008-4118-3401
+keywords:
+  - evolution
+  - simulation
+  - population-genetics
+  - microbiology
