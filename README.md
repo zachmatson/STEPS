@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="STEPS logo: a step-like fitness trajectory spelling out S T E P S" width="420">
+</p>
+
 # STEPS
 
 Inspired by [The Long-Term Evolution Experiment](https://the-ltee.org), Serially Transferred Evolving Population Simulator (aka STEPS) models the dynamics of asexual populations as they grow and evolve throughout a serial transfer experiment. Information regarding how to install, compile, and run STEPS can all be found in the [User Manual](https://github.com/zachmatson/STEPS/blob/main/STEPS_User_Manual.pdf) file along with other helpful information such as: example runs and how to interpret them, core assumptions made by model, and a walk through of web-based version. Basic installation, run, and compilation instructions can also be found below.
