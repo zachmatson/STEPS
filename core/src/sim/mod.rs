@@ -67,7 +67,7 @@ impl SimulationHandler {
 
     /// Get the current state of the handled simulations, or `None` if the simulations have not been
     /// advanced yet or the number of total replicates is zero
-    pub fn current_state(&self) -> Option<SimulationState> {
+    pub fn current_state<'a>(&'a self) -> Option<SimulationState<'a>> {
         if self.replicate > 0 {
             Some(SimulationState {
                 replicate: self.replicate,
@@ -83,7 +83,7 @@ impl SimulationHandler {
 
     /// If possible, advance the state of the handled simulations and return the new state, or do
     /// nothing and return `None` with the state left unchanged if it cannot be advanced any more
-    pub fn next_state(&mut self) -> Option<SimulationState> {
+    pub fn next_state<'a>(&'a mut self) -> Option<SimulationState<'a>> {
         if let Some(SimulationState {
             end_of_replicate: false,
             ..
